@@ -5,6 +5,7 @@ import queue
 import threading
 import datetime
 import json
+import hops.util as hopsutil
 import maggy.util as util
 from maggy.optimizer import AbstractOptimizer, RandomSearch
 from maggy.core import rpc
@@ -83,7 +84,7 @@ class ExperimentDriver(object):
 
         result = self.optimizer.finalize_experiment(self._final_store)
 
-        self.duration = util._time_diff(job_start, job_end)
+        self.duration = hopsutil._time_diff(job_start, job_end)
 
         if self.direction == 'max':
             results = '\n------ ' + str(self.optimizer.__class__.__name__) + ' results ------ direction(' + self.direction + ') \n' \
@@ -164,7 +165,7 @@ class ExperimentDriver(object):
                     with trial.lock:
                         trial.status = Trial.FINALIZED
                         trial.final_metric = msg['data']
-                        trial.duration = util._time_diff(
+                        trial.duration = hopsutil._time_diff(
                             trial.start, datetime.datetime.now())
 
                     # move trial to the finalized ones

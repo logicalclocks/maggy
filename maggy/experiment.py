@@ -10,6 +10,7 @@ provided information.
 """
 import socket
 import datetime
+import hops.util as hopsutil
 
 from maggy import util
 from maggy.core import rpc
@@ -19,10 +20,7 @@ from maggy.trial import Trial
 
 app_id = None
 running = False
-
-# TODO: this should be inferred from HDFS checkpoints
-run_id = 0
-
+run_id = None
 elastic_id = 1
 experiment_json = None
 driver_tensorboard_hdfs_path = None
@@ -70,8 +68,7 @@ def launch(map_fun, searchspace, optimizer, direction, num_trials, name, hb_inte
     assert num_trials > 0, "number of trials should be greater than zero"
 
     global running
-    # move run_id to the class of the optimizer
-    # global run_id
+
     if running:
         raise RuntimeError("An experiment is currently running.")
 
@@ -81,7 +78,7 @@ def launch(map_fun, searchspace, optimizer, direction, num_trials, name, hb_inte
         global elastic_id
         running = True
 
-        sc = util._find_spark().sparkContext
+        sc = hopsutil._find_spark().sparkContext
         app_id = str(sc.applicationId)
 
         num_executors = util.num_executors()
