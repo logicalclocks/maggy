@@ -1,5 +1,3 @@
-import random
-
 from maggy.optimizer import AbstractOptimizer
 from maggy.searchspace import Searchspace
 from maggy.trial import Trial
@@ -14,26 +12,9 @@ class RandomSearch(AbstractOptimizer):
             raise NotImplementedError(
                 "Searchspace needs at least one continuous parameter for random search.")
 
-        for _ in range(self.num_trials):
-
-            params = {}
-
-            for name, value in self.searchspace.names().items():
-
-                feasible_region = self.searchspace.get(name)
-
-                if value == Searchspace.DOUBLE:
-                    params[name] = random.uniform(feasible_region[0],
-                                                  feasible_region[1])
-                elif value == Searchspace.INTEGER:
-                    params[name] = random.randint(feasible_region[0],
-                                                  feasible_region[1])
-                elif value == Searchspace.DISCRETE:
-                    params[name] = random.choice(feasible_region)
-                elif value == Searchspace.CATEGORICAL:
-                    params[name] = random.choice(feasible_region)
-
-            self.trial_buffer.append(Trial(params))
+        list_of_random_trials = self.searchspace.get_random_parameter_values(self.num_trials)
+        for parameters_dict in list_of_random_trials:
+            self.trial_buffer.append(Trial(parameters_dict))
 
     def get_suggestion(self, trial=None):
         if self.trial_buffer:

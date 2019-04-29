@@ -16,6 +16,9 @@ from maggy.searchspace import Searchspace
 class ExperimentDriver(object):
 
     def __init__(self, searchspace, optimizer, direction, num_trials, name, num_executors, hb_interval, es_policy, es_interval, es_min):
+
+        self._final_store = []
+
         # perform type checks
         if isinstance(searchspace, Searchspace):
             self.searchspace = searchspace
@@ -25,7 +28,7 @@ class ExperimentDriver(object):
 
         if isinstance(optimizer, str):
             if optimizer.lower() == 'randomsearch':
-                self.optimizer = RandomSearch(num_trials, self.searchspace)
+                self.optimizer = RandomSearch(num_trials, self.searchspace, self._final_store)
             else:
                 raise Exception(
                     "Unknown Optimizer. Can't initialize experiment driver.")
@@ -56,7 +59,6 @@ class ExperimentDriver(object):
 
         self.direction = direction.lower()
         self._trial_store = {}
-        self._final_store = []
         self.num_executors = num_executors
         self._message_q = queue.Queue()
         self.name = name

@@ -1,4 +1,5 @@
 import json
+import random
 
 
 class Searchspace(object):
@@ -124,6 +125,34 @@ class Searchspace(object):
             return getattr(self, name)
 
         return default
+
+    def get_random_parameter_values(self, num):
+        """Generate random parameter dictionaries, e.g. to be used for initializing an optimizer.
+
+        :param num: number of random parameter dictionaries to be generated.
+        :type num: int
+        :raises ValueError: `num` is not an int.
+        :return: a list containing parameter dictionaries
+        :rtype: list
+        """
+        return_list = []
+        for _ in range(num):
+            params = {}
+            for name, value in self.names().items():
+                feasible_region = self.get(name)
+                if value == Searchspace.DOUBLE:
+                    params[name] = random.uniform(feasible_region[0],
+                                                  feasible_region[1])
+                elif value == Searchspace.INTEGER:
+                    params[name] = random.randint(feasible_region[0],
+                                                  feasible_region[1])
+                elif value == Searchspace.DISCRETE:
+                    params[name] = random.choice(feasible_region)
+                elif value == Searchspace.CATEGORICAL:
+                    params[name] = random.choice(feasible_region)
+            return_list.append(params)
+
+        return return_list
 
     def __contains__(self, name):
         return name in self._hparam_types

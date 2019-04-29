@@ -20,7 +20,7 @@ def test_random_search(sc):
 
     sp = Searchspace(argument_param=('DOUBLE', [1, 5]))
 
-    rs = RandomSearch(5, sp)
+    rs = RandomSearch(5, sp, [])
 
     exp_result = {'argument_param': 'DOUBLE'}
 
