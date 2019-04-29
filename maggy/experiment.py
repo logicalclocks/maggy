@@ -11,6 +11,7 @@ provided information.
 import socket
 import datetime
 import hops.util as hopsutil
+import hops.hdfs as hopshdfs
 
 from maggy import util
 from maggy.core import rpc
