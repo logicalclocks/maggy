@@ -244,6 +244,6 @@ class ExperimentDriver(object):
             'executors': self.num_executors,
             # TODO: add tensorboard logdir
             'logdir': 'UNDEFINED',
-            'hyperparameter_space': self.searchspace.to_dict(),
+            'hyperparameter_space': json.dumps(self.searchspace.to_dict()),
             # 'versioned_resources': versioned_resources,
             'description': self.description})
