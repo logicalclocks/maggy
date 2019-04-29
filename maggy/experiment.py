@@ -10,8 +10,11 @@ provided information.
 """
 import socket
 import datetime
+import os
+import json
 import hops.util as hopsutil
 import hops.hdfs as hopshdfs
+from datetime import datetime
 
 from maggy import util
 from maggy.core import rpc
@@ -25,6 +28,13 @@ run_id = None
 elastic_id = 1
 experiment_json = None
 driver_tensorboard_hdfs_path = None
+
+try:
+    hopsworks = os.environ['HOPSWORKS_VERSION']
+    print("You are running maggy on Hopsworks.")
+except KeyError:
+    print("You are running maggy in pure Spark mode.")
+    hopsworks = None
 
 
 def launch(map_fun, searchspace, optimizer, direction, num_trials, name, hb_interval=1, es_policy='median', es_interval=300, es_min=10, description=''):
@@ -106,8 +116,9 @@ def launch(map_fun, searchspace, optimizer, direction, num_trials, name, hb_inte
 
         experiment_json = exp_driver.json(sc)
 
-        hopsutil._put_elastic(hopshdfs.project_name(), app_id, elastic_id,
-            experiment_json)
+        if hopsworks is not None:
+            hopsutil._put_elastic(hopshdfs.project_name(), app_id, elastic_id,
+                experiment_json)
 
         # Force execution on executor, since GPU is located on executor
         job_start = datetime.datetime.now()
@@ -120,6 +131,7 @@ def launch(map_fun, searchspace, optimizer, direction, num_trials, name, hb_inte
         print("Finished Experiment \n")
 
     except:
+        _exception_handler()
         raise
     finally:
         # cleanup spark jobs
@@ -129,3 +141,18 @@ def launch(map_fun, searchspace, optimizer, direction, num_trials, name, hb_inte
         sc.setJobGroup("", "")
 
     return result
+
+def _exception_handler():
+    """
+
+    Returns:
+
+    """
+    global running
+    global experiment_json
+    if running and experiment_json != None:
+        experiment_json = json.loads(experiment_json)
+        experiment_json['status'] = "FAILED"
+        experiment_json['finished'] = datetime.now().isoformat()
+        experiment_json = json.dumps(experiment_json)
+        hopsutil._put_elastic(hopshdfs.project_name(), app_id, elastic_id, experiment_json)
