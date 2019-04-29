@@ -105,7 +105,7 @@ def launch(map_fun, searchspace, optimizer, direction, num_trials, name, hb_inte
 
         experiment_json = exp_driver.json(sc)
 
-        util._put_elastic(hopshdfs.project_name(), app_id, elastic_id,
+        hopsutil._put_elastic(hopshdfs.project_name(), app_id, elastic_id,
             experiment_json)
 
         # Force execution on executor, since GPU is located on executor
