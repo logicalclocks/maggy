@@ -1,8 +1,8 @@
-maggy
+Maggy
 =====
 
 Maggy is a framework for efficient asynchronous optimization of expensive
-black-box functions. Compared to existing frameworks, maggy is not bound to
+black-box functions on top of Apache Spark. Compared to existing frameworks, maggy is not bound to
 stage based optimization algorithms and therefore it is able to make extensive
 use of early stopping in order to achieve efficient resource utilization.
 
@@ -85,7 +85,7 @@ MNIST Example
 -------------
 
 For a full MNIST example with random search using Keras,
-see the Jupyter Notebook in `examples/`.
+see the Jupyter Notebook in the `examples` folder.
 
 Documentation
 -------------

@@ -13,7 +13,7 @@ def test_randomsearch_init():
 
     sp = Searchspace(argument_param=('DOUBLE', [1, 5]), param2=('integer', [3, 4]))
 
-    rs = RandomSearch(5, sp)
+    rs = RandomSearch(5, sp, [])
 
     assert rs.num_trials == 5
     assert rs.searchspace == sp
@@ -22,7 +22,7 @@ def test_randomsearch_initialize():
 
     sp = Searchspace(argument_param=('DOUBLE', [1, 5]), param2=('integer', [3, 4]))
 
-    rs = RandomSearch(5, sp)
+    rs = RandomSearch(5, sp, [])
 
     rs.initialize()
 
@@ -32,7 +32,7 @@ def test_rs_initialize2():
 
     sp = Searchspace(argument_param=('DISCRETE', [1, 5]))
 
-    rs = RandomSearch(5, sp)
+    rs = RandomSearch(5, sp, [])
 
     with pytest.raises(NotImplementedError) as excinfo:
         rs.initialize()
