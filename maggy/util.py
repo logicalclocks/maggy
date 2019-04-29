@@ -4,6 +4,12 @@ from pyspark.sql import SparkSession
 from pyspark import TaskContext
 
 
+def _get_directories(name):
+    """Checks if experiment directories exist in HDFS and if not creates them
+    """
+    pass
+
+
 def num_executors():
     """
     Get the number of executors configured for Jupyter

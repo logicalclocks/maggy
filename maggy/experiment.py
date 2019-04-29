@@ -26,7 +26,7 @@ experiment_json = None
 driver_tensorboard_hdfs_path = None
 
 
-def launch(map_fun, searchspace, optimizer, direction, num_trials, name, hb_interval=1, es_policy='median', es_interval=300, es_min=10):
+def launch(map_fun, searchspace, optimizer, direction, num_trials, name, hb_interval=1, es_policy='median', es_interval=300, es_min=10, description=''):
     """Launches a maggy experiment for hyperparameter optimization.
 
     Given a search space, objective and a model training procedure `map_fun`
@@ -60,6 +60,8 @@ def launch(map_fun, searchspace, optimizer, direction, num_trials, name, hb_inte
     :param es_min: Minimum number of trials finalized before checking for
         early stopping, defaults to 10
     :type es_min: int, optional
+    :param description: A longer description of the experiment.
+    :type description: str, optional
     :raises RuntimeError: An experiment is currently running.
     :return: A dictionary indicating the best trial and best hyperparameter
         combination with it's performance metric
@@ -95,11 +97,16 @@ def launch(map_fun, searchspace, optimizer, direction, num_trials, name, hb_inte
         # start experiment driver
         exp_driver = ExperimentDriver(searchspace, optimizer, direction,
             num_trials, name, num_executors, hb_interval, es_policy,
-            es_interval, es_min)
+            es_interval, es_min, description)
 
         exp_driver.init()
 
         server_addr = exp_driver.server_addr
+
+        experiment_json = exp_driver.json(sc)
+
+        util._put_elastic(hopshdfs.project_name(), app_id, elastic_id,
+            experiment_json)
 
         # Force execution on executor, since GPU is located on executor
         job_start = datetime.datetime.now()
@@ -116,6 +123,7 @@ def launch(map_fun, searchspace, optimizer, direction, num_trials, name, hb_inte
     finally:
         # cleanup spark jobs
         exp_driver.stop()
+        elastic_id +=1
         running = False
         sc.setJobGroup("", "")
 

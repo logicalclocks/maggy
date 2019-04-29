@@ -5,8 +5,12 @@ import queue
 import threading
 import datetime
 import json
+import os
 import hops.util as hopsutil
 import maggy.util as util
+from datetime import datetime
+from hops import constants
+from hops import hdfs
 from maggy.optimizer import AbstractOptimizer, RandomSearch
 from maggy.core import rpc
 from maggy.trial import Trial
@@ -16,10 +20,14 @@ from maggy.searchspace import Searchspace
 
 class ExperimentDriver(object):
 
+<<<<<<< HEAD
     def __init__(self, searchspace, optimizer, direction, num_trials, name, num_executors, hb_interval, es_policy, es_interval, es_min):
 
         self._final_store = []
 
+=======
+    def __init__(self, searchspace, optimizer, direction, num_trials, name, num_executors, hb_interval, es_policy, es_interval, es_min, description):
+>>>>>>> Add elastic call at exp beginning
         # perform type checks
         if isinstance(searchspace, Searchspace):
             self.searchspace = searchspace
@@ -69,6 +77,7 @@ class ExperimentDriver(object):
         self.hb_interval = hb_interval
         self.es_interval = es_interval
         self.es_min = es_min
+        self.description = description
         self.direction = direction.lower()
         self.server = rpc.Server(num_executors)
 
@@ -210,5 +219,31 @@ class ExperimentDriver(object):
         self.worker_done = True
         self.server.stop()
 
-    def experiment_json(self):
-        pass
+    def json(self, sc):
+        """Get all relevant experiment information in JSON format.
+        """
+        user = None
+        if constants.ENV_VARIABLES.HOPSWORKS_USER_ENV_VAR in os.environ:
+            user = os.environ[constants.ENV_VARIABLES.HOPSWORKS_USER_ENV_VAR]
+
+        if self.experiment_done:
+            status = "FINISHED"
+        else:
+            status = "RUNNING"
+
+        return json.dumps({'project': hdfs.project_name(),
+            'user': user,
+            'name': self.name,
+            'module': 'maggy',
+            'function': self.optimizer.__class__.__name__,
+            'status': status,
+            'app_id': str(sc.applicationId),
+            'start': datetime.now().isoformat(),
+            'memory_per_executor': str(sc._conf.get("spark.executor.memory")),
+            'gpus_per_executor': str(sc._conf.get("spark.executor.gpus")),
+            'executors': self.num_executors,
+            # TODO: add tensorboard logdir
+            'logdir': 'UNDEFINED',
+            'hyperparameter_space': self.searchspace.to_dict(),
+            # 'versioned_resources': versioned_resources,
+            'description': self.description})
