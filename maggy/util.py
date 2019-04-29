@@ -83,10 +83,3 @@ def _time_diff(task_start, task_end):
         return str(int(hours)) + ' hours, ' + str(int(minutes)) + ' minutes'
     else:
         return 'unknown time'
-
-class EarlyStopException(Exception):
-
-    def __init__(self, metric):
-        super().__init__()
-
-        self.metric = metric
