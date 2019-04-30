@@ -10,6 +10,14 @@ import secrets
 from maggy import util
 from maggy.trial import Trial
 
+import os
+from hops import constants
+from hops import tls
+from hops import util
+import json
+from pyspark.sql import SparkSession
+
+
 MAX_RETRIES = 3
 BUFSIZE = 1024 * 2
 
@@ -292,6 +300,12 @@ class Server(MessageSocket):
                 send['data'] = None
 
             MessageSocket.send(self, sock, send)
+        elif msg_type == 'LOG':
+                send = {}
+                send['type'] = "OK"
+                send['data'] = "Hello from Maggy"
+                MessageSocket.send(self, sock, send)
+                return
         else:
             # Prepare message
             send = {}
@@ -325,6 +339,32 @@ class Server(MessageSocket):
         host = util._get_ip_address()
         port = server_sock.getsockname()[1]
         addr = (host, port)
+
+        # register this driver with Hopsworks
+        sc = util._find_spark().sparkContext
+        app_id = str(sc.applicationId)
+        
+        method = constants.HTTP_CONFIG.HTTP_POST
+        connection = util._get_http_connection(https=True)
+        resource_url = constants.DELIMITERS.SLASH_DELIMITER + \
+                       constants.REST_CONFIG.HOPSWORKS_REST_RESOURCE + constants.DELIMITERS.SLASH_DELIMITER + \
+                       "maggy" + constants.DELIMITERS.SLASH_DELIMITER + "registerDriver" +
+                       constants.DELIMITERS.SLASH_DELIMITER + \
+                       app_id
+        json_contents = {"host_ip": host,
+                         "port": port,
+                         "app_id": app_id,
+                         "secret" : "abc"}
+        json_embeddable = json.dumps(json_contents)
+        headers = {constants.HTTP_CONFIG.HTTP_CONTENT_TYPE: constants.HTTP_CONFIG.HTTP_APPLICATION_JSON}
+        
+        response = util.send_request(connection, method, resource_url, body=json_embeddable, headers=headers)
+        resp_body = response.read()
+        response_object = json.loads(resp_body)
+
+        #
+        # TODO - store a variable that indicates that Hopsworks logging is not working
+        #
 
         def _listen(self, sock, driver):
             CONNECTIONS = []
@@ -510,7 +550,9 @@ class Client(MessageSocket):
         elif msg_type == 'ERR':
             print("Stopping experiment")
             self.done = True
-
+        elif msg_type == 'LOG':
+            return "log"
+            
     def finalize_metric(self, metric, reporter):
         # make sure heartbeat thread can't send between sending final metric
         # and resetting the reporter
@@ -518,3 +560,5 @@ class Client(MessageSocket):
             resp = self._request(self.sock, 'FINAL', metric, reporter.get_trial_id())
             reporter.reset()
         return resp
+
+    
