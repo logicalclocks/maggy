@@ -9,7 +9,6 @@ invoked it is also registered in the Experiments service along with the
 provided information.
 """
 import socket
-import datetime
 import os
 import json
 import hops.util as hopsutil
@@ -121,10 +120,10 @@ def launch(map_fun, searchspace, optimizer, direction, num_trials, name, hb_inte
                 experiment_json)
 
         # Force execution on executor, since GPU is located on executor
-        job_start = datetime.datetime.now()
+        job_start = datetime.now()
         nodeRDD.foreachPartition(trialexecutor._prepare_func(app_id, run_id,
             map_fun, server_addr, hb_interval))
-        job_end = datetime.datetime.now()
+        job_end = datetime.now()
 
         result = exp_driver.finalize(job_start, job_end)
 
