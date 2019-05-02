@@ -6,7 +6,7 @@ from maggy.core.reporter import Reporter
 from pyspark import TaskContext
 
 
-def _prepare_func(app_id, run_id, map_fun, server_addr, hb_interval):
+def _prepare_func(app_id, run_id, map_fun, server_addr, hb_interval, secret):
 
     def _wrapper_fun(iter):
         """
@@ -24,7 +24,7 @@ def _prepare_func(app_id, run_id, map_fun, server_addr, hb_interval):
         partition_id, task_attempt = util.get_partition_attempt_id()
 
         client = rpc.Client(server_addr, partition_id,
-                            task_attempt, hb_interval)
+                            task_attempt, hb_interval, secret)
         reporter = Reporter()
 
         try:

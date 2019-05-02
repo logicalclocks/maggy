@@ -368,7 +368,7 @@ class Client(MessageSocket):
     Args:
         :server_addr: a tuple of (host, port) pointing to the Server.
     """
-    def __init__(self, server_addr, partition_id, task_attempt, hb_interval):
+    def __init__(self, server_addr, partition_id, task_attempt, hb_interval, secret):
         # socket for main thread
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.connect(server_addr)
@@ -381,12 +381,14 @@ class Client(MessageSocket):
         self.partition_id = partition_id
         self.task_attempt = task_attempt
         self.hb_interval = hb_interval
+        self._secret = secret
 
     def _request(self, req_sock, msg_type, msg_data=None, trial_id=None):
         """Helper function to wrap msg w/ msg_type."""
         msg = {}
         msg['partition_id'] = self.partition_id
         msg['type'] = msg_type
+        msg['secret'] = self._secret
 
         if msg_type == 'FINAL' or msg_type == 'METRIC':
             msg['trial_id'] = trial_id

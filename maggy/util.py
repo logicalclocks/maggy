@@ -9,7 +9,6 @@ def _get_directories(name):
     """
     pass
 
-
 def num_executors():
     """
     Get the number of executors configured for Jupyter

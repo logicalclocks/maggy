@@ -3,9 +3,9 @@ The experiment driver implements the functionality for scheduling trials on magg
 """
 import queue
 import threading
-import datetime
 import json
 import os
+import secrets
 import hops.util as hopsutil
 import maggy.util as util
 from datetime import datetime
@@ -20,14 +20,9 @@ from maggy.searchspace import Searchspace
 
 class ExperimentDriver(object):
 
-<<<<<<< HEAD
-    def __init__(self, searchspace, optimizer, direction, num_trials, name, num_executors, hb_interval, es_policy, es_interval, es_min):
+    SECRET_BYTES = 16
 
-        self._final_store = []
-
-=======
     def __init__(self, searchspace, optimizer, direction, num_trials, name, num_executors, hb_interval, es_policy, es_interval, es_min, description):
->>>>>>> Add elastic call at exp beginning
         # perform type checks
         if isinstance(searchspace, Searchspace):
             self.searchspace = searchspace
@@ -80,6 +75,7 @@ class ExperimentDriver(object):
         self.description = description
         self.direction = direction.lower()
         self.server = rpc.Server(num_executors)
+        self._secret = self._generate_secret(ExperimentDriver.SECRET_BYTES)
 
     def init(self):
 
@@ -127,7 +123,7 @@ class ExperimentDriver(object):
 
         def _target_function(self):
 
-            time_earlystop_check = datetime.datetime.now()
+            time_earlystop_check = datetime.now()
 
             while not self.worker_done:
                 trial = None
@@ -137,8 +133,8 @@ class ExperimentDriver(object):
                 except:
                     msg = {'type': None}
 
-                if (datetime.datetime.now() - time_earlystop_check).total_seconds() >= self.es_interval:
-                    time_earlystop_check = datetime.datetime.now()
+                if (datetime.now() - time_earlystop_check).total_seconds() >= self.es_interval:
+                    time_earlystop_check = datetime.now()
 
                     # pass currently running trials to early stop component
                     if len(self._final_store) > self.es_min:
@@ -175,7 +171,7 @@ class ExperimentDriver(object):
                         trial.status = Trial.FINALIZED
                         trial.final_metric = msg['data']
                         trial.duration = hopsutil._time_diff(
-                            trial.start, datetime.datetime.now())
+                            trial.start, datetime.now())
 
                     # move trial to the finalized ones
                     self._final_store.append(trial)
@@ -191,7 +187,7 @@ class ExperimentDriver(object):
                         self.experiment_done = True
                     else:
                         with trial.lock:
-                            trial.start = datetime.datetime.now()
+                            trial.start = datetime.now()
                             trial.status = Trial.SCHEDULED
                             self.server.reservations.assign_trial(
                                 msg['partition_id'], trial.trial_id)
@@ -204,7 +200,7 @@ class ExperimentDriver(object):
                         self.experiment_done = True
                     else:
                         with trial.lock:
-                            trial.start = datetime.datetime.now()
+                            trial.start = datetime.now()
                             trial.status = Trial.SCHEDULED
                             self.server.reservations.assign_trial(
                                 msg['partition_id'], trial.trial_id)
@@ -247,3 +243,9 @@ class ExperimentDriver(object):
             'hyperparameter_space': json.dumps(self.searchspace.to_dict()),
             # 'versioned_resources': versioned_resources,
             'description': self.description})
+
+    def _generate_secret(self, nbytes):
+        """Generates a secret to be used by all clients during the experiment
+        to authenticate their messages with the experiment driver.
+        """
+        return secrets.token_hex(nbytes=nbytes)

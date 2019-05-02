@@ -11,8 +11,7 @@ provided information.
 import socket
 import os
 import json
-import hops.util as hopsutil
-import hops.hdfs as hopshdfs
+import atexit
 from datetime import datetime
 
 from maggy import util
@@ -31,6 +30,8 @@ driver_tensorboard_hdfs_path = None
 try:
     hopsworks = os.environ['HOPSWORKS_VERSION']
     print("You are running maggy on Hopsworks.")
+    import hops.util as hopsutil
+    import hops.hdfs as hopshdfs
 except KeyError:
     print("You are running maggy in pure Spark mode.")
     hopsworks = None
@@ -113,24 +114,29 @@ def launch(map_fun, searchspace, optimizer, direction, num_trials, name, hb_inte
 
         server_addr = exp_driver.server_addr
 
-        experiment_json = exp_driver.json(sc)
-
         if hopsworks is not None:
+            experiment_json = exp_driver.json(sc)
             hopsutil._put_elastic(hopshdfs.project_name(), app_id, elastic_id,
                 experiment_json)
 
         # Force execution on executor, since GPU is located on executor
         job_start = datetime.now()
         nodeRDD.foreachPartition(trialexecutor._prepare_func(app_id, run_id,
-            map_fun, server_addr, hb_interval))
+            map_fun, server_addr, hb_interval, exp_driver._secret))
         job_end = datetime.now()
+
+        if hopsworks is not None:
+            experiment_json = exp_driver.json(sc)
+            hopsutil._put_elastic(hopshdfs.project_name(), app_id, elastic_id,
+                experiment_json)
 
         result = exp_driver.finalize(job_start, job_end)
 
         print("Finished Experiment \n")
 
     except:
-        _exception_handler()
+        if hopsworks is not None:
+            _exception_handler()
         raise
     finally:
         # cleanup spark jobs
@@ -155,3 +161,21 @@ def _exception_handler():
         experiment_json['finished'] = datetime.now().isoformat()
         experiment_json = json.dumps(experiment_json)
         hopsutil._put_elastic(hopshdfs.project_name(), app_id, elastic_id, experiment_json)
+
+def _exit_handler():
+    """
+
+    Returns:
+
+    """
+    global running
+    global experiment_json
+    if running and experiment_json != None:
+        experiment_json = json.loads(experiment_json)
+        experiment_json['status'] = "KILLED"
+        experiment_json['finished'] = datetime.now().isoformat()
+        experiment_json = json.dumps(experiment_json)
+        hopsutil._put_elastic(hopshdfs.project_name(), app_id, elastic_id, experiment_json)
+
+if hopsworks is not None:
+    atexit.register(_exit_handler)
