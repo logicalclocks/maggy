@@ -25,7 +25,7 @@ elastic_id = 1
 experiment_json = None
 driver_tensorboard_hdfs_path = None
 
-if config.mode is not None:
+if config.mode is config.HOPSWORKS:
     import hops.util as hopsutil
     import hops.hdfs as hdfs
 
@@ -107,7 +107,7 @@ def launch(map_fun, searchspace, optimizer, direction, num_trials, name, hb_inte
 
         server_addr = exp_driver.server_addr
 
-        if config.mode is not None:
+        if config.mode is config.HOPSWORKS:
             experiment_json = exp_driver.json(sc)
             hopsutil._put_elastic(hdfs.project_name(), app_id, elastic_id,
                 experiment_json)
@@ -120,7 +120,7 @@ def launch(map_fun, searchspace, optimizer, direction, num_trials, name, hb_inte
 
         result = exp_driver.finalize(job_start, job_end)
 
-        if config.mode is not None:
+        if config.mode is config.HOPSWORKS:
             experiment_json = exp_driver.json(sc)
             hopsutil._put_elastic(hdfs.project_name(), app_id, elastic_id,
                 experiment_json)
@@ -128,7 +128,7 @@ def launch(map_fun, searchspace, optimizer, direction, num_trials, name, hb_inte
         print("Finished Experiment \n")
 
     except:
-        if config.mode is not None:
+        if config.mode is config.HOPSWORKS:
             _exception_handler()
         raise
     finally:

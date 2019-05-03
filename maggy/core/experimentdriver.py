@@ -14,7 +14,7 @@ from maggy.trial import Trial
 from maggy.earlystop import AbstractEarlyStop, MedianStoppingRule
 from maggy.searchspace import Searchspace
 
-if config.mode is not None:
+if config.mode is config.HOPSWORKS:
     from hops import constants
     from hops import hdfs
 
