@@ -4,7 +4,7 @@ API Module for the user to include in his training code.
 """
 import threading
 
-from maggy import util
+from maggy.core import exceptions
 
 class Reporter(object):
     """
@@ -24,7 +24,7 @@ class Reporter(object):
             # if stop == True -> raise exception to break training function
             self.metric = metric
             if self.stop:
-                raise util.EarlyStopException(metric)
+                raise exceptions.EarlyStopException(metric)
 
     def get_metric(self):
 

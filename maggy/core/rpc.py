@@ -5,7 +5,7 @@ import pickle
 import time
 import select
 import socket
-import hops.util as hopsutil
+import secrets
 
 from maggy import util
 from maggy.trial import Trial
@@ -322,7 +322,7 @@ class Server(MessageSocket):
         server_sock.listen(10)
 
         # hostname may not be resolvable but IP address probably will be
-        host = hopsutil._get_ip_address()
+        host = util._get_ip_address()
         port = server_sock.getsockname()[1]
         addr = (host, port)
 
@@ -341,6 +341,13 @@ class Server(MessageSocket):
                     else:
                         try:
                             msg = self.receive(sock)
+
+                            # raise exception if secret does not match
+                            # so client socket gets closed
+                            if not secrets.compare_digest(msg['secret'],
+                                                          exp_driver._secret):
+                                raise Exception
+
                             self._handle_message(sock, msg, driver)
                         except Exception as e:
                             _ = e
@@ -377,7 +384,7 @@ class Client(MessageSocket):
         self.hb_sock.connect(server_addr)
         self.server_addr = server_addr
         self.done = False
-        self.client_addr = (hopsutil._get_ip_address(), self.sock.getsockname()[1])
+        self.client_addr = (util._get_ip_address(), self.sock.getsockname()[1])
         self.partition_id = partition_id
         self.task_attempt = task_attempt
         self.hb_interval = hb_interval

@@ -15,9 +15,7 @@ import atexit
 from datetime import datetime
 
 from maggy import util
-from maggy.core import rpc
-from maggy.core import trialexecutor
-from maggy.core import ExperimentDriver
+from maggy.core import config, rpc, trialexecutor, ExperimentDriver
 from maggy.trial import Trial
 
 app_id = None
@@ -27,14 +25,9 @@ elastic_id = 1
 experiment_json = None
 driver_tensorboard_hdfs_path = None
 
-try:
-    hopsworks = os.environ['HOPSWORKS_VERSION']
-    print("You are running maggy on Hopsworks.")
+if config.mode is not None:
     import hops.util as hopsutil
-    import hops.hdfs as hopshdfs
-except KeyError:
-    print("You are running maggy in pure Spark mode.")
-    hopsworks = None
+    import hops.hdfs as hdfs
 
 
 def launch(map_fun, searchspace, optimizer, direction, num_trials, name, hb_interval=1, es_policy='median', es_interval=300, es_min=10, description=''):
@@ -91,7 +84,7 @@ def launch(map_fun, searchspace, optimizer, direction, num_trials, name, hb_inte
         global elastic_id
         running = True
 
-        sc = hopsutil._find_spark().sparkContext
+        sc = util._find_spark().sparkContext
         app_id = str(sc.applicationId)
 
         num_executors = util.num_executors()
@@ -114,9 +107,9 @@ def launch(map_fun, searchspace, optimizer, direction, num_trials, name, hb_inte
 
         server_addr = exp_driver.server_addr
 
-        if hopsworks is not None:
+        if config.mode is not None:
             experiment_json = exp_driver.json(sc)
-            hopsutil._put_elastic(hopshdfs.project_name(), app_id, elastic_id,
+            hopsutil._put_elastic(hdfs.project_name(), app_id, elastic_id,
                 experiment_json)
 
         # Force execution on executor, since GPU is located on executor
@@ -125,17 +118,17 @@ def launch(map_fun, searchspace, optimizer, direction, num_trials, name, hb_inte
             map_fun, server_addr, hb_interval, exp_driver._secret))
         job_end = datetime.now()
 
-        if hopsworks is not None:
-            experiment_json = exp_driver.json(sc)
-            hopsutil._put_elastic(hopshdfs.project_name(), app_id, elastic_id,
-                experiment_json)
-
         result = exp_driver.finalize(job_start, job_end)
+
+        if config.mode is not None:
+            experiment_json = exp_driver.json(sc)
+            hopsutil._put_elastic(hdfs.project_name(), app_id, elastic_id,
+                experiment_json)
 
         print("Finished Experiment \n")
 
     except:
-        if hopsworks is not None:
+        if config.mode is not None:
             _exception_handler()
         raise
     finally:
@@ -160,7 +153,7 @@ def _exception_handler():
         experiment_json['status'] = "FAILED"
         experiment_json['finished'] = datetime.now().isoformat()
         experiment_json = json.dumps(experiment_json)
-        hopsutil._put_elastic(hopshdfs.project_name(), app_id, elastic_id, experiment_json)
+        hopsutil._put_elastic(hdfs.project_name(), app_id, elastic_id, experiment_json)
 
 def _exit_handler():
     """
@@ -175,7 +168,7 @@ def _exit_handler():
         experiment_json['status'] = "KILLED"
         experiment_json['finished'] = datetime.now().isoformat()
         experiment_json = json.dumps(experiment_json)
-        hopsutil._put_elastic(hopshdfs.project_name(), app_id, elastic_id, experiment_json)
+        hopsutil._put_elastic(hdfs.project_name(), app_id, elastic_id, experiment_json)
 
-if hopsworks is not None:
+if config.mode is not None:
     atexit.register(_exit_handler)

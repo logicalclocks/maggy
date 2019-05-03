@@ -6,23 +6,27 @@ import threading
 import json
 import os
 import secrets
-import hops.util as hopsutil
 import maggy.util as util
 from datetime import datetime
-from hops import constants
-from hops import hdfs
 from maggy.optimizer import AbstractOptimizer, RandomSearch
-from maggy.core import rpc
+from maggy.core import config, rpc
 from maggy.trial import Trial
 from maggy.earlystop import AbstractEarlyStop, MedianStoppingRule
 from maggy.searchspace import Searchspace
 
+if config.mode is not None:
+    from hops import constants
+    from hops import hdfs
+
 
 class ExperimentDriver(object):
 
-    SECRET_BYTES = 16
+    SECRET_BYTES = 8
 
     def __init__(self, searchspace, optimizer, direction, num_trials, name, num_executors, hb_interval, es_policy, es_interval, es_min, description):
+
+        self._final_store = []
+
         # perform type checks
         if isinstance(searchspace, Searchspace):
             self.searchspace = searchspace
@@ -76,6 +80,8 @@ class ExperimentDriver(object):
         self.direction = direction.lower()
         self.server = rpc.Server(num_executors)
         self._secret = self._generate_secret(ExperimentDriver.SECRET_BYTES)
+        self.result = None
+        self.job_start = datetime.now()
 
     def init(self):
 
@@ -89,7 +95,9 @@ class ExperimentDriver(object):
 
         result = self.optimizer.finalize_experiment(self._final_store)
 
-        self.duration = hopsutil._time_diff(job_start, job_end)
+        self.job_end = datetime.now()
+
+        self.duration = util._time_diff(self.job_start, self.job_end)
 
         if self.direction == 'max':
             results = '\n------ ' + str(self.optimizer.__class__.__name__) + ' results ------ direction(' + self.direction + ') \n' \
@@ -108,7 +116,9 @@ class ExperimentDriver(object):
             # TODO: write to hdfs
             print(results)
 
-        return result
+        self.result = result
+
+        return self.result
 
     def get_trial(self, trial_id):
         return self._trial_store[trial_id]
@@ -170,7 +180,7 @@ class ExperimentDriver(object):
                     with trial.lock:
                         trial.status = Trial.FINALIZED
                         trial.final_metric = msg['data']
-                        trial.duration = hopsutil._time_diff(
+                        trial.duration = util._time_diff(
                             trial.start, datetime.now())
 
                     # move trial to the finalized ones
@@ -222,19 +232,13 @@ class ExperimentDriver(object):
         if constants.ENV_VARIABLES.HOPSWORKS_USER_ENV_VAR in os.environ:
             user = os.environ[constants.ENV_VARIABLES.HOPSWORKS_USER_ENV_VAR]
 
-        if self.experiment_done:
-            status = "FINISHED"
-        else:
-            status = "RUNNING"
-
-        return json.dumps({'project': hdfs.project_name(),
+        experiment_json = {'project': hdfs.project_name(),
             'user': user,
             'name': self.name,
             'module': 'maggy',
             'function': self.optimizer.__class__.__name__,
-            'status': status,
             'app_id': str(sc.applicationId),
-            'start': datetime.now().isoformat(),
+            'start': self.job_start.isoformat(),
             'memory_per_executor': str(sc._conf.get("spark.executor.memory")),
             'gpus_per_executor': str(sc._conf.get("spark.executor.gpus")),
             'executors': self.num_executors,
@@ -242,7 +246,23 @@ class ExperimentDriver(object):
             'logdir': 'UNDEFINED',
             'hyperparameter_space': json.dumps(self.searchspace.to_dict()),
             # 'versioned_resources': versioned_resources,
-            'description': self.description})
+            'description': self.description}
+
+        if self.experiment_done:
+            experiment_json['status'] = "FINISHED"
+            experiment_json['finished'] = self.job_end.isoformat()
+            experiment_json['duration'] = self.duration
+            if self.direction == 'max':
+                experiment_json['hyperparameter'] = json.dumps(self.result['max_hp'])
+                experiment_json['metric'] = self.result['max_val']
+            elif self.direction == 'min':
+                experiment_json['hyperparameter'] = json.dumps(self.result['min_hp'])
+                experiment_json['metric'] = self.result['min_val']
+
+        else:
+            experiment_json['status'] = "RUNNING"
+
+        return json.dumps(experiment_json)
 
     def _generate_secret(self, nbytes):
         """Generates a secret to be used by all clients during the experiment
