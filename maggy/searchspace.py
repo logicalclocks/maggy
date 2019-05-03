@@ -19,6 +19,7 @@ class Searchspace(object):
     or the discrete possible values for the types DISCRETE and CATEGORICAL.
 
     Sample usage:
+
     >>> # Define Searchspace
     >>> from maggy import Searchspace
     >>> # The searchspace can be instantiated with parameters
@@ -27,6 +28,7 @@ class Searchspace(object):
     >>> sp.add('dropout', ('DOUBLE', [0.01, 0.99]))
 
     The `Searchspace` object can also be initialized from a python dictionary:
+
     >>> sp_dict = sp.to_dict()
     >>> sp_new = Searchspace(**sp_dict)
 

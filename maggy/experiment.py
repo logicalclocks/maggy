@@ -170,5 +170,5 @@ def _exit_handler():
         experiment_json = json.dumps(experiment_json)
         hopsutil._put_elastic(hdfs.project_name(), app_id, elastic_id, experiment_json)
 
-if config.mode is not None:
+if config.mode is config.HOPSWORKS:
     atexit.register(_exit_handler)
