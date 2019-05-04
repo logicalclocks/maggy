@@ -3,9 +3,13 @@ from pyspark.sql import SparkSession
 from pyspark import TaskContext
 
 
+def _get_directories(name):
+    """Checks if experiment directories exist in HDFS and if not creates them
+    """
+    pass
+
 def _find_spark():
     """
-
     Returns:
         SparkSession
     """
@@ -14,7 +18,6 @@ def _find_spark():
 def _get_ip_address():
     """
     Simple utility to get host IP address
-
     Returns:
         x
     """
@@ -30,7 +33,6 @@ def _get_ip_address():
 def num_executors():
     """
     Get the number of executors configured for Jupyter
-
     Returns:
         Number of configured executors for Jupyter
     """
@@ -43,12 +45,9 @@ def num_executors():
 def get_partition_attempt_id():
     """Returns partitionId and attemptNumber of the task context, when invoked
     on a spark executor.
-
     PartitionId is ID of the RDD partition that is computed by this task.
-
     The first task attempt will be assigned attemptNumber = 0, and subsequent
     attempts will have increasing attempt numbers.
-
     Returns:
         partitionId, attemptNumber -- [description]
     """
@@ -64,9 +63,7 @@ def _time_diff(task_start, task_end):
     Args:
         :task_start:
         :tast_end:
-
     Returns:
-
     """
     time_diff = task_end - task_start
 
@@ -83,10 +80,3 @@ def _time_diff(task_start, task_end):
         return str(int(hours)) + ' hours, ' + str(int(minutes)) + ' minutes'
     else:
         return 'unknown time'
-
-class EarlyStopException(Exception):
-
-    def __init__(self, metric):
-        super().__init__()
-
-        self.metric = metric

@@ -1,12 +1,12 @@
 import socket
 import time
 from maggy import util
-from maggy.core import rpc
+from maggy.core import rpc, exceptions
 from maggy.core.reporter import Reporter
 from pyspark import TaskContext
 
 
-def _prepare_func(app_id, run_id, map_fun, server_addr, hb_interval):
+def _prepare_func(app_id, run_id, map_fun, server_addr, hb_interval, secret):
 
     def _wrapper_fun(iter):
         """
@@ -24,7 +24,7 @@ def _prepare_func(app_id, run_id, map_fun, server_addr, hb_interval):
         partition_id, task_attempt = util.get_partition_attempt_id()
 
         client = rpc.Client(server_addr, partition_id,
-                            task_attempt, hb_interval)
+                            task_attempt, hb_interval, secret)
         reporter = Reporter()
 
         try:
@@ -58,7 +58,7 @@ def _prepare_func(app_id, run_id, map_fun, server_addr, hb_interval):
                     print("Starting Trial: {}".format(trial_id))
                     print("Parameter Combination: {}".format(parameters))
                     retval = map_fun(**parameters, reporter=reporter)
-                except util.EarlyStopException as e:
+                except exceptions.EarlyStopException as e:
                     retval = e.metric
                     print("Early Stopped Trial.")
                 finally:

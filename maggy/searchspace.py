@@ -18,6 +18,20 @@ class Searchspace(object):
     and end point of of the feasible interval for DOUBLE and INTEGER,
     or the discrete possible values for the types DISCRETE and CATEGORICAL.
 
+    Sample usage:
+
+    >>> # Define Searchspace
+    >>> from maggy import Searchspace
+    >>> # The searchspace can be instantiated with parameters
+    >>> sp = Searchspace(kernel=('INTEGER', [2, 8]), pool=('INTEGER', [2, 8]))
+    >>> # Or additional parameters can be added one by one
+    >>> sp.add('dropout', ('DOUBLE', [0.01, 0.99]))
+
+    The `Searchspace` object can also be initialized from a python dictionary:
+
+    >>> sp_dict = sp.to_dict()
+    >>> sp_new = Searchspace(**sp_dict)
+
     The parameter names are added as attributes of `Searchspace` object,
     so they can be accessed directly with the dot notation
     `searchspace._name_`.

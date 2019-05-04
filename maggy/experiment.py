@@ -9,26 +9,28 @@ invoked it is also registered in the Experiments service along with the
 provided information.
 """
 import socket
-import datetime
+import os
+import json
+import atexit
+from datetime import datetime
 
 from maggy import util
-from maggy.core import rpc
-from maggy.core import trialexecutor
-from maggy.core import ExperimentDriver
+from maggy.core import config, rpc, trialexecutor, ExperimentDriver
 from maggy.trial import Trial
 
 app_id = None
 running = False
-
-# TODO: this should be inferred from HDFS checkpoints
-run_id = 0
-
+run_id = None
 elastic_id = 1
 experiment_json = None
 driver_tensorboard_hdfs_path = None
 
+if config.mode is config.HOPSWORKS:
+    import hops.util as hopsutil
+    import hops.hdfs as hdfs
 
-def launch(map_fun, searchspace, optimizer, direction, num_trials, name, hb_interval=1, es_policy='median', es_interval=300, es_min=10):
+
+def launch(map_fun, searchspace, optimizer, direction, num_trials, name, hb_interval=1, es_policy='median', es_interval=300, es_min=10, description=''):
     """Launches a maggy experiment for hyperparameter optimization.
 
     Given a search space, objective and a model training procedure `map_fun`
@@ -62,6 +64,8 @@ def launch(map_fun, searchspace, optimizer, direction, num_trials, name, hb_inte
     :param es_min: Minimum number of trials finalized before checking for
         early stopping, defaults to 10
     :type es_min: int, optional
+    :param description: A longer description of the experiment.
+    :type description: str, optional
     :raises RuntimeError: An experiment is currently running.
     :return: A dictionary indicating the best trial and best hyperparameter
         combination with it's performance metric
@@ -70,8 +74,7 @@ def launch(map_fun, searchspace, optimizer, direction, num_trials, name, hb_inte
     assert num_trials > 0, "number of trials should be greater than zero"
 
     global running
-    # move run_id to the class of the optimizer
-    # global run_id
+
     if running:
         raise RuntimeError("An experiment is currently running.")
 
@@ -98,28 +101,74 @@ def launch(map_fun, searchspace, optimizer, direction, num_trials, name, hb_inte
         # start experiment driver
         exp_driver = ExperimentDriver(searchspace, optimizer, direction,
             num_trials, name, num_executors, hb_interval, es_policy,
-            es_interval, es_min)
+            es_interval, es_min, description)
 
         exp_driver.init()
 
         server_addr = exp_driver.server_addr
 
+        if config.mode is config.HOPSWORKS:
+            experiment_json = exp_driver.json(sc)
+            hopsutil._put_elastic(hdfs.project_name(), app_id, elastic_id,
+                experiment_json)
+
         # Force execution on executor, since GPU is located on executor
-        job_start = datetime.datetime.now()
+        job_start = datetime.now()
         nodeRDD.foreachPartition(trialexecutor._prepare_func(app_id, run_id,
-            map_fun, server_addr, hb_interval))
-        job_end = datetime.datetime.now()
+            map_fun, server_addr, hb_interval, exp_driver._secret))
+        job_end = datetime.now()
 
         result = exp_driver.finalize(job_start, job_end)
+
+        if config.mode is config.HOPSWORKS:
+            experiment_json = exp_driver.json(sc)
+            hopsutil._put_elastic(hdfs.project_name(), app_id, elastic_id,
+                experiment_json)
 
         print("Finished Experiment \n")
 
     except:
+        if config.mode is config.HOPSWORKS:
+            _exception_handler()
         raise
     finally:
         # cleanup spark jobs
         exp_driver.stop()
+        elastic_id +=1
         running = False
         sc.setJobGroup("", "")
 
     return result
+
+def _exception_handler():
+    """
+
+    Returns:
+
+    """
+    global running
+    global experiment_json
+    if running and experiment_json != None:
+        experiment_json = json.loads(experiment_json)
+        experiment_json['status'] = "FAILED"
+        experiment_json['finished'] = datetime.now().isoformat()
+        experiment_json = json.dumps(experiment_json)
+        hopsutil._put_elastic(hdfs.project_name(), app_id, elastic_id, experiment_json)
+
+def _exit_handler():
+    """
+
+    Returns:
+
+    """
+    global running
+    global experiment_json
+    if running and experiment_json != None:
+        experiment_json = json.loads(experiment_json)
+        experiment_json['status'] = "KILLED"
+        experiment_json['finished'] = datetime.now().isoformat()
+        experiment_json = json.dumps(experiment_json)
+        hopsutil._put_elastic(hdfs.project_name(), app_id, elastic_id, experiment_json)
+
+if config.mode is config.HOPSWORKS:
+    atexit.register(_exit_handler)

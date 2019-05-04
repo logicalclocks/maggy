@@ -3,19 +3,27 @@ The experiment driver implements the functionality for scheduling trials on magg
 """
 import queue
 import threading
-import datetime
 import json
+import os
+import secrets
 import maggy.util as util
+from datetime import datetime
 from maggy.optimizer import AbstractOptimizer, RandomSearch
-from maggy.core import rpc
+from maggy.core import config, rpc
 from maggy.trial import Trial
 from maggy.earlystop import AbstractEarlyStop, MedianStoppingRule
 from maggy.searchspace import Searchspace
 
+if config.mode is config.HOPSWORKS:
+    from hops import constants
+    from hops import hdfs
+
 
 class ExperimentDriver(object):
 
-    def __init__(self, searchspace, optimizer, direction, num_trials, name, num_executors, hb_interval, es_policy, es_interval, es_min):
+    SECRET_BYTES = 8
+
+    def __init__(self, searchspace, optimizer, direction, num_trials, name, num_executors, hb_interval, es_policy, es_interval, es_min, description):
 
         self._final_store = []
 
@@ -68,8 +76,12 @@ class ExperimentDriver(object):
         self.hb_interval = hb_interval
         self.es_interval = es_interval
         self.es_min = es_min
+        self.description = description
         self.direction = direction.lower()
         self.server = rpc.Server(num_executors)
+        self._secret = self._generate_secret(ExperimentDriver.SECRET_BYTES)
+        self.result = None
+        self.job_start = datetime.now()
 
     def init(self):
 
@@ -83,7 +95,9 @@ class ExperimentDriver(object):
 
         result = self.optimizer.finalize_experiment(self._final_store)
 
-        self.duration = util._time_diff(job_start, job_end)
+        self.job_end = datetime.now()
+
+        self.duration = util._time_diff(self.job_start, self.job_end)
 
         if self.direction == 'max':
             results = '\n------ ' + str(self.optimizer.__class__.__name__) + ' results ------ direction(' + self.direction + ') \n' \
@@ -102,7 +116,9 @@ class ExperimentDriver(object):
             # TODO: write to hdfs
             print(results)
 
-        return result
+        self.result = result
+
+        return self.result
 
     def get_trial(self, trial_id):
         return self._trial_store[trial_id]
@@ -117,7 +133,7 @@ class ExperimentDriver(object):
 
         def _target_function(self):
 
-            time_earlystop_check = datetime.datetime.now()
+            time_earlystop_check = datetime.now()
 
             while not self.worker_done:
                 trial = None
@@ -127,8 +143,8 @@ class ExperimentDriver(object):
                 except:
                     msg = {'type': None}
 
-                if (datetime.datetime.now() - time_earlystop_check).total_seconds() >= self.es_interval:
-                    time_earlystop_check = datetime.datetime.now()
+                if (datetime.now() - time_earlystop_check).total_seconds() >= self.es_interval:
+                    time_earlystop_check = datetime.now()
 
                     # pass currently running trials to early stop component
                     if len(self._final_store) > self.es_min:
@@ -165,7 +181,7 @@ class ExperimentDriver(object):
                         trial.status = Trial.FINALIZED
                         trial.final_metric = msg['data']
                         trial.duration = util._time_diff(
-                            trial.start, datetime.datetime.now())
+                            trial.start, datetime.now())
 
                     # move trial to the finalized ones
                     self._final_store.append(trial)
@@ -181,7 +197,7 @@ class ExperimentDriver(object):
                         self.experiment_done = True
                     else:
                         with trial.lock:
-                            trial.start = datetime.datetime.now()
+                            trial.start = datetime.now()
                             trial.status = Trial.SCHEDULED
                             self.server.reservations.assign_trial(
                                 msg['partition_id'], trial.trial_id)
@@ -194,7 +210,7 @@ class ExperimentDriver(object):
                         self.experiment_done = True
                     else:
                         with trial.lock:
-                            trial.start = datetime.datetime.now()
+                            trial.start = datetime.now()
                             trial.status = Trial.SCHEDULED
                             self.server.reservations.assign_trial(
                                 msg['partition_id'], trial.trial_id)
@@ -209,5 +225,47 @@ class ExperimentDriver(object):
         self.worker_done = True
         self.server.stop()
 
-    def experiment_json(self):
-        pass
+    def json(self, sc):
+        """Get all relevant experiment information in JSON format.
+        """
+        user = None
+        if constants.ENV_VARIABLES.HOPSWORKS_USER_ENV_VAR in os.environ:
+            user = os.environ[constants.ENV_VARIABLES.HOPSWORKS_USER_ENV_VAR]
+
+        experiment_json = {'project': hdfs.project_name(),
+            'user': user,
+            'name': self.name,
+            'module': 'maggy',
+            'function': self.optimizer.__class__.__name__,
+            'app_id': str(sc.applicationId),
+            'start': self.job_start.isoformat(),
+            'memory_per_executor': str(sc._conf.get("spark.executor.memory")),
+            'gpus_per_executor': str(sc._conf.get("spark.executor.gpus")),
+            'executors': self.num_executors,
+            # TODO: add tensorboard logdir
+            'logdir': 'UNDEFINED',
+            'hyperparameter_space': json.dumps(self.searchspace.to_dict()),
+            # 'versioned_resources': versioned_resources,
+            'description': self.description}
+
+        if self.experiment_done:
+            experiment_json['status'] = "FINISHED"
+            experiment_json['finished'] = self.job_end.isoformat()
+            experiment_json['duration'] = self.duration
+            if self.direction == 'max':
+                experiment_json['hyperparameter'] = json.dumps(self.result['max_hp'])
+                experiment_json['metric'] = self.result['max_val']
+            elif self.direction == 'min':
+                experiment_json['hyperparameter'] = json.dumps(self.result['min_hp'])
+                experiment_json['metric'] = self.result['min_val']
+
+        else:
+            experiment_json['status'] = "RUNNING"
+
+        return json.dumps(experiment_json)
+
+    def _generate_secret(self, nbytes):
+        """Generates a secret to be used by all clients during the experiment
+        to authenticate their messages with the experiment driver.
+        """
+        return secrets.token_hex(nbytes=nbytes)
