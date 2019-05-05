@@ -269,3 +269,43 @@ class ExperimentDriver(object):
         to authenticate their messages with the experiment driver.
         """
         return secrets.token_hex(nbytes=nbytes)
+
+    def _update_result(self, trial):
+        """Given a finalized trial updates the current result's best and
+        worst trial.
+        """
+
+        metric = trial.final_metric
+        param_string = trial.params
+        trial_id = trial.trial_id
+
+        # First finalized trial
+        if self.result is None:
+            self.result = {'max_id': trial_id, 'max_val': metric,
+                'max_hp': param_string, 'min_id': trial_id,
+                'min_val': metric, 'min_hp': param_string,
+                'avg': metric, 'metric_list': [metric], 'num_trials': 1,
+                'early_stopped': 0}
+
+            if trial.early_stop:
+                self.result['early_stopped'] += 1
+
+            return
+
+        if metric > self.result['max_val']:
+            self.result['max_val'] = metric
+            self.result['max_id'] = trial_id
+            self.result['max_hp'] = param_string
+        if metric < self.result['min_val']:
+            self.result['min_val'] = metric
+            self.result['min_id'] = trial_id
+            self.result['min_hp'] = param_string
+
+        # update average
+        self.result['metric_list'].append(metric)
+        self.result['num_trials'] += 1
+        self.result['avg'] = sum(self.result['metric_list'])/float(
+            len(self.result['metric_list']))
+
+        if trial.early_stop:
+                self.result['early_stopped'] += 1
