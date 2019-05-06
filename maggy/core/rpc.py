@@ -335,7 +335,8 @@ class Server(MessageSocket):
         server_sock.bind(('', 0))
         server_sock.listen(10)
 
-        print("Maggy getting Hopsworks Ip/Port")
+        from hops import hdfs
+        hdfs.log("Maggy getting Hopsworks Ip/Port")
         # hostname may not be resolvable but IP address probably will be
         host = util._get_ip_address()
         port = server_sock.getsockname()[1]
@@ -346,7 +347,7 @@ class Server(MessageSocket):
         sc = util._find_spark().sparkContext
         app_id = str(sc.applicationId)
 
-        print("Maggy getting Hopsworks Endpoint")
+        hdfs.log("Maggy getting Hopsworks Endpoint")
         method = constants.HTTP_CONFIG.HTTP_POST
         connection = util._get_http_connection(https=True)
         resource_url = constants.DELIMITERS.SLASH_DELIMITER + \
@@ -361,12 +362,12 @@ class Server(MessageSocket):
         json_embeddable = json.dumps(json_contents)
         headers = {constants.HTTP_CONFIG.HTTP_CONTENT_TYPE: constants.HTTP_CONFIG.HTTP_APPLICATION_JSON}
 
-        print("Maggy registering Driver with Hopsworks")        
+        hdfs.log("Maggy registering Driver with Hopsworks")        
         response = util.send_request(connection, method, resource_url, body=json_embeddable, headers=headers)
         resp_body = response.read()
         response_object = json.loads(resp_body)
 
-        print("Maggy has registered its Driver with Hopsworks")                
+        hdfs.log("Maggy has registered its Driver with Hopsworks")                
         #
         # TODO - store a variable that indicates that Hopsworks logging is not working
         #
