@@ -104,7 +104,7 @@ class ExperimentDriver(object):
                 'BEST combination ' + json.dumps(self.result['max_hp']) + ' -- metric ' + str(self.result['max_val']) + '\n' \
                 'WORST combination ' + json.dumps(self.result['min_hp']) + ' -- metric ' + str(self.result['min_val']) + '\n' \
                 'AVERAGE metric -- ' + str(self.result['avg']) + '\n' \
-                'EARLY STOPPED Trials -- ' str(self.result['early_stopped']) + '\n' \
+                'EARLY STOPPED Trials -- ' + str(self.result['early_stopped']) + '\n' \
                 'Total job time ' + self.duration + '\n'
             # TODO: write to hdfs
             print(results)
@@ -113,7 +113,7 @@ class ExperimentDriver(object):
                 'BEST combination ' + json.dumps(self.result['min_hp']) + ' -- metric ' + str(self.result['min_val']) + '\n' \
                 'WORST combination ' + json.dumps(self.result['max_hp']) + ' -- metric ' + str(self.result['max_val']) + '\n' \
                 'AVERAGE metric -- ' + str(self.result['avg']) + '\n' \
-                'EARLY STOPPED Trials -- ' str(self.result['early_stopped']) + '\n' \
+                'EARLY STOPPED Trials -- ' + str(self.result['early_stopped']) + '\n' \
                 'Total job time ' + self.duration + '\n'
             # TODO: write to hdfs
             print(results)
