@@ -1,12 +1,20 @@
 import socket
 import time
-from maggy import util
-from maggy.core import rpc, exceptions
+from maggy import util, tensorboard
+from maggy.core import rpc, exceptions, config
 from maggy.core.reporter import Reporter
 from pyspark import TaskContext
 
+if config.mode is config.HOPSWORKS:
+    import hops.util as hopsutil
+    import hops.hdfs as hdfs
+    import tensorflow as tf
+    from tensorboard.plugins.hparams import api_pb2
+    from tensorboard.plugins.hparams import summary
+    from tensorboard.plugins.hparams import summary_v2
 
-def _prepare_func(app_id, run_id, map_fun, server_addr, hb_interval, secret):
+
+def _prepare_func(app_id, run_id, map_fun, server_addr, hb_interval, secret, app_dir):
 
     def _wrapper_fun(iter):
         """
@@ -52,6 +60,11 @@ def _prepare_func(app_id, run_id, map_fun, server_addr, hb_interval, secret):
             while not client.done:
 
                 reporter.set_trial_id(trial_id)
+
+                if config.mode is config.HOPSWORKS:
+                    logdir = app_dir + '/trials/' + trial_id
+                    tensorboard._register(logdir)
+                    hdfs.mkdir(logdir)
 
                 try:
                     print("--------------------------------")
