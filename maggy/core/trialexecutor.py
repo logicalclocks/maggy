@@ -9,9 +9,11 @@ if config.mode is config.HOPSWORKS:
     import hops.util as hopsutil
     import hops.hdfs as hdfs
     import tensorflow as tf
-    from tensorboard.plugins.hparams import api_pb2
-    from tensorboard.plugins.hparams import summary
-    from tensorboard.plugins.hparams import summary_v2
+
+    if config.tf_version >= 2:
+        from tensorboard.plugins.hparams import api_pb2
+        from tensorboard.plugins.hparams import summary
+        from tensorboard.plugins.hparams import summary_v2
 
 
 def _prepare_func(app_id, run_id, map_fun, server_addr, hb_interval, secret, app_dir):
