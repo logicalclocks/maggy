@@ -14,7 +14,7 @@ import json
 import atexit
 from datetime import datetime
 
-from maggy import util
+from maggy import util, tensorboard
 from maggy.core import config, rpc, trialexecutor, ExperimentDriver
 from maggy.trial import Trial
 
@@ -23,7 +23,6 @@ running = False
 run_id = None
 elastic_id = 1
 experiment_json = None
-driver_tensorboard_hdfs_path = None
 
 if config.mode is config.HOPSWORKS:
     import hops.util as hopsutil
@@ -82,10 +81,23 @@ def launch(map_fun, searchspace, optimizer, direction, num_trials, name, hb_inte
         global app_id
         global experiment_json
         global elastic_id
+        global run_id
         running = True
 
         sc = util._find_spark().sparkContext
         app_id = str(sc.applicationId)
+
+        if config.mode is config.HOPSWORKS:
+            exp_dir = util._get_experiments_dir(name)
+            # get run_id and run_dir
+            run_id, run_dir = util._get_run_dir(name)
+            # trial dir will be for tensorboard
+            app_dir, trial_dir, log_dir, result_dir = util._init_run(run_dir, app_id)
+            hdfs.dump('creating dirs worked', log_dir+'/maggy.log')
+            tensorboard._register(trial_dir)
+            hdfs.dump('registering trial dir worked', log_dir+'/maggy.log')
+            tensorboard.write_hparams_proto(trial_dir, searchspace)
+            hdfs.dump('writing proto buf worked', log_dir+'/maggy.log')
 
         num_executors = util.num_executors()
 
@@ -93,6 +105,8 @@ def launch(map_fun, searchspace, optimizer, direction, num_trials, name, hb_inte
             num_executors = num_trials
 
         nodeRDD = sc.parallelize(range(num_executors), num_executors)
+
+        hdfs.dump('rdd worked', log_dir+'/maggy.log')
 
         # Make SparkUI intuitive by grouping jobs
         sc.setJobGroup("Maggy Experiment", "{}".format(name))
@@ -115,7 +129,7 @@ def launch(map_fun, searchspace, optimizer, direction, num_trials, name, hb_inte
         # Force execution on executor, since GPU is located on executor
         job_start = datetime.now()
         nodeRDD.foreachPartition(trialexecutor._prepare_func(app_id, run_id,
-            map_fun, server_addr, hb_interval, exp_driver._secret))
+            map_fun, server_addr, hb_interval, exp_driver._secret, app_dir))
         job_end = datetime.now()
 
         result = exp_driver.finalize(job_start, job_end)
