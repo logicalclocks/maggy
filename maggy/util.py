@@ -2,11 +2,61 @@ import socket
 from pyspark.sql import SparkSession
 from pyspark import TaskContext
 
+from maggy.core import config
 
-def _get_directories(name):
-    """Checks if experiment directories exist in HDFS and if not creates them
+if config.mode is config.HOPSWORKS:
+    import hops.hdfs as hopshdfs
+
+
+def _get_experiments_dir(name):
+    """Checks if a directory for the given maggy experiment `name` exists and
+    if not creates it and returns the path.
     """
-    pass
+    base_dir = hopshdfs._get_experiments_dir()
+    maggy_exp_dir = base_dir + '/maggy/' + str(name)
+
+    if not hopshdfs.exists(maggy_exp_dir):
+        hopshdfs.mkdir(maggy_exp_dir)
+
+    return maggy_exp_dir
+
+def _get_run_dir(name):
+    """Checks the index of the latest run of an experiments and creates a new
+    directory with the index incremented by one.
+    """
+    maggy_exp_dir = _get_experiments_dir(name)
+
+    ls_exp_dir = hopshdfs.ls(maggy_exp_dir)
+
+    if len(ls_exp_dir) == 0:
+        run_dir = maggy_exp_dir + '/run.1'
+        hopshdfs.mkdir(run_dir)
+        return 1, run_dir
+    elif len(ls_exp_dir) > 0:
+        run_index = list(map(lambda x: int(x.rsplit('.', 1)[-1]), ls_exp_dir))
+        max_run = max(run_index)
+        new_run = max_run + 1
+        run_dir = maggy_exp_dir + '/run.' + str(new_run)
+        hopshdfs.mkdir(run_dir)
+        return new_run, run_dir
+
+def _get_runs(name):
+    """Returns a list of hdfs paths for the runs of the experiment with `name`.
+    """
+    maggy_exp_dir = _get_experiments_dir(name)
+    return hopshdfs.ls(maggy_exp_dir)
+
+def _init_run(run_dir, app_id):
+    app_dir = run_dir + '/' + app_id
+    trials = app_dir + '/trials'
+    logs = app_dir + '/logs'
+    results = app_dir + '/result'
+
+    hopshdfs.mkdir(trials)
+    hopshdfs.mkdir(logs)
+    hopshdfs.mkdir(results)
+
+    return app_dir, trials, logs, results
 
 def _find_spark():
     """
