@@ -6,8 +6,8 @@ import threading
 import json
 import os
 import secrets
-import maggy.util as util
 from datetime import datetime
+from maggy import util
 from maggy.optimizer import AbstractOptimizer, RandomSearch
 from maggy.core import config, rpc
 from maggy.trial import Trial

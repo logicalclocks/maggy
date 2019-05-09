@@ -86,18 +86,19 @@ def launch(map_fun, searchspace, optimizer, direction, num_trials, name, hb_inte
 
         sc = util._find_spark().sparkContext
         app_id = str(sc.applicationId)
+        app_dir = None
 
         if config.mode is config.HOPSWORKS:
             exp_dir = util._get_experiments_dir(name)
             # get run_id and run_dir
             run_id, run_dir = util._get_run_dir(name)
+            # set elastic id to run_id
+            elastic_id = run_id
             # trial dir will be for tensorboard
             app_dir, trial_dir, log_dir, result_dir = util._init_run(run_dir, app_id)
-            hdfs.dump('creating dirs worked', log_dir+'/maggy.log')
             tensorboard._register(trial_dir)
-            hdfs.dump('registering trial dir worked', log_dir+'/maggy.log')
-            tensorboard.write_hparams_proto(trial_dir, searchspace)
-            hdfs.dump('writing proto buf worked', log_dir+'/maggy.log')
+            #tensorboard.write_hparams_proto(trial_dir, searchspace)
+            #hdfs.dump('writing proto buf worked', log_dir+'/maggy.log')
 
         num_executors = util.num_executors()
 
@@ -105,8 +106,6 @@ def launch(map_fun, searchspace, optimizer, direction, num_trials, name, hb_inte
             num_executors = num_trials
 
         nodeRDD = sc.parallelize(range(num_executors), num_executors)
-
-        hdfs.dump('rdd worked', log_dir+'/maggy.log')
 
         # Make SparkUI intuitive by grouping jobs
         sc.setJobGroup("Maggy Experiment", "{}".format(name))

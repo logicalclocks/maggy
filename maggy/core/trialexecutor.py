@@ -33,7 +33,8 @@ def _prepare_func(app_id, run_id, map_fun, server_addr, hb_interval, secret, app
 
         client = rpc.Client(server_addr, partition_id,
                             task_attempt, hb_interval, secret)
-        reporter = Reporter()
+        log_file = app_dir + '/logs/executor_' + str(partition_id) + '_' + str(task_attempt)
+        reporter = Reporter(log_file)
 
         try:
             client_addr = client.client_addr
@@ -46,7 +47,7 @@ def _prepare_func(app_id, run_id, map_fun, server_addr, hb_interval, secret, app
             exec_spec['host_port'] = host_port
             exec_spec['trial_id'] = None
 
-            print("Registering with experiment driver")
+            reporter.log("Registering with experiment driver", True)
             client.register(exec_spec)
 
             # blocking
@@ -67,25 +68,27 @@ def _prepare_func(app_id, run_id, map_fun, server_addr, hb_interval, secret, app
                     hdfs.mkdir(logdir)
 
                 try:
-                    print("--------------------------------")
-                    print("Starting Trial: {}".format(trial_id))
-                    print("Parameter Combination: {}".format(parameters))
+                    reporter.log("Starting Trial: {}".format(trial_id), True)
+                    reporter.log("Parameter Combination: {}".format(parameters), True)
                     retval = map_fun(**parameters, reporter=reporter)
                 except exceptions.EarlyStopException as e:
                     retval = e.metric
-                    print("Early Stopped Trial.")
+                    reporter.log("Early Stopped Trial.", True)
                 finally:
                     client.finalize_metric(retval, reporter)
-                    print("Finished Trial: {}".format(trial_id))
-                    print("Final Metric: {}".format(retval))
-                    print("--------------------------------\n")
+                    reporter.log("Finished Trial: {}".format(trial_id), True)
+                    reporter.log("Final Metric: {}".format(retval), True)
 
                 # blocking
                 trial_id, parameters = client.get_suggestion()
 
         except:
+            if config.mode is config.HOPSWORKS:
+                reporter.fd.close()
             raise
         finally:
+            if config.mode is config.HOPSWORKS:
+                reporter.fd.close()
             client.stop()
             client.close()
 

@@ -1,5 +1,9 @@
 import tensorflow as tf
-from tensorboard.plugins.hparams import api as hp
+
+from maggy.core import config
+
+if config.mode is config.HOPSWORKS:
+    from tensorboard.plugins.hparams import api as hp
 
 tensorboard_dir = None
 
