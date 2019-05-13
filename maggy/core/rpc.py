@@ -13,7 +13,7 @@ from maggy.trial import Trial
 import os
 from hops import constants
 from hops import tls
-from hops import util
+from hops import util as hopsutil
 from hops import hdfs
 import json
 from pyspark.sql import SparkSession
@@ -338,12 +338,12 @@ class Server(MessageSocket):
 
         print("Maggy getting SparkContext")        
         # register this driver with Hopsworks
-        sc = util._find_spark().sparkContext
+        sc = hopsutil._find_spark().sparkContext
         app_id = str(sc.applicationId)
 
         hdfs.log("Maggy getting Hopsworks Endpoint")
         method = constants.HTTP_CONFIG.HTTP_POST
-        connection = util._get_http_connection(https=True)
+        connection = hopsutil._get_http_connection(https=True)
         resource_url = constants.DELIMITERS.SLASH_DELIMITER + \
                        constants.REST_CONFIG.HOPSWORKS_REST_RESOURCE + constants.DELIMITERS.SLASH_DELIMITER + \
                        "maggy" + constants.DELIMITERS.SLASH_DELIMITER + "registerDriver" + \
@@ -357,12 +357,23 @@ class Server(MessageSocket):
         headers = {constants.HTTP_CONFIG.HTTP_CONTENT_TYPE: constants.HTTP_CONFIG.HTTP_APPLICATION_JSON}
 
         hdfs.log("Maggy registering Driver with Hopsworks")        
-        response = util.send_request(connection, method, resource_url, body=json_embeddable, headers=headers)
+        response = hopsutil.send_request(connection, method, resource_url, body=json_embeddable, headers=headers)
         resp_body = response.read()
         response_object = json.loads(resp_body)
 
         hdfs.log("Maggy has registered its Driver with Hopsworks")                
 
+        def _send_request(connection, method, resource, body=None):
+            headers = {}
+            headers[hopster.HTTP_CONFIG.HTTP_AUTHORIZATION] = "Bearer " + _get_jwt()
+            connection.request(method, resource, body, headers)
+            response = connection.getresponse()
+            if response.status == hopster.HTTP_CONFIG.HTTP_UNAUTHORIZED:
+                headers[hopster.HTTP_CONFIG.HTTP_AUTHORIZATION] = "Bearer " + _get_jwt()
+                connection.request(method, resource, body, headers)
+                response = connection.getresponse()
+            return response
+    
         def _listen(self, sock, driver):
             CONNECTIONS = []
             CONNECTIONS.append(sock)
