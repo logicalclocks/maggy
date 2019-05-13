@@ -346,7 +346,7 @@ class Server(MessageSocket):
         connection = hopsutil._get_http_connection(https=True)
         resource_url = constants.DELIMITERS.SLASH_DELIMITER + \
                        constants.REST_CONFIG.HOPSWORKS_REST_RESOURCE + constants.DELIMITERS.SLASH_DELIMITER + \
-                       "maggy" + constants.DELIMITERS.SLASH_DELIMITER + "registerDriver" + \
+                       "maggy" + constants.DELIMITERS.SLASH_DELIMITER + "drivers" + \
                        constants.DELIMITERS.SLASH_DELIMITER + \
                        app_id
         json_contents = {"host_ip": host,
