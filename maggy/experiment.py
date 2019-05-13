@@ -86,7 +86,7 @@ def launch(map_fun, searchspace, optimizer, direction, num_trials, name, hb_inte
 
         sc = util._find_spark().sparkContext
         app_id = str(sc.applicationId)
-        app_dir = None
+        app_dir = ''
 
         if config.mode is config.HOPSWORKS:
             exp_dir = util._get_experiments_dir(name)

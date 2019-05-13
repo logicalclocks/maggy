@@ -253,6 +253,7 @@ class Server(MessageSocket):
 
             # lookup executor reservation to find assigned trial
             trialId = msg['trial_id']
+            print("received: {}".format(msg))
             # get early stopping flag
             flag = exp_driver.get_trial(trialId).get_early_stop()
             # add metric msg to the exp driver queue
@@ -428,7 +429,7 @@ class Client(MessageSocket):
         self.hb_interval = hb_interval
         self._secret = secret
 
-    def _request(self, req_sock, msg_type, msg_data=None, trial_id=None):
+    def _request(self, req_sock, msg_type, msg_data=None, trial_id=None, logs=None):
         """Helper function to wrap msg w/ msg_type."""
         msg = {}
         msg['partition_id'] = self.partition_id
@@ -437,6 +438,8 @@ class Client(MessageSocket):
 
         if msg_type == 'FINAL' or msg_type == 'METRIC':
             msg['trial_id'] = trial_id
+            if logs is not None and logs != '':
+                msg['logs'] = logs
 
         if msg_data or ((msg_data == True) or (msg_data == False)):
             msg['data'] = msg_data
@@ -492,12 +495,13 @@ class Client(MessageSocket):
 
             while not self.done:
 
-                metric = report.get_metric()
+                metric, logs = report.get_data()
 
                 resp = self._request(self.hb_sock,
                                     'METRIC',
                                      metric,
-                                     report.get_trial_id())
+                                     report.get_trial_id(),
+                                     logs)
                 _ = self._handle_message(resp, report)
 
                 # sleep one second
@@ -507,7 +511,7 @@ class Client(MessageSocket):
         t.daemon = True
         t.start()
 
-        print("Started metric heartbeat")
+        reporter.log("Started metric heartbeat", True)
 
     def get_suggestion(self):
         """Blocking call to get new parameter combination."""

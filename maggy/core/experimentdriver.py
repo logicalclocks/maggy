@@ -82,6 +82,8 @@ class ExperimentDriver(object):
         self._secret = self._generate_secret(ExperimentDriver.SECRET_BYTES)
         self.result = None
         self.job_start = datetime.now()
+        self.executor_logs = ''
+        self.maggy_log = ''
 
     def init(self):
 
@@ -160,6 +162,8 @@ class ExperimentDriver(object):
                 # 1. METRIC
                 if msg['type'] == 'METRIC':
                     self.get_trial(msg['trial_id']).append_metric(msg['data'])
+
+
 
                 # 2. BLACK
                 elif msg['type'] == 'BLACK':
@@ -312,3 +316,6 @@ class ExperimentDriver(object):
 
         if trial.early_stop:
                 self.result['early_stopped'] += 1
+
+    def _update_maggy_log(self):
+        pass

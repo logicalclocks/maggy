@@ -15,13 +15,15 @@ class Reporter(object):
     Thread-safe store for sending a metric and logs from executor to driver
     """
 
-    def __init__(self, log_file):
+    def __init__(self, log_file, partition_id, task_attempt):
         self.metric = None
         self.lock = threading.RLock()
         self.stop = False
         self.trial_id = None
         self.logs = ''
         self.log_file = log_file
+        self.partition_id = partition_id
+        self.task_attempt = task_attempt
 
         #Open File desc for HDFS to log
         if config.mode is config.HOPSWORKS:
@@ -43,7 +45,7 @@ class Reporter(object):
             if self.stop:
                 raise exceptions.EarlyStopException(metric)
 
-    def log(self, log_msg, print_executor=False):
+    def log(self, log_msg, verbose=False):
         """Logs a message to the executor logfile and optionally to the
         executor sterr.
 
@@ -53,17 +55,22 @@ class Reporter(object):
         :type print_executor: bool, optional
         """
         with self.lock:
-            msg = datetime.now().isoformat() + ': ' + str(log_msg)
-            if print_executor:
+            msg = datetime.now().isoformat() + \
+                ' (' + str(self.partition_id) + '/' + \
+                str(self.task_attempt) + '): ' + str(log_msg)
+            if verbose:
                 print(msg)
             if config.mode is config.HOPSWORKS:
                 self.fd.write((msg + '\n').encode())
             self.logs = self.logs + msg + '\n'
 
-    def get_metric(self):
-
+    def get_data(self):
+        """Returns the metric and logs to be sent to the experiment driver.
+        """
         with self.lock:
-            return self.metric
+            log_to_send = self.logs
+            self.logs = ''
+            return self.metric, log_to_send
 
     def reset(self):
         """
@@ -74,9 +81,10 @@ class Reporter(object):
             self.metric = None
             self.stop = False
             self.trial_id = None
+            if config.mode is config.HOPSWORKS:
+                self.fd.flush()
 
     def early_stop(self):
-
         with self.lock:
             if self.metric is not None:
                 self.stop = True
