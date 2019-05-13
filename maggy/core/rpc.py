@@ -14,6 +14,7 @@ import os
 from hops import constants
 from hops import tls
 from hops import util
+from hops import hdfs
 import json
 from pyspark.sql import SparkSession
 
@@ -300,12 +301,7 @@ class Server(MessageSocket):
                 send['data'] = None
 
             MessageSocket.send(self, sock, send)
-        elif msg_type == 'LOG':
-                send = {}
-                send['type'] = "OK"
-                send['data'] = "Hello from Maggy"
-                MessageSocket.send(self, sock, send)
-                return
+
         else:
             # Prepare message
             send = {}
@@ -335,8 +331,6 @@ class Server(MessageSocket):
         server_sock.bind(('', 0))
         server_sock.listen(10)
 
-        from hops import hdfs
-        hdfs.log("Maggy getting Hopsworks Ip/Port")
         # hostname may not be resolvable but IP address probably will be
         host = util._get_ip_address()
         port = server_sock.getsockname()[1]
@@ -368,9 +362,6 @@ class Server(MessageSocket):
         response_object = json.loads(resp_body)
 
         hdfs.log("Maggy has registered its Driver with Hopsworks")                
-        #
-        # TODO - store a variable that indicates that Hopsworks logging is not working
-        #
 
         def _listen(self, sock, driver):
             CONNECTIONS = []
@@ -556,8 +547,6 @@ class Client(MessageSocket):
         elif msg_type == 'ERR':
             print("Stopping experiment")
             self.done = True
-        elif msg_type == 'LOG':
-            return "log"
             
     def finalize_metric(self, metric, reporter):
         # make sure heartbeat thread can't send between sending final metric
