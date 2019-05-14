@@ -253,7 +253,7 @@ class Server(MessageSocket):
 
             # lookup executor reservation to find assigned trial
             trialId = msg['trial_id']
-            print("received: {}".format(msg))
+            #print("received: {}".format(msg))
             # get early stopping flag
             flag = exp_driver.get_trial(trialId).get_early_stop()
             # add metric msg to the exp driver queue
@@ -299,7 +299,12 @@ class Server(MessageSocket):
                 send['data'] = None
 
             MessageSocket.send(self, sock, send)
-
+        elif msg_type == 'LOG':
+            send = {}
+            send['type'] = "OK"
+            send['data'] = "Hello from Maggy"
+            MessageSocket.send(self, sock, send)
+            return
         else:
             # Prepare message
             send = {}

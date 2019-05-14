@@ -84,6 +84,7 @@ class ExperimentDriver(object):
         self.job_start = datetime.now()
         self.executor_logs = ''
         self.maggy_log = ''
+        self.log_lock = threading.RLock()
 
     def init(self):
 
@@ -163,7 +164,12 @@ class ExperimentDriver(object):
                 if msg['type'] == 'METRIC':
                     self.get_trial(msg['trial_id']).append_metric(msg['data'])
 
-
+                    # append executor logs if in the message
+                    logs = msg.get('logs', None)
+                    if logs is not None:
+                        with self.log_lock:
+                            self.executor_logs = self.executor_logs + logs
+                            print(self.executor_logs)
 
                 # 2. BLACK
                 elif msg['type'] == 'BLACK':
@@ -172,7 +178,6 @@ class ExperimentDriver(object):
                         trial.status = Trial.SCHEDULED
                         self.server.reservations.assign_trial(
                             msg['partition_id'], msg['trial_id'])
-                        # print("Scheduled Trial: " + trial.to_json())
 
                 # 3. FINAL
                 elif msg['type'] == 'FINAL':
@@ -193,6 +198,8 @@ class ExperimentDriver(object):
 
                     # update result dictionary
                     self._update_result(trial)
+                    # keep for later in case tqdm doesn't work
+                    self.maggy_log = self._update_maggy_log()
 
                     # TODO: make json and write to HDFS
 
@@ -318,4 +325,24 @@ class ExperimentDriver(object):
                 self.result['early_stopped'] += 1
 
     def _update_maggy_log(self):
-        pass
+        """Creates the status of a maggy experiment with a progress bar.
+        """
+        finished = self.result['num_trials']
+
+        log = 'Maggy ' + str(finished) + '/' + str(self.num_trials) + \
+            ' (' + str(self.result['early_stopped']) + ') ' + \
+            util._progress_bar(finished, self.num_trials) + ' - BEST ' + \
+            json.dumps(self.result['max_hp']) + ' - metric ' + \
+            str(self.result['max_val'])
+
+        return log
+
+    def _get_logs(self):
+        """Return current experiment status and executor logs to send them to
+        spark magic.
+        """
+        with  self.log_lock:
+            temp = self.executor_logs
+            # clear the executor logs since they are being sent
+            self.executor_logs = ''
+            return self.result, temp

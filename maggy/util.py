@@ -1,4 +1,5 @@
 import socket
+import math
 from pyspark.sql import SparkSession
 from pyspark import TaskContext
 
@@ -130,3 +131,21 @@ def _time_diff(task_start, task_end):
         return str(int(hours)) + ' hours, ' + str(int(minutes)) + ' minutes'
     else:
         return 'unknown time'
+
+def _progress_bar(done, total):
+
+            done_ratio = done/total
+            progress = math.floor(done_ratio * 30)
+
+            bar = '['
+
+            for i in range(30):
+                if i < progress:
+                    bar += '='
+                elif i == progress:
+                    bar += '>'
+                else:
+                    bar += '.'
+
+            bar += ']'
+            return bar
