@@ -10,11 +10,9 @@ import secrets
 from maggy import util
 from maggy.trial import Trial
 
-import os
 from hops import constants as hopsconstants
-from hops import tls
 from hops import util as hopsutil
-from hops import hdfs
+
 import json
 from pyspark.sql import SparkSession
 
@@ -341,7 +339,6 @@ class Server(MessageSocket):
         sc = hopsutil._find_spark().sparkContext
         app_id = str(sc.applicationId)
 
-        hdfs.log("Maggy getting Hopsworks Endpoint")
         method = constants.HTTP_CONFIG.HTTP_POST
         connection = hopsutil._get_http_connection(https=True)
         resource_url = constants.DELIMITERS.SLASH_DELIMITER + \
@@ -356,24 +353,10 @@ class Server(MessageSocket):
         json_embeddable = json.dumps(json_contents)
         headers = {constants.HTTP_CONFIG.HTTP_CONTENT_TYPE: constants.HTTP_CONFIG.HTTP_APPLICATION_JSON}
 
-        hdfs.log("Maggy registering Driver with Hopsworks")        
         response = hopsutil.send_request(connection, method, resource_url, body=json_embeddable, headers=headers)
         resp_body = response.read()
         response_object = json.loads(resp_body)
 
-        hdfs.log("Maggy has registered its Driver with Hopsworks")                
-
-        def _send_request(connection, method, resource, body=None):
-            headers = {}
-            headers[hopsconstants.HTTP_CONFIG.HTTP_AUTHORIZATION] = "Bearer " + _get_jwt()
-            connection.request(method, resource, body, headers)
-            response = connection.getresponse()
-            if response.status == hopsconstants.HTTP_CONFIG.HTTP_UNAUTHORIZED:
-                headers[hopsconstants.HTTP_CONFIG.HTTP_AUTHORIZATION] = "Bearer " + _get_jwt()
-                connection.request(method, resource, body, headers)
-                response = connection.getresponse()
-            return response
-    
         def _listen(self, sock, driver):
             CONNECTIONS = []
             CONNECTIONS.append(sock)
