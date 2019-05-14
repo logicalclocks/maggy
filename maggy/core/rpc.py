@@ -14,7 +14,6 @@ from hops import constants as hopsconstants
 from hops import util as hopsutil
 
 import json
-from pyspark.sql import SparkSession
 
 
 MAX_RETRIES = 3
@@ -341,17 +340,17 @@ class Server(MessageSocket):
 
         method = constants.HTTP_CONFIG.HTTP_POST
         connection = hopsutil._get_http_connection(https=True)
-        resource_url = constants.DELIMITERS.SLASH_DELIMITER + \
-                       constants.REST_CONFIG.HOPSWORKS_REST_RESOURCE + constants.DELIMITERS.SLASH_DELIMITER + \
-                       "maggy" + constants.DELIMITERS.SLASH_DELIMITER + "drivers" + \
-                       constants.DELIMITERS.SLASH_DELIMITER + \
+        resource_url = hopsconstants.DELIMITERS.SLASH_DELIMITER + \
+                       hopsconstants.REST_CONFIG.HOPSWORKS_REST_RESOURCE + hopsconstants.DELIMITERS.SLASH_DELIMITER + \
+                       "maggy" + hopsconstants.DELIMITERS.SLASH_DELIMITER + "drivers" + \
+                       hopsconstants.DELIMITERS.SLASH_DELIMITER + \
                        app_id
         json_contents = {"host_ip": host,
                          "port": port,
                          "app_id": app_id,
                          "secret" : "abc"}
         json_embeddable = json.dumps(json_contents)
-        headers = {constants.HTTP_CONFIG.HTTP_CONTENT_TYPE: constants.HTTP_CONFIG.HTTP_APPLICATION_JSON}
+        headers = {hopsconstants.HTTP_CONFIG.HTTP_CONTENT_TYPE: hopsconstants.HTTP_CONFIG.HTTP_APPLICATION_JSON}
 
         response = hopsutil.send_request(connection, method, resource_url, body=json_embeddable, headers=headers)
         resp_body = response.read()
