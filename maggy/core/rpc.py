@@ -376,7 +376,7 @@ class Server(MessageSocket):
         # check if registration with hopsworks was successful
         if response_object.get('errorMsg', None) is not None:
             print('Failed to register maggy driver with hopsworks \n \
-                ErrorCode: {1}, {2}'.format(response_object['errorCode'],
+                ErrorCode: {0}, {1}'.format(response_object['errorCode'],
                 response_object['errorMsg']))
 
         def _listen(self, sock, driver):

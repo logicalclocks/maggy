@@ -112,7 +112,7 @@ def launch(map_fun, searchspace, optimizer, direction, num_trials, name, hb_inte
 
         # Make SparkUI intuitive by grouping jobs
         sc.setJobGroup("Maggy Experiment", "{}".format(name))
-        exp_driver._log("Started Maggy Experiment: {1}, run {2}".format(name, run_id))
+        exp_driver._log("Started Maggy Experiment: {0}, run {1}".format(name, run_id))
 
         exp_driver.init()
 
