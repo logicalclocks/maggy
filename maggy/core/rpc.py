@@ -297,9 +297,16 @@ class Server(MessageSocket):
 
             MessageSocket.send(self, sock, send)
         elif msg_type == 'LOG':
+            # get data from experiment driver
+            result, log = exp_driver._get_logs()
+
             send = {}
             send['type'] = "OK"
-            send['data'] = "Hello from Maggy"
+            send['ex_logs'] = log
+            send['num_trials'] = exp_driver.num_trials
+            send['to_date'] = result['num_trials']
+            send['stopped'] = result['early_stopped']
+            send['metric'] = result['max_val']
             MessageSocket.send(self, sock, send)
             return
         else:

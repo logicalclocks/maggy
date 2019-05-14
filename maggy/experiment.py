@@ -108,7 +108,7 @@ def launch(map_fun, searchspace, optimizer, direction, num_trials, name, hb_inte
         # start experiment driver
         exp_driver = ExperimentDriver(searchspace, optimizer, direction,
             num_trials, name, num_executors, hb_interval, es_policy,
-            es_interval, es_min, description, log_dir)
+            es_interval, es_min, description, log_dir, trial_dir)
 
         # Make SparkUI intuitive by grouping jobs
         sc.setJobGroup("Maggy Experiment", "{}".format(name))

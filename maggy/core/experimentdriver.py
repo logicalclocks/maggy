@@ -23,7 +23,7 @@ class ExperimentDriver(object):
 
     SECRET_BYTES = 8
 
-    def __init__(self, searchspace, optimizer, direction, num_trials, name, num_executors, hb_interval, es_policy, es_interval, es_min, description, log_file):
+    def __init__(self, searchspace, optimizer, direction, num_trials, name, num_executors, hb_interval, es_policy, es_interval, es_min, description, log_dir, trial_dir):
 
         self._final_store = []
 
@@ -85,7 +85,8 @@ class ExperimentDriver(object):
         self.executor_logs = ''
         self.maggy_log = ''
         self.log_lock = threading.RLock()
-        self.log_file = log_file + '/maggy.log'
+        self.log_file = log_dir+ '/maggy.log'
+        self.trial_dir = trial_dir
 
         #Open File desc for HDFS to log
         if not hopshdfs.exists(self.log_file):
@@ -207,7 +208,7 @@ class ExperimentDriver(object):
                     self.maggy_log = self._update_maggy_log()
                     self._log(self.maggy_log)
 
-                    # TODO: make json and write to HDFS
+                    hopshdfs.dump(trial.to_json(), self.trial_dir + '/' + trial.trial_id + '/trial')
 
                     # assign new trial
                     trial = self.optimizer.get_suggestion(trial)
