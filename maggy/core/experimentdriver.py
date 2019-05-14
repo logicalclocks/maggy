@@ -14,9 +14,9 @@ from maggy.trial import Trial
 from maggy.earlystop import AbstractEarlyStop, MedianStoppingRule
 from maggy.searchspace import Searchspace
 
-if config.mode is config.HOPSWORKS:
-    from hops import constants
-    from hops import hdfs
+from hops import constants as hopsconstants
+from hops import hdfs as hopshdfs
+from hops import util as hopsutil
 
 
 class ExperimentDriver(object):
@@ -100,7 +100,7 @@ class ExperimentDriver(object):
 
         self.job_end = datetime.now()
 
-        self.duration = util._time_diff(self.job_start, self.job_end)
+        self.duration = hopsutil._time_diff(self.job_start, self.job_end)
 
         if self.direction == 'max':
             results = '\n------ ' + str(self.optimizer.__class__.__name__) + ' results ------ direction(' + self.direction + ') \n' \
@@ -189,7 +189,7 @@ class ExperimentDriver(object):
                     with trial.lock:
                         trial.status = Trial.FINALIZED
                         trial.final_metric = msg['data']
-                        trial.duration = util._time_diff(
+                        trial.duration = hopsutil._time_diff(
                             trial.start, datetime.now())
 
                     # move trial to the finalized ones
@@ -243,10 +243,10 @@ class ExperimentDriver(object):
         """Get all relevant experiment information in JSON format.
         """
         user = None
-        if constants.ENV_VARIABLES.HOPSWORKS_USER_ENV_VAR in os.environ:
-            user = os.environ[constants.ENV_VARIABLES.HOPSWORKS_USER_ENV_VAR]
+        if hopsconstants.ENV_VARIABLES.HOPSWORKS_USER_ENV_VAR in os.environ:
+            user = os.environ[hopsconstants.ENV_VARIABLES.HOPSWORKS_USER_ENV_VAR]
 
-        experiment_json = {'project': hdfs.project_name(),
+        experiment_json = {'project': hopshdfs.project_name(),
             'user': user,
             'name': self.name,
             'module': 'maggy',

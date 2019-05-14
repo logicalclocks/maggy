@@ -7,8 +7,7 @@ from datetime import datetime
 
 from maggy.core import exceptions, config
 
-if config.mode is config.HOPSWORKS:
-    from hops import hdfs
+from hops import hdfs as hopshdfs
 
 class Reporter(object):
     """
@@ -26,10 +25,9 @@ class Reporter(object):
         self.task_attempt = task_attempt
 
         #Open File desc for HDFS to log
-        if config.mode is config.HOPSWORKS:
-            if not hdfs.exists(log_file):
-                hdfs.dump('', log_file)
-            self.fd = hdfs.open_file(log_file, flags='w')
+        if not hopshdfs.exists(log_file):
+            hopshdfs.dump('', log_file)
+        self.fd = hopshdfs.open_file(log_file, flags='w')
 
     # report
     def broadcast(self, metric):

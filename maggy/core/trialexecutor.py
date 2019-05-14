@@ -5,15 +5,13 @@ from maggy.core import rpc, exceptions, config
 from maggy.core.reporter import Reporter
 from pyspark import TaskContext
 
-if config.mode is config.HOPSWORKS:
-    import hops.util as hopsutil
-    import hops.hdfs as hdfs
-    import tensorflow as tf
+from hops import hdfs as hopshdfs
+import tensorflow as tf
 
-    if config.tf_version >= 2:
-        from tensorboard.plugins.hparams import api_pb2
-        from tensorboard.plugins.hparams import summary
-        from tensorboard.plugins.hparams import summary_v2
+if config.tf_version >= 2:
+    from tensorboard.plugins.hparams import api_pb2
+    from tensorboard.plugins.hparams import summary
+    from tensorboard.plugins.hparams import summary_v2
 
 
 def _prepare_func(app_id, run_id, map_fun, server_addr, hb_interval, secret, app_dir):
@@ -64,10 +62,9 @@ def _prepare_func(app_id, run_id, map_fun, server_addr, hb_interval, secret, app
 
                 reporter.set_trial_id(trial_id)
 
-                if config.mode is config.HOPSWORKS:
-                    logdir = app_dir + '/trials/' + trial_id
-                    tensorboard._register(logdir)
-                    hdfs.mkdir(logdir)
+                logdir = app_dir + '/trials/' + trial_id
+                tensorboard._register(logdir)
+                hopshdfs.mkdir(logdir)
 
                 try:
                     reporter.log("Starting Trial: {}".format(trial_id), True)
@@ -85,12 +82,10 @@ def _prepare_func(app_id, run_id, map_fun, server_addr, hb_interval, secret, app
                 trial_id, parameters = client.get_suggestion()
 
         except:
-            if config.mode is config.HOPSWORKS:
-                reporter.fd.close()
+            reporter.fd.close()
             raise
         finally:
-            if config.mode is config.HOPSWORKS:
-                reporter.fd.close()
+            reporter.fd.close()
             client.stop()
             client.close()
 

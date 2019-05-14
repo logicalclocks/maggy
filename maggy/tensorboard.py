@@ -1,7 +1,7 @@
 
 from maggy.core import config
 
-if config.mode is config.HOPSWORKS and config.tf_version >= 2:
+if config.tf_version >= 2:
     from maggy.tb_experimental import write_hparams_proto
 
 tensorboard_dir = None

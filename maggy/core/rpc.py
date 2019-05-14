@@ -6,15 +6,12 @@ import time
 import select
 import socket
 import secrets
+import json
 
-from maggy import util
 from maggy.trial import Trial
 
 from hops import constants as hopsconstants
 from hops import util as hopsutil
-
-import json
-
 
 MAX_RETRIES = 3
 BUFSIZE = 1024 * 2
@@ -335,11 +332,10 @@ class Server(MessageSocket):
         server_sock.listen(10)
 
         # hostname may not be resolvable but IP address probably will be
-        host = util._get_ip_address()
+        host = hopsutil._get_ip_address()
         port = server_sock.getsockname()[1]
         addr = (host, port)
 
-        print("Maggy getting SparkContext")        
         # register this driver with Hopsworks
         sc = hopsutil._find_spark().sparkContext
         app_id = str(sc.applicationId)
@@ -369,6 +365,12 @@ class Server(MessageSocket):
             print("Connection failed to Hopsworks. No logging.")
             
 
+
+        # check if registration with hopsworks was successful
+        if response_object.get('errorMsg', None) is not None:
+            print('Failed to register maggy driver with hopsworks \n \
+                ErrorCode: {1}, {2}'.format(response_object['errorCode'],
+                response_object['errorMsg']))
 
         def _listen(self, sock, driver):
             CONNECTIONS = []
@@ -428,7 +430,7 @@ class Client(MessageSocket):
         self.hb_sock.connect(server_addr)
         self.server_addr = server_addr
         self.done = False
-        self.client_addr = (util._get_ip_address(), self.sock.getsockname()[1])
+        self.client_addr = (hopsutil._get_ip_address(), self.sock.getsockname()[1])
         self.partition_id = partition_id
         self.task_attempt = task_attempt
         self.hb_interval = hb_interval
@@ -557,7 +559,7 @@ class Client(MessageSocket):
         elif msg_type == 'ERR':
             print("Stopping experiment")
             self.done = True
-            
+
     def finalize_metric(self, metric, reporter):
         # make sure heartbeat thread can't send between sending final metric
         # and resetting the reporter
@@ -565,5 +567,3 @@ class Client(MessageSocket):
             resp = self._request(self.sock, 'FINAL', metric, reporter.get_trial_id())
             reporter.reset()
         return resp
-
-    
