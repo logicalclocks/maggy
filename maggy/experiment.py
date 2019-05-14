@@ -105,21 +105,21 @@ def launch(map_fun, searchspace, optimizer, direction, num_trials, name, hb_inte
 
         nodeRDD = sc.parallelize(range(num_executors), num_executors)
 
-        # Make SparkUI intuitive by grouping jobs
-        sc.setJobGroup("Maggy Experiment", "{}".format(name))
-        print("Started Maggy Experiment: ", "{}".format(name))
-
         # start experiment driver
         exp_driver = ExperimentDriver(searchspace, optimizer, direction,
             num_trials, name, num_executors, hb_interval, es_policy,
-            es_interval, es_min, description)
+            es_interval, es_min, description, log_dir)
+
+        # Make SparkUI intuitive by grouping jobs
+        sc.setJobGroup("Maggy Experiment", "{}".format(name))
+        exp_driver._log("Started Maggy Experiment: {1}, run {2}".format(name, run_id))
 
         exp_driver.init()
 
         server_addr = exp_driver.server_addr
 
         experiment_json = exp_driver.json(sc)
-        hopsutil._put_elastic(hopshdfs.project_name(), app_id, elastic_id,
+        hopsutil._put_elastic(hopshdfs.project_name(), app_id, run_id,
             experiment_json)
 
         # Force execution on executor, since GPU is located on executor
@@ -134,7 +134,7 @@ def launch(map_fun, searchspace, optimizer, direction, num_trials, name, hb_inte
         hopsutil._put_elastic(hopshdfs.project_name(), app_id, elastic_id,
             experiment_json)
 
-        print("Finished Experiment \n")
+        exp_driver._log("Finished Experiment")
 
     except:
         _exception_handler()

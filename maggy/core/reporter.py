@@ -58,8 +58,7 @@ class Reporter(object):
                 str(self.task_attempt) + '): ' + str(log_msg)
             if verbose:
                 print(msg)
-            if config.mode is config.HOPSWORKS:
-                self.fd.write((msg + '\n').encode())
+            self.fd.write((msg + '\n').encode())
             self.logs = self.logs + msg + '\n'
 
     def get_data(self):
@@ -79,8 +78,7 @@ class Reporter(object):
             self.metric = None
             self.stop = False
             self.trial_id = None
-            if config.mode is config.HOPSWORKS:
-                self.fd.flush()
+            self.fd.flush()
 
     def early_stop(self):
         with self.lock:

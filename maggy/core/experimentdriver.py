@@ -23,7 +23,7 @@ class ExperimentDriver(object):
 
     SECRET_BYTES = 8
 
-    def __init__(self, searchspace, optimizer, direction, num_trials, name, num_executors, hb_interval, es_policy, es_interval, es_min, description):
+    def __init__(self, searchspace, optimizer, direction, num_trials, name, num_executors, hb_interval, es_policy, es_interval, es_min, description, log_file):
 
         self._final_store = []
 
@@ -85,6 +85,12 @@ class ExperimentDriver(object):
         self.executor_logs = ''
         self.maggy_log = ''
         self.log_lock = threading.RLock()
+        self.log_file = log_file + '/maggy.log'
+
+        #Open File desc for HDFS to log
+        if not hopshdfs.exists(self.log_file):
+            hopshdfs.dump('', self.log_file)
+        self.fd = hopshdfs.open_file(self.log_file, flags='w')
 
     def init(self):
 
@@ -151,11 +157,11 @@ class ExperimentDriver(object):
 
                     # pass currently running trials to early stop component
                     if len(self._final_store) > self.es_min:
-                        print("Check for early stopping.")
+                        self._log("Check for early stopping.")
                         to_stop = self.earlystop_check(
                             self._trial_store, self._final_store, self.direction)
                         if len(to_stop) > 0:
-                            print("Trials to stop: {}".format(to_stop))
+                            self._log("Trials to stop: {}".format(to_stop))
                         for trial_id in to_stop:
                             self.get_trial(trial_id).set_early_stop()
 
@@ -169,7 +175,6 @@ class ExperimentDriver(object):
                     if logs is not None:
                         with self.log_lock:
                             self.executor_logs = self.executor_logs + logs
-                            print(self.executor_logs)
 
                 # 2. BLACK
                 elif msg['type'] == 'BLACK':
@@ -200,6 +205,7 @@ class ExperimentDriver(object):
                     self._update_result(trial)
                     # keep for later in case tqdm doesn't work
                     self.maggy_log = self._update_maggy_log()
+                    self._log(self.maggy_log)
 
                     # TODO: make json and write to HDFS
 
@@ -238,6 +244,8 @@ class ExperimentDriver(object):
         """Stop the Driver's worker thread and server."""
         self.worker_done = True
         self.server.stop()
+        self.fd.flush()
+        self.fd.close()
 
     def json(self, sc):
         """Get all relevant experiment information in JSON format.
@@ -346,3 +354,9 @@ class ExperimentDriver(object):
             # clear the executor logs since they are being sent
             self.executor_logs = ''
             return self.result, temp
+
+    def _log(self, log_msg):
+        """Logs a string to the maggy driver log file.
+        """
+        msg = datetime.now().isoformat() + ': ' + str(log_msg)
+        self.fd.write((msg + '\n').encode())
