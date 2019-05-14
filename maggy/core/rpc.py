@@ -10,6 +10,12 @@ import secrets
 from maggy import util
 from maggy.trial import Trial
 
+from hops import constants as hopsconstants
+from hops import util as hopsutil
+
+import json
+
+
 MAX_RETRIES = 3
 BUFSIZE = 1024 * 2
 
@@ -292,6 +298,7 @@ class Server(MessageSocket):
                 send['data'] = None
 
             MessageSocket.send(self, sock, send)
+
         else:
             # Prepare message
             send = {}
@@ -325,6 +332,29 @@ class Server(MessageSocket):
         host = util._get_ip_address()
         port = server_sock.getsockname()[1]
         addr = (host, port)
+
+        print("Maggy getting SparkContext")        
+        # register this driver with Hopsworks
+        sc = hopsutil._find_spark().sparkContext
+        app_id = str(sc.applicationId)
+
+        method = constants.HTTP_CONFIG.HTTP_POST
+        connection = hopsutil._get_http_connection(https=True)
+        resource_url = hopsconstants.DELIMITERS.SLASH_DELIMITER + \
+                       hopsconstants.REST_CONFIG.HOPSWORKS_REST_RESOURCE + hopsconstants.DELIMITERS.SLASH_DELIMITER + \
+                       "maggy" + hopsconstants.DELIMITERS.SLASH_DELIMITER + "drivers" + \
+                       hopsconstants.DELIMITERS.SLASH_DELIMITER + \
+                       app_id
+        json_contents = {"host_ip": host,
+                         "port": port,
+                         "app_id": app_id,
+                         "secret" : "abc"}
+        json_embeddable = json.dumps(json_contents)
+        headers = {hopsconstants.HTTP_CONFIG.HTTP_CONTENT_TYPE: hopsconstants.HTTP_CONFIG.HTTP_APPLICATION_JSON}
+
+        response = hopsutil.send_request(connection, method, resource_url, body=json_embeddable, headers=headers)
+        resp_body = response.read()
+        response_object = json.loads(resp_body)
 
         def _listen(self, sock, driver):
             CONNECTIONS = []
@@ -510,7 +540,7 @@ class Client(MessageSocket):
         elif msg_type == 'ERR':
             print("Stopping experiment")
             self.done = True
-
+            
     def finalize_metric(self, metric, reporter):
         # make sure heartbeat thread can't send between sending final metric
         # and resetting the reporter
@@ -518,3 +548,5 @@ class Client(MessageSocket):
             resp = self._request(self.sock, 'FINAL', metric, reporter.get_trial_id())
             reporter.reset()
         return resp
+
+    
