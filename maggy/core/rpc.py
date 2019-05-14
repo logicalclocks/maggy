@@ -11,7 +11,7 @@ from maggy import util
 from maggy.trial import Trial
 
 import os
-from hops import constants
+from hops import constants as hopsconstants
 from hops import tls
 from hops import util as hopsutil
 from hops import hdfs
@@ -365,11 +365,11 @@ class Server(MessageSocket):
 
         def _send_request(connection, method, resource, body=None):
             headers = {}
-            headers[hopster.HTTP_CONFIG.HTTP_AUTHORIZATION] = "Bearer " + _get_jwt()
+            headers[hopsconstants.HTTP_CONFIG.HTTP_AUTHORIZATION] = "Bearer " + _get_jwt()
             connection.request(method, resource, body, headers)
             response = connection.getresponse()
-            if response.status == hopster.HTTP_CONFIG.HTTP_UNAUTHORIZED:
-                headers[hopster.HTTP_CONFIG.HTTP_AUTHORIZATION] = "Bearer " + _get_jwt()
+            if response.status == hopsconstants.HTTP_CONFIG.HTTP_UNAUTHORIZED:
+                headers[hopsconstants.HTTP_CONFIG.HTTP_AUTHORIZATION] = "Bearer " + _get_jwt()
                 connection.request(method, resource, body, headers)
                 response = connection.getresponse()
             return response
