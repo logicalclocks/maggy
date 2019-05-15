@@ -129,9 +129,9 @@ class ExperimentDriver(object):
 
         self._log(results)
 
-        hopshdfs.dump(json.dumps(self.result), self.app_dir + '/result')
+        hopshdfs.dump(json.dumps(self.result), self.app_dir + '/result.json')
         sc = hopsutil._find_spark().sparkContext
-        hopshdfs.dump(self.json(sc), self.app_dir + '/maggy')
+        hopshdfs.dump(self.json(sc), self.app_dir + '/maggy.json')
 
         return self.result
 
@@ -217,7 +217,7 @@ class ExperimentDriver(object):
                     self.maggy_log = self._update_maggy_log()
                     self._log(self.maggy_log)
 
-                    hopshdfs.dump(trial.to_json(), self.trial_dir + '/' + trial.trial_id + '/trial')
+                    hopshdfs.dump(trial.to_json(), self.trial_dir + '/' + trial.trial_id + '/trial.json')
 
                     # assign new trial
                     trial = self.optimizer.get_suggestion(trial)
