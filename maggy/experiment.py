@@ -28,7 +28,7 @@ elastic_id = 1
 experiment_json = None
 
 
-def launch(map_fun, searchspace, optimizer, direction, num_trials, name, hb_interval=1, es_policy='median', es_interval=300, es_min=10, description=''):
+def lagom(map_fun, searchspace, optimizer, direction, num_trials, name, hb_interval=1, es_policy='median', es_interval=300, es_min=10, description=''):
     """Launches a maggy experiment for hyperparameter optimization.
 
     Given a search space, objective and a model training procedure `map_fun`
@@ -36,6 +36,8 @@ def launch(map_fun, searchspace, optimizer, direction, num_trials, name, hb_inte
     best hyperparameter combination in the search space, optimizing the
     black-box function. Currently maggy supports random search and a median
     stopping rule.
+
+    **lagom** is a Swedish word meaning "just the right amount".
 
     :param map_fun: User defined experiment containing the model training.
     :type map_fun: function

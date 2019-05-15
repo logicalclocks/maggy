@@ -2,9 +2,10 @@ Maggy
 =====
 
 Maggy is a framework for efficient asynchronous optimization of expensive
-black-box functions on top of Apache Spark. Compared to existing frameworks, maggy is not bound to
-stage based optimization algorithms and therefore it is able to make extensive
-use of early stopping in order to achieve efficient resource utilization.
+black-box functions on top of Apache Spark. Compared to existing frameworks,
+maggy is not bound to stage based optimization algorithms and therefore it is
+able to make extensive use of early stopping in order to achieve efficient
+resource utilization.
 
 Right now, maggy supports asynchronous hyperparameter tuning of machine
 learning and deep learning models, but other use cases include ablation studies
@@ -73,13 +74,16 @@ Sample usage:
 
 >>> # Launch maggy experiment
 >>> from maggy import experiment
->>> result = experiment.launch(map_fun=mnist,
+>>> result = experiment.lagom(map_fun=mnist,
 >>>                            searchspace=sp,
 >>>                            optimizer='randomsearch',
 >>>                            direction='max',
 >>>                            num_trials=15,
 >>>                            name='MNIST'
 >>>                           )
+
+**lagom** is a Swedish word meaning "just the right amount". This is how maggy
+uses your resources.
 
 MNIST Example
 -------------
@@ -90,4 +94,4 @@ see the Jupyter Notebook in the `examples` folder.
 Documentation
 -------------
 
-API documentation is available here.
+API documentation is available `here <https://maggy.readthedocs.io/en/latest/>`_.

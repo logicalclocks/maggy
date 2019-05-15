@@ -55,5 +55,5 @@ def test_randomsearch(sc):
 
         return acc
 
-    result = experiment.launch(train, sp, optimizer='randomsearch', direction='max', num_trials=25, name='test', hb_interval=1, es_interval=10)
+    result = experiment.lagom(train, sp, optimizer='randomsearch', direction='max', num_trials=25, name='test', hb_interval=1, es_interval=10)
     assert type(result) == type({})
