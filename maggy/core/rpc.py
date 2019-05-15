@@ -338,7 +338,7 @@ class Server(MessageSocket):
         sc = hopsutil._find_spark().sparkContext
         app_id = str(sc.applicationId)
 
-        method = constants.HTTP_CONFIG.HTTP_POST
+        method = hopsconstants.HTTP_CONFIG.HTTP_POST
         connection = hopsutil._get_http_connection(https=True)
         resource_url = hopsconstants.DELIMITERS.SLASH_DELIMITER + \
                        hopsconstants.REST_CONFIG.HOPSWORKS_REST_RESOURCE + hopsconstants.DELIMITERS.SLASH_DELIMITER + \
