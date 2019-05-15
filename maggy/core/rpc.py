@@ -367,17 +367,11 @@ class Server(MessageSocket):
                 resp_body = response.read()
                 response_object = json.loads(resp_body)
             else:
-                print("No connection to Hopsworks for logging.")                
+                print("No connection to Hopsworks for logging.")
+                exp_driver._log("No connection to Hopsworks for logging.")
         except Exception as e:
             print("Connection failed to Hopsworks. No logging.")
-            
-
-
-        # check if registration with hopsworks was successful
-        if response_object.get('errorMsg', None) is not None:
-            print('Failed to register maggy driver with hopsworks \n \
-                ErrorCode: {0}, {1}'.format(response_object['errorCode'],
-                response_object['errorMsg']))
+            exp_driver._log("Connection failed to Hopsworks. No logging.")
 
         def _listen(self, sock, driver):
             CONNECTIONS = []

@@ -62,7 +62,7 @@ class ExperimentDriver(object):
                 raise Exception(
                     "Unknown Early Stopping Policy. Can't initialize experiment driver.")
         elif isinstance(es_policy, AbstractEarlyStop):
-            print("Custom Early Esrly Stopping policy initialized.")
+            print("Custom Early Early Stopping policy initialized.")
             self.earlystop_check = es_policy.earlystop_check
 
         self.direction = direction.lower()
