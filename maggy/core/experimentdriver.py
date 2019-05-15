@@ -62,7 +62,7 @@ class ExperimentDriver(object):
                 raise Exception(
                     "Unknown Early Stopping Policy. Can't initialize experiment driver.")
         elif isinstance(es_policy, AbstractEarlyStop):
-            print("Custom Early Early Stopping policy initialized.")
+            print("Custom Early Stopping policy initialized.")
             self.earlystop_check = es_policy.earlystop_check
 
         self.direction = direction.lower()
@@ -169,6 +169,9 @@ class ExperimentDriver(object):
                                 self._trial_store, self._final_store, self.direction)
                         except Exception as e:
                             self._log(e)
+                            # log the final store in case of median exception
+                            for i in self._final_store:
+                                self._log(json.dumps(i))
                             raise
                         if len(to_stop) > 0:
                             self._log("Trials to stop: {}".format(to_stop))
@@ -186,7 +189,7 @@ class ExperimentDriver(object):
                         with self.log_lock:
                             self.executor_logs = self.executor_logs + logs
 
-                # 2. BLACK
+                # 2. BLACKLIST the trial
                 elif msg['type'] == 'BLACK':
                     trial = self.get_trial(msg['trial_id'])
                     with trial.lock:
@@ -358,7 +361,7 @@ class ExperimentDriver(object):
         """Return current experiment status and executor logs to send them to
         spark magic.
         """
-        with  self.log_lock:
+        with self.log_lock:
             temp = self.executor_logs
             # clear the executor logs since they are being sent
             self.executor_logs = ''

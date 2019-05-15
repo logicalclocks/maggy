@@ -245,7 +245,6 @@ class Server(MessageSocket):
         elif msg_type == 'METRIC':
             # lookup executor reservation to find assigned trial
             trialId = msg['trial_id']
-            #print("received: {}".format(msg))
             # get early stopping flag
             flag = exp_driver.get_trial(trialId).get_early_stop()
             # add metric msg to the exp driver queue
