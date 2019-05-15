@@ -87,13 +87,14 @@ def launch(map_fun, searchspace, optimizer, direction, num_trials, name, hb_inte
         app_id = str(sc.applicationId)
         app_dir = ''
 
-        exp_dir = util._get_experiments_dir(name)
+        # Create the root dir if not existing
+        _ = util._get_experiments_dir(name)
         # get run_id and run_dir
         run_id, run_dir = util._get_run_dir(name)
         # set elastic id to run_id
         elastic_id = run_id
         # trial dir will be for tensorboard
-        app_dir, trial_dir, log_dir, result_dir = util._init_run(run_dir, app_id)
+        app_dir, trial_dir, log_dir = util._init_run(run_dir, app_id)
         tensorboard._register(trial_dir)
         #tensorboard.write_hparams_proto(trial_dir, searchspace)
         #hopshdfs.dump('writing proto buf worked', log_dir+'/maggy.log')
@@ -108,7 +109,7 @@ def launch(map_fun, searchspace, optimizer, direction, num_trials, name, hb_inte
         # start experiment driver
         exp_driver = ExperimentDriver(searchspace, optimizer, direction,
             num_trials, name, num_executors, hb_interval, es_policy,
-            es_interval, es_min, description, log_dir, trial_dir)
+            es_interval, es_min, description, app_dir, log_dir, trial_dir)
 
         # Make SparkUI intuitive by grouping jobs
         sc.setJobGroup("Maggy Experiment", "{}".format(name))

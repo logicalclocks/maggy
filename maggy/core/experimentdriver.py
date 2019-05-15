@@ -23,7 +23,7 @@ class ExperimentDriver(object):
 
     SECRET_BYTES = 8
 
-    def __init__(self, searchspace, optimizer, direction, num_trials, name, num_executors, hb_interval, es_policy, es_interval, es_min, description, log_dir, trial_dir):
+    def __init__(self, searchspace, optimizer, direction, num_trials, name, num_executors, hb_interval, es_policy, es_interval, es_min, description, app_dir, log_dir, trial_dir):
 
         self._final_store = []
 
@@ -85,8 +85,9 @@ class ExperimentDriver(object):
         self.executor_logs = ''
         self.maggy_log = ''
         self.log_lock = threading.RLock()
-        self.log_file = log_dir+ '/maggy.log'
+        self.log_file = log_dir + '/maggy.log'
         self.trial_dir = trial_dir
+        self.app_dir = app_dir
 
         #Open File desc for HDFS to log
         if not hopshdfs.exists(self.log_file):
@@ -116,7 +117,6 @@ class ExperimentDriver(object):
                 'AVERAGE metric -- ' + str(self.result['avg']) + '\n' \
                 'EARLY STOPPED Trials -- ' + str(self.result['early_stopped']) + '\n' \
                 'Total job time ' + self.duration + '\n'
-            # TODO: write to hdfs
             print(results)
         elif self.direction == 'min':
             results = '\n------ ' + str(self.optimizer.__class__.__name__) + ' results ------ direction(' + self.direction + ') \n' \
@@ -125,8 +125,13 @@ class ExperimentDriver(object):
                 'AVERAGE metric -- ' + str(self.result['avg']) + '\n' \
                 'EARLY STOPPED Trials -- ' + str(self.result['early_stopped']) + '\n' \
                 'Total job time ' + self.duration + '\n'
-            # TODO: write to hdfs
             print(results)
+
+        self._log(results)
+
+        hopshdfs.dump(json.dumps(self.result), self.app_dir + '/result')
+        sc = hopsutil._find_spark().sparkContext
+        hopshdfs.dump(self.json(sc), self.app_dir + '/maggy')
 
         return self.result
 

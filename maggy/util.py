@@ -49,13 +49,11 @@ def _init_run(run_dir, app_id):
     app_dir = run_dir + '/' + app_id
     trials = app_dir + '/trials'
     logs = app_dir + '/logs'
-    results = app_dir + '/result'
 
     hopshdfs.mkdir(trials)
     hopshdfs.mkdir(logs)
-    hopshdfs.mkdir(results)
 
-    return app_dir, trials, logs, results
+    return app_dir, trials, logs
 
 def num_executors():
     """
