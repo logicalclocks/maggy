@@ -200,10 +200,12 @@ class Server(MessageSocket):
         """
         msg_type = msg['type']
 
+        # Prepare message
+        send = {}
+
         if 'trial_id' in msg:
             # throw away idle heartbeat messages without trial
             if msg['trial_id'] is None:
-                send = {}
                 send['type'] = 'OK'
                 MessageSocket.send(self, sock, send)
                 return
@@ -211,7 +213,6 @@ class Server(MessageSocket):
             # yet so trial_id is not None but data is None
             elif msg['trial_id'] is not None:
                 if msg.get('data', None) is None:
-                    send = {}
                     send['type'] = 'OK'
                     MessageSocket.send(self, sock, send)
                     return
@@ -233,21 +234,15 @@ class Server(MessageSocket):
                 self.reservations.add(msg['data'])
                 exp_driver.add_message(msg)
 
-            send = {}
             send['type'] = 'OK'
 
             MessageSocket.send(self, sock, send)
         elif msg_type == 'QUERY':
-
-            send = {}
             send['type'] = 'QUERY'
             send['data'] = self.reservations.done()
 
             MessageSocket.send(self, sock, send)
         elif msg_type == 'METRIC':
-            # Prepare message
-            send = {}
-
             # lookup executor reservation to find assigned trial
             trialId = msg['trial_id']
             #print("received: {}".format(msg))
@@ -266,7 +261,6 @@ class Server(MessageSocket):
             # reset the reservation to avoid sending the same trial again
             self.reservations.assign_trial(msg['partition_id'], None)
 
-            send = {}
             send['type'] = 'OK'
 
             # add metric msg to the exp driver queue
@@ -280,10 +274,8 @@ class Server(MessageSocket):
             # trial_id needs to be none because experiment_done can be true but
             # the assigned trial might not be finalized yet
             if exp_driver.experiment_done and trial_id is None:
-                send = {}
                 send['type'] = "GSTOP"
             else:
-                send = {}
                 send['type'] = "TRIAL"
 
             send['trial_id'] = trial_id
@@ -300,7 +292,6 @@ class Server(MessageSocket):
             # get data from experiment driver
             result, log = exp_driver._get_logs()
 
-            send = {}
             send['type'] = "OK"
             send['ex_logs'] = log
             send['num_trials'] = exp_driver.num_trials
@@ -310,8 +301,6 @@ class Server(MessageSocket):
             MessageSocket.send(self, sock, send)
             return
         else:
-            # Prepare message
-            send = {}
             send['type'] = "ERR"
             MessageSocket.send(self, sock, send)
 
