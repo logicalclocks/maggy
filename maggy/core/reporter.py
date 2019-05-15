@@ -72,7 +72,7 @@ class Reporter(object):
     def reset(self):
         """
         Resets the reporter to the initial state in order to start a new
-        experiment.
+        trial.
         """
         with self.lock:
             self.metric = None
