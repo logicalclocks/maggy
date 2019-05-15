@@ -62,9 +62,9 @@ def _prepare_func(app_id, run_id, map_fun, server_addr, hb_interval, secret, app
 
                 reporter.set_trial_id(trial_id)
 
-                logdir = app_dir + '/trials/' + trial_id
-                tensorboard._register(logdir)
-                hopshdfs.mkdir(logdir)
+                tb_logdir = app_dir + '/trials/' + trial_id
+                tensorboard._register(tb_logdir)
+                hopshdfs.mkdir(tb_logdir)
 
                 try:
                     reporter.log("Starting Trial: {}".format(trial_id), True)
