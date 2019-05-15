@@ -265,8 +265,7 @@ class ExperimentDriver(object):
             'memory_per_executor': str(sc._conf.get("spark.executor.memory")),
             'gpus_per_executor': str(sc._conf.get("spark.executor.gpus")),
             'executors': self.num_executors,
-            # TODO: add tensorboard logdir
-            'logdir': 'UNDEFINED',
+            'logdir': self.trial_dir,
             'hyperparameter_space': json.dumps(self.searchspace.to_dict()),
             # 'versioned_resources': versioned_resources,
             'description': self.description}
