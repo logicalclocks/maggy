@@ -164,8 +164,12 @@ class ExperimentDriver(object):
                     # pass currently running trials to early stop component
                     if len(self._final_store) > self.es_min:
                         self._log("Check for early stopping.")
-                        to_stop = self.earlystop_check(
-                            self._trial_store, self._final_store, self.direction)
+                        try:
+                            to_stop = self.earlystop_check(
+                                self._trial_store, self._final_store, self.direction)
+                        except Exception as e:
+                            self._log(e)
+                            raise
                         if len(to_stop) > 0:
                             self._log("Trials to stop: {}".format(to_stop))
                         for trial_id in to_stop:
