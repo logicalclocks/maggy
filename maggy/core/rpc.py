@@ -158,7 +158,6 @@ class Server(MessageSocket):
 
         Args:
             count:
-            secret: required by Hopsworks/sparkmagic
         """
         assert count > 0
         self.reservations = Reservations(count)
