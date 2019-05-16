@@ -1,10 +1,12 @@
 
 import os
+import tensorflow as tf
 
 HOPSWORKS = "HOPSWORKS"
 SPARK_ONLY = "SPARK_ONLY"
 
 mode = None
+tf_version = int(tf.__version__.split(".")[0])
 
 try:
     mode = os.environ['HOPSWORKS_VERSION']

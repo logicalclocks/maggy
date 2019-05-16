@@ -6,24 +6,24 @@ import threading
 import json
 import os
 import secrets
-import maggy.util as util
 from datetime import datetime
+from maggy import util
 from maggy.optimizer import AbstractOptimizer, RandomSearch
 from maggy.core import config, rpc
 from maggy.trial import Trial
 from maggy.earlystop import AbstractEarlyStop, MedianStoppingRule
 from maggy.searchspace import Searchspace
 
-if config.mode is config.HOPSWORKS:
-    from hops import constants
-    from hops import hdfs
+from hops import constants as hopsconstants
+from hops import hdfs as hopshdfs
+from hops import util as hopsutil
 
 
 class ExperimentDriver(object):
 
     SECRET_BYTES = 8
 
-    def __init__(self, searchspace, optimizer, direction, num_trials, name, num_executors, hb_interval, es_policy, es_interval, es_min, description):
+    def __init__(self, searchspace, optimizer, direction, num_trials, name, num_executors, hb_interval, es_policy, es_interval, es_min, description, app_dir, log_dir, trial_dir):
 
         self._final_store = []
 
@@ -62,7 +62,7 @@ class ExperimentDriver(object):
                 raise Exception(
                     "Unknown Early Stopping Policy. Can't initialize experiment driver.")
         elif isinstance(es_policy, AbstractEarlyStop):
-            print("Custom Early Esrly Stopping policy initialized.")
+            print("Custom Early Stopping policy initialized.")
             self.earlystop_check = es_policy.earlystop_check
 
         self.direction = direction.lower()
@@ -82,6 +82,17 @@ class ExperimentDriver(object):
         self._secret = self._generate_secret(ExperimentDriver.SECRET_BYTES)
         self.result = None
         self.job_start = datetime.now()
+        self.executor_logs = ''
+        self.maggy_log = ''
+        self.log_lock = threading.RLock()
+        self.log_file = log_dir + '/maggy.log'
+        self.trial_dir = trial_dir
+        self.app_dir = app_dir
+
+        #Open File desc for HDFS to log
+        if not hopshdfs.exists(self.log_file):
+            hopshdfs.dump('', self.log_file)
+        self.fd = hopshdfs.open_file(self.log_file, flags='w')
 
     def init(self):
 
@@ -97,7 +108,7 @@ class ExperimentDriver(object):
 
         self.job_end = datetime.now()
 
-        self.duration = util._time_diff(self.job_start, self.job_end)
+        self.duration = hopsutil._time_diff(self.job_start, self.job_end)
 
         if self.direction == 'max':
             results = '\n------ ' + str(self.optimizer.__class__.__name__) + ' results ------ direction(' + self.direction + ') \n' \
@@ -106,7 +117,6 @@ class ExperimentDriver(object):
                 'AVERAGE metric -- ' + str(self.result['avg']) + '\n' \
                 'EARLY STOPPED Trials -- ' + str(self.result['early_stopped']) + '\n' \
                 'Total job time ' + self.duration + '\n'
-            # TODO: write to hdfs
             print(results)
         elif self.direction == 'min':
             results = '\n------ ' + str(self.optimizer.__class__.__name__) + ' results ------ direction(' + self.direction + ') \n' \
@@ -115,8 +125,13 @@ class ExperimentDriver(object):
                 'AVERAGE metric -- ' + str(self.result['avg']) + '\n' \
                 'EARLY STOPPED Trials -- ' + str(self.result['early_stopped']) + '\n' \
                 'Total job time ' + self.duration + '\n'
-            # TODO: write to hdfs
             print(results)
+
+        self._log(results)
+
+        hopshdfs.dump(json.dumps(self.result), self.app_dir + '/result.json')
+        sc = hopsutil._find_spark().sparkContext
+        hopshdfs.dump(self.json(sc), self.app_dir + '/maggy.json')
 
         return self.result
 
@@ -148,11 +163,18 @@ class ExperimentDriver(object):
 
                     # pass currently running trials to early stop component
                     if len(self._final_store) > self.es_min:
-                        print("Check for early stopping.")
-                        to_stop = self.earlystop_check(
-                            self._trial_store, self._final_store, self.direction)
+                        self._log("Check for early stopping.")
+                        try:
+                            to_stop = self.earlystop_check(
+                                self._trial_store, self._final_store, self.direction)
+                        except Exception as e:
+                            self._log(e)
+                            # log the final store in case of median exception
+                            for i in self._final_store:
+                                self._log(json.dumps(i))
+                            raise
                         if len(to_stop) > 0:
-                            print("Trials to stop: {}".format(to_stop))
+                            self._log("Trials to stop: {}".format(to_stop))
                         for trial_id in to_stop:
                             self.get_trial(trial_id).set_early_stop()
 
@@ -161,14 +183,19 @@ class ExperimentDriver(object):
                 if msg['type'] == 'METRIC':
                     self.get_trial(msg['trial_id']).append_metric(msg['data'])
 
-                # 2. BLACK
+                    # append executor logs if in the message
+                    logs = msg.get('logs', None)
+                    if logs is not None:
+                        with self.log_lock:
+                            self.executor_logs = self.executor_logs + logs
+
+                # 2. BLACKLIST the trial
                 elif msg['type'] == 'BLACK':
                     trial = self.get_trial(msg['trial_id'])
                     with trial.lock:
                         trial.status = Trial.SCHEDULED
                         self.server.reservations.assign_trial(
                             msg['partition_id'], msg['trial_id'])
-                        # print("Scheduled Trial: " + trial.to_json())
 
                 # 3. FINAL
                 elif msg['type'] == 'FINAL':
@@ -180,7 +207,7 @@ class ExperimentDriver(object):
                     with trial.lock:
                         trial.status = Trial.FINALIZED
                         trial.final_metric = msg['data']
-                        trial.duration = util._time_diff(
+                        trial.duration = hopsutil._time_diff(
                             trial.start, datetime.now())
 
                     # move trial to the finalized ones
@@ -189,8 +216,11 @@ class ExperimentDriver(object):
 
                     # update result dictionary
                     self._update_result(trial)
+                    # keep for later in case tqdm doesn't work
+                    self.maggy_log = self._update_maggy_log()
+                    self._log(self.maggy_log)
 
-                    # TODO: make json and write to HDFS
+                    hopshdfs.dump(trial.to_json(), self.trial_dir + '/' + trial.trial_id + '/trial.json')
 
                     # assign new trial
                     trial = self.optimizer.get_suggestion(trial)
@@ -227,15 +257,17 @@ class ExperimentDriver(object):
         """Stop the Driver's worker thread and server."""
         self.worker_done = True
         self.server.stop()
+        self.fd.flush()
+        self.fd.close()
 
     def json(self, sc):
         """Get all relevant experiment information in JSON format.
         """
         user = None
-        if constants.ENV_VARIABLES.HOPSWORKS_USER_ENV_VAR in os.environ:
-            user = os.environ[constants.ENV_VARIABLES.HOPSWORKS_USER_ENV_VAR]
+        if hopsconstants.ENV_VARIABLES.HOPSWORKS_USER_ENV_VAR in os.environ:
+            user = os.environ[hopsconstants.ENV_VARIABLES.HOPSWORKS_USER_ENV_VAR]
 
-        experiment_json = {'project': hdfs.project_name(),
+        experiment_json = {'project': hopshdfs.project_name(),
             'user': user,
             'name': self.name,
             'module': 'maggy',
@@ -245,8 +277,7 @@ class ExperimentDriver(object):
             'memory_per_executor': str(sc._conf.get("spark.executor.memory")),
             'gpus_per_executor': str(sc._conf.get("spark.executor.gpus")),
             'executors': self.num_executors,
-            # TODO: add tensorboard logdir
-            'logdir': 'UNDEFINED',
+            'logdir': self.trial_dir,
             'hyperparameter_space': json.dumps(self.searchspace.to_dict()),
             # 'versioned_resources': versioned_resources,
             'description': self.description}
@@ -312,3 +343,32 @@ class ExperimentDriver(object):
 
         if trial.early_stop:
                 self.result['early_stopped'] += 1
+
+    def _update_maggy_log(self):
+        """Creates the status of a maggy experiment with a progress bar.
+        """
+        finished = self.result['num_trials']
+
+        log = 'Maggy ' + str(finished) + '/' + str(self.num_trials) + \
+            ' (' + str(self.result['early_stopped']) + ') ' + \
+            util._progress_bar(finished, self.num_trials) + ' - BEST ' + \
+            json.dumps(self.result['max_hp']) + ' - metric ' + \
+            str(self.result['max_val'])
+
+        return log
+
+    def _get_logs(self):
+        """Return current experiment status and executor logs to send them to
+        spark magic.
+        """
+        with self.log_lock:
+            temp = self.executor_logs
+            # clear the executor logs since they are being sent
+            self.executor_logs = ''
+            return self.result, temp
+
+    def _log(self, log_msg):
+        """Logs a string to the maggy driver log file.
+        """
+        msg = datetime.now().isoformat() + ': ' + str(log_msg)
+        self.fd.write((msg + '\n').encode())

@@ -49,6 +49,7 @@ def test_randomsearch(sc):
         for i in range(5):
             acc = i+random.random()
             reporter.broadcast(metric=acc)
+            reporter.log("Metric: {}".format(acc))
 
             time.sleep(argument_param)
 

@@ -6,15 +6,12 @@ import time
 import select
 import socket
 import secrets
+import json
 
-from maggy import util
 from maggy.trial import Trial
 
 from hops import constants as hopsconstants
 from hops import util as hopsutil
-
-import json
-
 
 MAX_RETRIES = 3
 BUFSIZE = 1024 * 2
@@ -203,10 +200,12 @@ class Server(MessageSocket):
         """
         msg_type = msg['type']
 
+        # Prepare message
+        send = {}
+
         if 'trial_id' in msg:
             # throw away idle heartbeat messages without trial
             if msg['trial_id'] is None:
-                send = {}
                 send['type'] = 'OK'
                 MessageSocket.send(self, sock, send)
                 return
@@ -214,7 +213,6 @@ class Server(MessageSocket):
             # yet so trial_id is not None but data is None
             elif msg['trial_id'] is not None:
                 if msg.get('data', None) is None:
-                    send = {}
                     send['type'] = 'OK'
                     MessageSocket.send(self, sock, send)
                     return
@@ -236,21 +234,15 @@ class Server(MessageSocket):
                 self.reservations.add(msg['data'])
                 exp_driver.add_message(msg)
 
-            send = {}
             send['type'] = 'OK'
 
             MessageSocket.send(self, sock, send)
         elif msg_type == 'QUERY':
-
-            send = {}
             send['type'] = 'QUERY'
             send['data'] = self.reservations.done()
 
             MessageSocket.send(self, sock, send)
         elif msg_type == 'METRIC':
-            # Prepare message
-            send = {}
-
             # lookup executor reservation to find assigned trial
             trialId = msg['trial_id']
             # get early stopping flag
@@ -268,7 +260,6 @@ class Server(MessageSocket):
             # reset the reservation to avoid sending the same trial again
             self.reservations.assign_trial(msg['partition_id'], None)
 
-            send = {}
             send['type'] = 'OK'
 
             # add metric msg to the exp driver queue
@@ -282,10 +273,8 @@ class Server(MessageSocket):
             # trial_id needs to be none because experiment_done can be true but
             # the assigned trial might not be finalized yet
             if exp_driver.experiment_done and trial_id is None:
-                send = {}
                 send['type'] = "GSTOP"
             else:
-                send = {}
                 send['type'] = "TRIAL"
 
             send['trial_id'] = trial_id
@@ -298,10 +287,19 @@ class Server(MessageSocket):
                 send['data'] = None
 
             MessageSocket.send(self, sock, send)
+        elif msg_type == 'LOG':
+            # get data from experiment driver
+            result, log = exp_driver._get_logs()
 
+            send['type'] = "OK"
+            send['ex_logs'] = log
+            send['num_trials'] = exp_driver.num_trials
+            send['to_date'] = result['num_trials']
+            send['stopped'] = result['early_stopped']
+            send['metric'] = result['max_val']
+            MessageSocket.send(self, sock, send)
+            return
         else:
-            # Prepare message
-            send = {}
             send['type'] = "ERR"
             MessageSocket.send(self, sock, send)
 
@@ -329,11 +327,10 @@ class Server(MessageSocket):
         server_sock.listen(10)
 
         # hostname may not be resolvable but IP address probably will be
-        host = util._get_ip_address()
+        host = hopsutil._get_ip_address()
         port = server_sock.getsockname()[1]
         addr = (host, port)
 
-        print("Maggy getting SparkContext")        
         # register this driver with Hopsworks
         sc = hopsutil._find_spark().sparkContext
         app_id = str(sc.applicationId)
@@ -356,13 +353,14 @@ class Server(MessageSocket):
             response = hopsutil.send_request(connection, method, resource_url, body=json_embeddable, headers=headers)
             if (response.status == 200):
                 resp_body = response.read()
-                response_object = json.loads(resp_body)
+                _ = json.loads(resp_body)
             else:
-                print("No connection to Hopsworks for logging.")                
+                print("No connection to Hopsworks for logging.")
+                exp_driver._log("No connection to Hopsworks for logging.")
         except Exception as e:
             print("Connection failed to Hopsworks. No logging.")
-            
-
+            exp_driver._log(e)
+            exp_driver._log("Connection failed to Hopsworks. No logging.")
 
         def _listen(self, sock, driver):
             CONNECTIONS = []
@@ -422,13 +420,13 @@ class Client(MessageSocket):
         self.hb_sock.connect(server_addr)
         self.server_addr = server_addr
         self.done = False
-        self.client_addr = (util._get_ip_address(), self.sock.getsockname()[1])
+        self.client_addr = (hopsutil._get_ip_address(), self.sock.getsockname()[1])
         self.partition_id = partition_id
         self.task_attempt = task_attempt
         self.hb_interval = hb_interval
         self._secret = secret
 
-    def _request(self, req_sock, msg_type, msg_data=None, trial_id=None):
+    def _request(self, req_sock, msg_type, msg_data=None, trial_id=None, logs=None):
         """Helper function to wrap msg w/ msg_type."""
         msg = {}
         msg['partition_id'] = self.partition_id
@@ -437,6 +435,8 @@ class Client(MessageSocket):
 
         if msg_type == 'FINAL' or msg_type == 'METRIC':
             msg['trial_id'] = trial_id
+            if logs is not None and logs != '':
+                msg['logs'] = logs
 
         if msg_data or ((msg_data == True) or (msg_data == False)):
             msg['data'] = msg_data
@@ -492,12 +492,13 @@ class Client(MessageSocket):
 
             while not self.done:
 
-                metric = report.get_metric()
+                metric, logs = report.get_data()
 
                 resp = self._request(self.hb_sock,
                                     'METRIC',
                                      metric,
-                                     report.get_trial_id())
+                                     report.get_trial_id(),
+                                     logs)
                 _ = self._handle_message(resp, report)
 
                 # sleep one second
@@ -507,7 +508,7 @@ class Client(MessageSocket):
         t.daemon = True
         t.start()
 
-        print("Started metric heartbeat")
+        reporter.log("Started metric heartbeat", True)
 
     def get_suggestion(self):
         """Blocking call to get new parameter combination."""
@@ -548,7 +549,7 @@ class Client(MessageSocket):
         elif msg_type == 'ERR':
             print("Stopping experiment")
             self.done = True
-            
+
     def finalize_metric(self, metric, reporter):
         # make sure heartbeat thread can't send between sending final metric
         # and resetting the reporter
@@ -556,5 +557,3 @@ class Client(MessageSocket):
             resp = self._request(self.sock, 'FINAL', metric, reporter.get_trial_id())
             reporter.reset()
         return resp
-
-    

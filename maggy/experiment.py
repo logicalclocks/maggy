@@ -14,20 +14,18 @@ import json
 import atexit
 from datetime import datetime
 
-from maggy import util
+from maggy import util, tensorboard
 from maggy.core import config, rpc, trialexecutor, ExperimentDriver
 from maggy.trial import Trial
+
+from hops import util as hopsutil
+from hops import hdfs as hopshdfs
 
 app_id = None
 running = False
 run_id = None
 elastic_id = 1
 experiment_json = None
-driver_tensorboard_hdfs_path = None
-
-if config.mode is config.HOPSWORKS:
-    import hops.util as hopsutil
-    import hops.hdfs as hdfs
 
 
 def launch(map_fun, searchspace, optimizer, direction, num_trials, name, hb_interval=1, es_policy='median', es_interval=300, es_min=10, description=''):
@@ -82,10 +80,24 @@ def launch(map_fun, searchspace, optimizer, direction, num_trials, name, hb_inte
         global app_id
         global experiment_json
         global elastic_id
+        global run_id
         running = True
 
-        sc = util._find_spark().sparkContext
+        sc = hopsutil._find_spark().sparkContext
         app_id = str(sc.applicationId)
+        app_dir = ''
+
+        # Create the root dir if not existing
+        _ = util._get_experiments_dir(name)
+        # get run_id and run_dir
+        run_id, run_dir = util._get_run_dir(name)
+        # set elastic id to run_id
+        elastic_id = run_id
+        # trial dir will be for tensorboard
+        app_dir, trial_dir, log_dir = util._init_run(run_dir, app_id)
+        tensorboard._register(trial_dir)
+        #tensorboard.write_hparams_proto(trial_dir, searchspace)
+        #hopshdfs.dump('writing proto buf worked', log_dir+'/maggy.log')
 
         num_executors = util.num_executors()
 
@@ -94,42 +106,39 @@ def launch(map_fun, searchspace, optimizer, direction, num_trials, name, hb_inte
 
         nodeRDD = sc.parallelize(range(num_executors), num_executors)
 
-        # Make SparkUI intuitive by grouping jobs
-        sc.setJobGroup("Maggy Experiment", "{}".format(name))
-        print("Started Maggy Experiment: ", "{}".format(name))
-
         # start experiment driver
         exp_driver = ExperimentDriver(searchspace, optimizer, direction,
             num_trials, name, num_executors, hb_interval, es_policy,
-            es_interval, es_min, description)
+            es_interval, es_min, description, app_dir, log_dir, trial_dir)
+
+        # Make SparkUI intuitive by grouping jobs
+        sc.setJobGroup("Maggy Experiment", "{}".format(name))
+        exp_driver._log("Started Maggy Experiment: {0}, run {1}".format(name, run_id))
 
         exp_driver.init()
 
         server_addr = exp_driver.server_addr
 
-        if config.mode is config.HOPSWORKS:
-            experiment_json = exp_driver.json(sc)
-            hopsutil._put_elastic(hdfs.project_name(), app_id, elastic_id,
-                experiment_json)
+        experiment_json = exp_driver.json(sc)
+        hopsutil._put_elastic(hopshdfs.project_name(), app_id, run_id,
+            experiment_json)
 
         # Force execution on executor, since GPU is located on executor
         job_start = datetime.now()
         nodeRDD.foreachPartition(trialexecutor._prepare_func(app_id, run_id,
-            map_fun, server_addr, hb_interval, exp_driver._secret))
+            map_fun, server_addr, hb_interval, exp_driver._secret, app_dir))
         job_end = datetime.now()
 
         result = exp_driver.finalize(job_start, job_end)
 
-        if config.mode is config.HOPSWORKS:
-            experiment_json = exp_driver.json(sc)
-            hopsutil._put_elastic(hdfs.project_name(), app_id, elastic_id,
-                experiment_json)
+        experiment_json = exp_driver.json(sc)
+        hopsutil._put_elastic(hopshdfs.project_name(), app_id, elastic_id,
+            experiment_json)
 
-        print("Finished Experiment \n")
+        exp_driver._log("Finished Experiment")
 
     except:
-        if config.mode is config.HOPSWORKS:
-            _exception_handler()
+        _exception_handler()
         raise
     finally:
         # cleanup spark jobs
@@ -153,7 +162,7 @@ def _exception_handler():
         experiment_json['status'] = "FAILED"
         experiment_json['finished'] = datetime.now().isoformat()
         experiment_json = json.dumps(experiment_json)
-        hopsutil._put_elastic(hdfs.project_name(), app_id, elastic_id, experiment_json)
+        hopsutil._put_elastic(hopshdfs.project_name(), app_id, elastic_id, experiment_json)
 
 def _exit_handler():
     """
@@ -168,7 +177,6 @@ def _exit_handler():
         experiment_json['status'] = "KILLED"
         experiment_json['finished'] = datetime.now().isoformat()
         experiment_json = json.dumps(experiment_json)
-        hopsutil._put_elastic(hdfs.project_name(), app_id, elastic_id, experiment_json)
+        hopsutil._put_elastic(hopshdfs.project_name(), app_id, elastic_id, experiment_json)
 
-if config.mode is config.HOPSWORKS:
-    atexit.register(_exit_handler)
+atexit.register(_exit_handler)
