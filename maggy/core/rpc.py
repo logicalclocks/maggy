@@ -349,10 +349,7 @@ class Server(MessageSocket):
 
         try:
             response = hopsutil.send_request(connection, method, resource_url, body=json_embeddable, headers=headers)
-            if (response.status == 200):
-                resp_body = response.read()
-                _ = json.loads(resp_body)
-            else:
+            if (response.status != 200):
                 print("No connection to Hopsworks for logging.")
                 exp_driver._log("No connection to Hopsworks for logging.")
         except Exception as e:
