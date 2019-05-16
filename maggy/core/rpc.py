@@ -207,13 +207,15 @@ class Server(MessageSocket):
             # throw away idle heartbeat messages without trial
             if msg['trial_id'] is None:
                 send['type'] = 'OK'
+                MessageSocket.send(self, sock, send)
+                return
             # it can happen that executor has trial but no metric was reported
             # yet so trial_id is not None but data is None
             elif msg['trial_id'] is not None:
                 if msg.get('data', None) is None:
                     send['type'] = 'OK'
-            MessageSocket.send(self, sock, send)
-            return
+                    MessageSocket.send(self, sock, send)
+                    return
 
         if msg_type == 'REG':
             # check if executor was registered before and retrieve lost trial
