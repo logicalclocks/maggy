@@ -78,7 +78,7 @@ class ExperimentDriver(object):
         self.es_min = es_min
         self.description = description
         self.direction = direction.lower()
-        self.server = rpc.Server(num_executors)        
+        self.server = rpc.Server(num_executors)
         self._secret = self._generate_secret(ExperimentDriver.SECRET_BYTES)
         self.result = None
         self.job_start = datetime.now()
