@@ -345,16 +345,24 @@ class Server(MessageSocket):
                        "maggy" + hopsconstants.DELIMITERS.SLASH_DELIMITER + "drivers" + \
                        hopsconstants.DELIMITERS.SLASH_DELIMITER + \
                        app_id
-        json_contents = {"host_ip": host,
+        json_contents = {"hostIp": host,
                          "port": port,
-                         "app_id": app_id,
-                         "secret" : "abc"}
+                         "appId": app_id,
+                         "secret" : exp_driver._secret }
         json_embeddable = json.dumps(json_contents)
         headers = {hopsconstants.HTTP_CONFIG.HTTP_CONTENT_TYPE: hopsconstants.HTTP_CONFIG.HTTP_APPLICATION_JSON}
 
-        response = hopsutil.send_request(connection, method, resource_url, body=json_embeddable, headers=headers)
-        resp_body = response.read()
-        response_object = json.loads(resp_body)
+        try:
+            response = hopsutil.send_request(connection, method, resource_url, body=json_embeddable, headers=headers)
+            if (response.status == 200):
+                resp_body = response.read()
+                response_object = json.loads(resp_body)
+            else:
+                print("No connection to Hopsworks for logging.")                
+        except Exception as e:
+            print("Connection failed to Hopsworks. No logging.")
+            
+
 
         def _listen(self, sock, driver):
             CONNECTIONS = []
