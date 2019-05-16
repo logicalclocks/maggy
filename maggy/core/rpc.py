@@ -153,7 +153,7 @@ class Server(MessageSocket):
     reservations = None
     done = False
 
-    def __init__(self, count, secret):
+    def __init__(self, count):
         """
 
         Args:
@@ -162,7 +162,6 @@ class Server(MessageSocket):
         """
         assert count > 0
         self.reservations = Reservations(count)
-        self.secret = secret
 
     def await_reservations(self, sc, status={}, timeout=600):
         """
@@ -350,7 +349,7 @@ class Server(MessageSocket):
         json_contents = {"host_ip": host,
                          "port": port,
                          "app_id": app_id,
-                         "secret" : self.secret }
+                         "secret" : exp_driver._secret }
         json_embeddable = json.dumps(json_contents)
         headers = {hopsconstants.HTTP_CONFIG.HTTP_CONTENT_TYPE: hopsconstants.HTTP_CONFIG.HTTP_APPLICATION_JSON}
 
