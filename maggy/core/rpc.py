@@ -345,9 +345,9 @@ class Server(MessageSocket):
                        "maggy" + hopsconstants.DELIMITERS.SLASH_DELIMITER + "drivers" + \
                        hopsconstants.DELIMITERS.SLASH_DELIMITER + \
                        app_id
-        json_contents = {"host_ip": host,
+        json_contents = {"hostIp": host,
                          "port": port,
-                         "app_id": app_id,
+                         "appId": app_id,
                          "secret" : exp_driver._secret }
         json_embeddable = json.dumps(json_contents)
         headers = {hopsconstants.HTTP_CONFIG.HTTP_CONTENT_TYPE: hopsconstants.HTTP_CONFIG.HTTP_APPLICATION_JSON}
