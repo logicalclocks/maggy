@@ -153,14 +153,16 @@ class Server(MessageSocket):
     reservations = None
     done = False
 
-    def __init__(self, count):
+    def __init__(self, count, secret):
         """
 
         Args:
             count:
+            secret: required by Hopsworks/sparkmagic
         """
         assert count > 0
         self.reservations = Reservations(count)
+        self.secret = secret
 
     def await_reservations(self, sc, status={}, timeout=600):
         """
@@ -348,13 +350,21 @@ class Server(MessageSocket):
         json_contents = {"host_ip": host,
                          "port": port,
                          "app_id": app_id,
-                         "secret" : "abc"}
+                         "secret" : self.secret }
         json_embeddable = json.dumps(json_contents)
         headers = {hopsconstants.HTTP_CONFIG.HTTP_CONTENT_TYPE: hopsconstants.HTTP_CONFIG.HTTP_APPLICATION_JSON}
 
-        response = hopsutil.send_request(connection, method, resource_url, body=json_embeddable, headers=headers)
-        resp_body = response.read()
-        response_object = json.loads(resp_body)
+        try:
+            response = hopsutil.send_request(connection, method, resource_url, body=json_embeddable, headers=headers)
+            if (response.status == 200):
+                resp_body = response.read()
+                response_object = json.loads(resp_body)
+            else:
+                print("No connection to Hopsworks for logging.")                
+        except Exception as e:
+            print("Connection failed to Hopsworks. No logging.")
+            
+
 
         def _listen(self, sock, driver):
             CONNECTIONS = []
