@@ -70,6 +70,9 @@ def _prepare_func(app_id, run_id, map_fun, server_addr, hb_interval, secret, app
                     reporter.log("Starting Trial: {}".format(trial_id), True)
                     reporter.log("Parameter Combination: {}".format(parameters), True)
                     retval = map_fun(**parameters, reporter=reporter)
+                    if retval is None:
+                        reporter.log("Training function can't return None", True)
+                        raise Exception("Training function can't return None")
                 except exceptions.EarlyStopException as e:
                     retval = e.metric
                     reporter.log("Early Stopped Trial.", True)
