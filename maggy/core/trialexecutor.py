@@ -84,14 +84,11 @@ def _prepare_func(app_id, run_id, map_fun, server_addr, hb_interval, secret, app
                 # blocking
                 trial_id, parameters = client.get_suggestion()
 
-        except Exception as exc:
-            print("Outermost exception")
-            print(exc)
-            reporter.log(exc)
-            print("after logging exception")
+        except:
             reporter.fd.close()
             raise
         finally:
+            reporter.log("Finished Experiment.")
             reporter.fd.close()
             client.stop()
             client.close()
