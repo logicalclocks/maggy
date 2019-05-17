@@ -84,7 +84,8 @@ def _prepare_func(app_id, run_id, map_fun, server_addr, hb_interval, secret, app
                 # blocking
                 trial_id, parameters = client.get_suggestion()
 
-        except:
+        except Exception as exc:
+            reporter.log(exc)
             reporter.fd.close()
             raise
         finally:
