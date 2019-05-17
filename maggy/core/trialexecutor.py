@@ -71,7 +71,7 @@ def _prepare_func(app_id, run_id, map_fun, server_addr, hb_interval, secret, app
                     reporter.log("Parameter Combination: {}".format(parameters), True)
                     retval = map_fun(**parameters, reporter=reporter)
                     if retval is None:
-                        reporter.log("Training function can't return None", True)
+                        reporter.log("ERROR: Training function can't return None", True)
                         raise Exception("Training function can't return None")
                 except exceptions.EarlyStopException as e:
                     retval = e.metric
@@ -88,7 +88,6 @@ def _prepare_func(app_id, run_id, map_fun, server_addr, hb_interval, secret, app
             reporter.fd.close()
             raise
         finally:
-            reporter.log("Finished Experiment.")
             reporter.fd.close()
             client.stop()
             client.close()
