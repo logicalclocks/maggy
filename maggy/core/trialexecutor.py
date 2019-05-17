@@ -85,7 +85,9 @@ def _prepare_func(app_id, run_id, map_fun, server_addr, hb_interval, secret, app
                 trial_id, parameters = client.get_suggestion()
 
         except Exception as exc:
+            print("Outermost exception")
             reporter.log(exc)
+            print("after logging exception")
             reporter.fd.close()
             raise
         finally:
