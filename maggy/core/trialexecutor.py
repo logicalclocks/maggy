@@ -70,12 +70,20 @@ def _prepare_func(app_id, run_id, map_fun, server_addr, hb_interval, secret, app
                     reporter.log("Starting Trial: {}".format(trial_id), True)
                     reporter.log("Parameter Combination: {}".format(parameters), True)
                     retval = map_fun(**parameters, reporter=reporter)
+
+                    # Make sure user function returns a numeric value
                     if retval is None:
-                        reporter.log("ERROR: Training function can't return None", True)
+                        reporter.log(
+                            "ERROR: Training function can't return None", True)
                         raise Exception("Training function can't return None")
                     elif not isinstance(retval, float) or not isinstance(retval, int):
-                        reporter.log("ERROR: Training function returns non numeric value: {}".format(type(retval)), True)
-                        raise Exception("ERROR: Training function returns non numeric value: {}".format(type(retval)))
+                        reporter.log(
+                            "ERROR: Training function returns non numeric value: {}"
+                            .format(type(retval)), True)
+                        raise Exception(
+                            "ERROR: Training function returns non numeric value: {}"
+                            .format(type(retval)))
+
                 except exceptions.EarlyStopException as e:
                     retval = e.metric
                     reporter.log("Early Stopped Trial.", True)
