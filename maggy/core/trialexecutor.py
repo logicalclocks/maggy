@@ -86,6 +86,7 @@ def _prepare_func(app_id, run_id, map_fun, server_addr, hb_interval, secret, app
 
         except Exception as exc:
             print("Outermost exception")
+            print(exc)
             reporter.log(exc)
             print("after logging exception")
             reporter.fd.close()
