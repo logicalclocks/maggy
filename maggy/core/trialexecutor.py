@@ -1,6 +1,6 @@
 import socket
 import time
-from maggy import util, tensorboard
+from maggy import util, tensorboard, constants
 from maggy.core import rpc, exceptions, config
 from maggy.core.reporter import Reporter
 from pyspark import TaskContext
@@ -76,7 +76,7 @@ def _prepare_func(app_id, run_id, map_fun, server_addr, hb_interval, secret, app
                         reporter.log(
                             "ERROR: Training function can't return None", True)
                         raise Exception("Training function can't return None")
-                    elif not isinstance(retval, float) or not isinstance(retval, int):
+                    elif not isinstance(retval, constants.USER_FCT.RETURN_TYPES):
                         reporter.log(
                             "ERROR: Training function returns non numeric value: {}"
                             .format(type(retval)), True)
