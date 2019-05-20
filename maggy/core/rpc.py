@@ -502,7 +502,7 @@ class Client(MessageSocket):
         t.daemon = True
         t.start()
 
-        reporter.log("Started metric heartbeat", True)
+        reporter.log("Started metric heartbeat", False)
 
     def get_suggestion(self):
         """Blocking call to get new parameter combination."""

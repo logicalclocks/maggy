@@ -43,23 +43,23 @@ class Reporter(object):
             if self.stop:
                 raise exceptions.EarlyStopException(metric)
 
-    def log(self, log_msg, verbose=False):
-        """Logs a message to the executor logfile and optionally to the
-        executor sterr.
+    def log(self, log_msg, verbose=True):
+        """Logs a message to the executor logfile and executor stderr and
+        optionally prints the message in jupyter.
 
         :param log_msg: Message to log.
         :type log_msg: str
-        :param print_executor: Print to executor sterr, defaults to False
+        :param print_executor: Print in Jupyter Notebook, defaults to True
         :type print_executor: bool, optional
         """
         with self.lock:
             msg = datetime.now().isoformat() + \
                 ' (' + str(self.partition_id) + '/' + \
                 str(self.task_attempt) + '): ' + str(log_msg)
-            if verbose:
-                print(msg)
+            print(msg)
             self.fd.write((msg + '\n').encode())
-            self.logs = self.logs + msg + '\n'
+            if verbose:
+                self.logs = self.logs + msg + '\n'
 
     def get_data(self):
         """Returns the metric and logs to be sent to the experiment driver.

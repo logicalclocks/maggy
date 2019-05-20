@@ -47,7 +47,7 @@ def _prepare_func(app_id, run_id, map_fun, server_addr, hb_interval, secret, app
             exec_spec['host_port'] = host_port
             exec_spec['trial_id'] = None
 
-            reporter.log("Registering with experiment driver", True)
+            reporter.log("Registering with experiment driver", False)
             client.register(exec_spec)
 
             # blocking
@@ -67,30 +67,30 @@ def _prepare_func(app_id, run_id, map_fun, server_addr, hb_interval, secret, app
                 hopshdfs.mkdir(tb_logdir)
 
                 try:
-                    reporter.log("Starting Trial: {}".format(trial_id), True)
-                    reporter.log("Parameter Combination: {}".format(parameters), True)
+                    reporter.log("Starting Trial: {}".format(trial_id), False)
+                    reporter.log("Parameter Combination: {}".format(parameters), False)
                     retval = map_fun(**parameters, reporter=reporter)
 
                     # Make sure user function returns a numeric value
                     if retval is None:
                         reporter.log(
-                            "ERROR: Training function can't return None", True)
+                            "ERROR: Training function can't return None", False)
                         raise Exception("Training function can't return None")
                     elif not isinstance(retval, constants.USER_FCT.RETURN_TYPES):
                         reporter.log(
                             "ERROR: Training function returns non numeric value: {}"
-                            .format(type(retval)), True)
+                            .format(type(retval)), False)
                         raise Exception(
                             "ERROR: Training function returns non numeric value: {}"
                             .format(type(retval)))
 
                 except exceptions.EarlyStopException as e:
                     retval = e.metric
-                    reporter.log("Early Stopped Trial.", True)
+                    reporter.log("Early Stopped Trial.", False)
                 finally:
                     client.finalize_metric(retval, reporter)
-                    reporter.log("Finished Trial: {}".format(trial_id), True)
-                    reporter.log("Final Metric: {}".format(retval), True)
+                    reporter.log("Finished Trial: {}".format(trial_id), False)
+                    reporter.log("Final Metric: {}".format(retval), False)
 
                 # blocking
                 trial_id, parameters = client.get_suggestion()
