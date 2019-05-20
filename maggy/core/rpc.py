@@ -281,6 +281,8 @@ class Server(MessageSocket):
             print('Handle LOG message')
             # get data from experiment driver
             result, log = exp_driver._get_logs()
+            print('result: {}'.format(result))
+            print('log: {}'.format(log))
 
             send['type'] = "OK"
             send['ex_logs'] = log
