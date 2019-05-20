@@ -177,13 +177,10 @@ class ExperimentDriver(object):
                 if msg['type'] == 'METRIC':
                     self.get_trial(msg['trial_id']).append_metric(msg['data'])
 
-                    print('METRIC: {}'.format(msg))
-
                     # append executor logs if in the message
                     logs = msg.get('logs', None)
                     if logs is not None:
                         with self.log_lock:
-                            print('update logs with; {}'.format(logs))
                             self.executor_logs = self.executor_logs + logs
 
                 # 2. BLACKLIST the trial
