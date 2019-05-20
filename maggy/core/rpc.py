@@ -365,6 +365,8 @@ class Server(MessageSocket):
                         try:
                             msg = self.receive(sock)
 
+                            print("rcvd: {}".format(msg))
+
                             # raise exception if secret does not match
                             # so client socket gets closed
                             if not secrets.compare_digest(msg['secret'],
