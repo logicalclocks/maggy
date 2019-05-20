@@ -175,8 +175,6 @@ class ExperimentDriver(object):
                 # depending on message do the work
                 # 1. METRIC
                 if msg['type'] == 'METRIC':
-                    self.get_trial(msg['trial_id']).append_metric(msg['data'])
-
                     print("METRIC MSG: {}".format(msg))
 
                     # append executor logs if in the message
@@ -185,6 +183,9 @@ class ExperimentDriver(object):
                         print("METRIC: {}".format(msg['logs']))
                         with self.log_lock:
                             self.executor_logs = self.executor_logs + logs
+
+                    if msg['trial_id'] is not None and msg['data'] is not None:
+                        self.get_trial(msg['trial_id']).append_metric(msg['data'])
 
                 # 2. BLACKLIST the trial
                 elif msg['type'] == 'BLACK':

@@ -203,19 +203,19 @@ class Server(MessageSocket):
         # Prepare message
         send = {}
 
-        if 'trial_id' in msg:
+        #if 'trial_id' in msg:
             # throw away idle heartbeat messages without trial
-            if msg['trial_id'] is None:
-                send['type'] = 'OK'
-                MessageSocket.send(self, sock, send)
-                return
+        #    if msg['trial_id'] is None:
+        #        send['type'] = 'OK'
+        #        MessageSocket.send(self, sock, send)
+        #        return
             # it can happen that executor has trial but no metric was reported
             # yet so trial_id is not None but data is None
-            elif msg['trial_id'] is not None:
-                if msg.get('data', None) is None:
-                    send['type'] = 'OK'
-                    MessageSocket.send(self, sock, send)
-                    return
+        #    elif msg['trial_id'] is not None:
+        #        if msg.get('data', None) is None:
+        #            send['type'] = 'OK'
+        #            MessageSocket.send(self, sock, send)
+        #            return
 
         if msg_type == 'REG':
             # check if executor was registered before and retrieve lost trial
@@ -239,6 +239,19 @@ class Server(MessageSocket):
             send['type'] = 'QUERY'
             send['data'] = self.reservations.done()
         elif msg_type == 'METRIC':
+            if msg['logs'] is not None:
+                exp_driver.add_message(msg)
+
+            if msg['trial_id'] is None:
+                send['type'] = 'OK'
+                MessageSocket.send(self, sock, send)
+                return
+            elif msg['trial_id'] is not None:
+                if msg.get('data', None) is None:
+                    send['type'] = 'OK'
+                    MessageSocket.send(self, sock, send)
+                    return
+
             # lookup executor reservation to find assigned trial
             trialId = msg['trial_id']
             # get early stopping flag
@@ -424,13 +437,19 @@ class Client(MessageSocket):
         msg['type'] = msg_type
         msg['secret'] = self._secret
 
-        if msg_type == 'FINAL' or msg_type == 'METRIC':
+        if msg_type == 'FINAL':
             msg['trial_id'] = trial_id
-            if logs is not None and logs != '':
+
+        if msg_type == 'METRIC':
+            msg['trial_id'] = trial_id
+            if logs == '':
+                msg['logs'] = None
+            else:
                 msg['logs'] = logs
 
-        if msg_data or ((msg_data == True) or (msg_data == False)):
-            msg['data'] = msg_data
+        #if msg_data or ((msg_data == True) or (msg_data == False)):
+        #    msg['data'] = msg_data
+        msg['data'] = msg_data
 
         done = False
         tries = 0
