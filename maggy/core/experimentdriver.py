@@ -80,7 +80,9 @@ class ExperimentDriver(object):
         self.direction = direction.lower()
         self.server = rpc.Server(num_executors)
         self._secret = self._generate_secret(ExperimentDriver.SECRET_BYTES)
-        self.result = {'best_val': '...', 'num_trials': 0, 'early_stopped': 0}
+        self.result = {'best_val': 'no Trial finished yet',
+            'num_trials': 0,
+            'early_stopped': 0}
         self.job_start = datetime.now()
         self.executor_logs = ''
         self.maggy_log = ''
@@ -179,6 +181,7 @@ class ExperimentDriver(object):
                     logs = msg.get('logs', None)
                     if logs is not None:
                         with self.log_lock:
+                            print('update logs with; {}'.format(logs))
                             self.executor_logs = self.executor_logs + logs
 
                 # 2. BLACKLIST the trial
