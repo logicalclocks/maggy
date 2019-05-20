@@ -203,20 +203,6 @@ class Server(MessageSocket):
         # Prepare message
         send = {}
 
-        #if 'trial_id' in msg:
-            # throw away idle heartbeat messages without trial
-        #    if msg['trial_id'] is None:
-        #        send['type'] = 'OK'
-        #        MessageSocket.send(self, sock, send)
-        #        return
-            # it can happen that executor has trial but no metric was reported
-            # yet so trial_id is not None but data is None
-        #    elif msg['trial_id'] is not None:
-        #        if msg.get('data', None) is None:
-        #            send['type'] = 'OK'
-        #            MessageSocket.send(self, sock, send)
-        #            return
-
         if msg_type == 'REG':
             # check if executor was registered before and retrieve lost trial
             lost_trial = self.reservations.get_assigned_trial(msg['partition_id'])
@@ -378,8 +364,6 @@ class Server(MessageSocket):
                         try:
                             msg = self.receive(sock)
 
-                            print("rcvd: {}".format(msg))
-
                             # raise exception if secret does not match
                             # so client socket gets closed
                             if not secrets.compare_digest(msg['secret'],
@@ -503,8 +487,6 @@ class Client(MessageSocket):
             while not self.done:
 
                 metric, logs = report.get_data()
-
-                print('HB sending: {}'.format(logs))
 
                 resp = self._request(self.hb_sock,
                                     'METRIC',

@@ -175,12 +175,9 @@ class ExperimentDriver(object):
                 # depending on message do the work
                 # 1. METRIC
                 if msg['type'] == 'METRIC':
-                    print("METRIC MSG: {}".format(msg))
-
                     # append executor logs if in the message
                     logs = msg.get('logs', None)
                     if logs is not None:
-                        print("METRIC: {}".format(msg['logs']))
                         with self.log_lock:
                             self.executor_logs = self.executor_logs + logs
 
