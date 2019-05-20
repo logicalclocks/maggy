@@ -278,6 +278,7 @@ class Server(MessageSocket):
             else:
                 send['data'] = None
         elif msg_type == 'LOG':
+            print('Handle LOG message')
             # get data from experiment driver
             result, log = exp_driver._get_logs()
 
@@ -287,6 +288,7 @@ class Server(MessageSocket):
             send['to_date'] = result['num_trials']
             send['stopped'] = result['early_stopped']
             send['metric'] = result['max_val']
+            print('LOG answer: {}'.format(send))
         else:
             send['type'] = "ERR"
 
