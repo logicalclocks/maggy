@@ -177,6 +177,8 @@ class ExperimentDriver(object):
                 if msg['type'] == 'METRIC':
                     self.get_trial(msg['trial_id']).append_metric(msg['data'])
 
+                    print('METRIC: {}'.format(msg))
+
                     # append executor logs if in the message
                     logs = msg.get('logs', None)
                     if logs is not None:
