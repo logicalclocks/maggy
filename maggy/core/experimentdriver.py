@@ -278,12 +278,8 @@ class ExperimentDriver(object):
             experiment_json['status'] = "FINISHED"
             experiment_json['finished'] = self.job_end.isoformat()
             experiment_json['duration'] = self.duration
-            if self.direction == 'max':
-                experiment_json['hyperparameter'] = json.dumps(self.result['max_hp'])
-                experiment_json['metric'] = self.result['max_val']
-            elif self.direction == 'min':
-                experiment_json['hyperparameter'] = json.dumps(self.result['min_hp'])
-                experiment_json['metric'] = self.result['min_val']
+            experiment_json['hyperparameter'] = json.dumps(self.result['best_hp'])
+            experiment_json['metric'] = self.result['best_val']
 
         else:
             experiment_json['status'] = "RUNNING"
@@ -353,8 +349,8 @@ class ExperimentDriver(object):
         log = 'Maggy ' + str(finished) + '/' + str(self.num_trials) + \
             ' (' + str(self.result['early_stopped']) + ') ' + \
             util._progress_bar(finished, self.num_trials) + ' - BEST ' + \
-            json.dumps(self.result['max_hp']) + ' - metric ' + \
-            str(self.result['max_val'])
+            json.dumps(self.result['best_hp']) + ' - metric ' + \
+            str(self.result['best_val'])
 
         return log
 

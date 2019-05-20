@@ -289,7 +289,7 @@ class Server(MessageSocket):
             send['num_trials'] = exp_driver.num_trials
             send['to_date'] = result['num_trials']
             send['stopped'] = result['early_stopped']
-            send['metric'] = result['max_val']
+            send['metric'] = result['best_val']
             print('LOG answer: {}'.format(send))
         else:
             send['type'] = "ERR"
