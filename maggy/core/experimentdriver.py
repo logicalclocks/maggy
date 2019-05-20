@@ -80,7 +80,7 @@ class ExperimentDriver(object):
         self.direction = direction.lower()
         self.server = rpc.Server(num_executors)
         self._secret = self._generate_secret(ExperimentDriver.SECRET_BYTES)
-        self.result = {'best_val': 'no Trial finished yet',
+        self.result = {'best_val': 'n.a.',
             'num_trials': 0,
             'early_stopped': 0}
         self.job_start = datetime.now()

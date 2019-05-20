@@ -483,6 +483,8 @@ class Client(MessageSocket):
 
                 metric, logs = report.get_data()
 
+                print('HB sending: {}'.format(logs))
+
                 resp = self._request(self.hb_sock,
                                     'METRIC',
                                      metric,

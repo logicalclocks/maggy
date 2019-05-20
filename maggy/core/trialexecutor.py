@@ -88,9 +88,9 @@ def _prepare_func(app_id, run_id, map_fun, server_addr, hb_interval, secret, app
                     retval = e.metric
                     reporter.log("Early Stopped Trial.", True)
                 finally:
+                    client.finalize_metric(retval, reporter)
                     reporter.log("Finished Trial: {}".format(trial_id), True)
                     reporter.log("Final Metric: {}".format(retval), True)
-                    client.finalize_metric(retval, reporter)
 
                 # blocking
                 trial_id, parameters = client.get_suggestion()
