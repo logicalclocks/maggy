@@ -1,3 +1,5 @@
+import math
+
 from maggy.optimizer import AbstractOptimizer
 from maggy.searchspace import Searchspace
 from maggy.trial import Trial
@@ -55,36 +57,73 @@ class Asha(AbstractOptimizer):
                 self.resource_min = min(self.resource)
                 self.resource_max = max(self.resource)
 
-        # maps rung index k to all finished trials in that rung
-        self.rungs = {}
+        # maps rung index k to trials in that rung
+        self.rungs = {0: []}
+        # maps rung index k to trial ids of trials that were promoted
+        self.promoted = {0: []}
+
+        self.max_rung = int(math.floor(math.log(
+            self.resource_max/self.resource_min, self.reduction_factor)))
 
 
     def get_suggestion(self, trial=None):
-        # first couple of trials just get random trial from base rung
-        if trial is None:
+
+        if trial is not None:
+            # stopping criterium: one trial in max rung
+            if self.max_rung in self.rungs:
+                # return None to signal end to experiment driver
+                return None
+
+            # for each rung
+            for k in range(self.max_rung, -1, -1):
+                # if rung doesn't exist yet go one lower
+                if k not in self.rungs:
+                    continue
+                # get top_k
+                candidates = self._top_k(k, len(self.rungs[k])//self.reduction_factor)
+                if not candidates:
+                    continue
+                # select all that haven't been promoted yet in top_k
+                promotable = [t for t in candidates if t.trial_id not in self.promoted[k]]
+
+                nr_promotable = len(promotable)
+                if nr_promotable == 1:
+                    new_rung = k + 1
+                    t = promotable[0]
+                    params = t.params
+                    params.pop('reduction_factor', None)
+                    params['resource'] = self.resource_min * (self.reduction_factor**new_rung)
+                    promote_trial = Trial(params)
+                    if new_rung in self.rungs:
+                        self.rungs[new_rung].append(promote_trial)
+                    else:
+                        self.rungs[new_rung] = [promote_trial]
+
+                    if new_rung in self.promoted:
+                        self.promoted[k].append(promote_trial.trial_id)
+                    else:
+                        self.promoted[k] = [promote_trial.trial_id]
+
+                    return promote_trial
+                elif nr_promotable > 1:
+                    raise Exception("More than one trial promotable")
+
+            # return random configuration in base rung
             # get one random combination
             params = self.searchspace.get_random_parameter_values(1)
             # set resource to minimum
             params.pop('reduction_factor', None)
             params['resource'] = self.resource_min
-            return Trial(params)
-        if trial is not None:
-            # for each rung
-            for i
-                # get top_k
-                # select all that haven't been promoted yet in top_k
-
-                # there is a promotable
-                    #return promotable with one rung (resource) higher
-            
-            # return random configuration in base rung
-
+            trial = Trial(params)
+            self.rungs[0].append(trial)
+            return trial
 
     def finalize_experiment(self, trials):
         return
 
-    def _get_job(self):
-        pass
-
     def _top_k(self, rung_k, number):
-        pass
+        if number > 0:
+            self.rungs[rung_k].sort(key=lambda x: x.final_metric, reverse=True)
+            return self.rungs[rung_k][:number]
+        else:
+            return []
