@@ -9,7 +9,7 @@ import secrets
 from datetime import datetime
 from maggy import util
 from maggy.optimizer import AbstractOptimizer, RandomSearch
-from maggy.core import config, rpc
+from maggy.core import rpc
 from maggy.trial import Trial
 from maggy.earlystop import AbstractEarlyStop, MedianStoppingRule
 from maggy.searchspace import Searchspace

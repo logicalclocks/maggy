@@ -15,7 +15,7 @@ import atexit
 from datetime import datetime
 
 from maggy import util, tensorboard
-from maggy.core import config, rpc, trialexecutor, ExperimentDriver
+from maggy.core import rpc, trialexecutor, ExperimentDriver
 from maggy.trial import Trial
 
 from hops import util as hopsutil
