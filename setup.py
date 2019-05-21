@@ -10,6 +10,12 @@ def read(fname):
 setup(
     name='maggy',
     version=__version__,
+    install_requires=[
+        'numpy'
+    ],
+    extras_require={
+        'tf': ['tensorflow']
+    },
     author='Moritz Meister',
     author_email='meister.mo@gmail.com',
     description='',
