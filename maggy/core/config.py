@@ -7,6 +7,7 @@ SPARK_ONLY = "SPARK_ONLY"
 
 mode = None
 tf_full = tf.__version__.split(".")[0]
+# for building the docs since mock object doesn't mock int()
 if not isinstance(tf_full, str):
     tf_version = 2
 else:
