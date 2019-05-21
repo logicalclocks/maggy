@@ -342,7 +342,7 @@ class ExperimentDriver(object):
             len(self.result['metric_list']))
 
         if trial.early_stop:
-                self.result['early_stopped'] += 1
+            self.result['early_stopped'] += 1
 
     def _update_maggy_log(self):
         """Creates the status of a maggy experiment with a progress bar.

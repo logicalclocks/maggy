@@ -49,8 +49,8 @@ class Reporter(object):
 
         :param log_msg: Message to log.
         :type log_msg: str
-        :param print_executor: Print in Jupyter Notebook, defaults to True
-        :type print_executor: bool, optional
+        :param verbose: Print in Jupyter Notebook, defaults to True
+        :type verbose: bool, optional
         """
         with self.lock:
             msg = datetime.now().isoformat() + \
