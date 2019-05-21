@@ -55,6 +55,7 @@ class Asha(AbstractOptimizer):
                 self.resource_min = min(self.resource)
                 self.resource_max = max(self.resource)
 
+        # maps rung index k to all finished trials in that rung
         self.rungs = {}
 
 
@@ -68,7 +69,15 @@ class Asha(AbstractOptimizer):
             params['resource'] = self.resource_min
             return Trial(params)
         if trial is not None:
+            # for each rung
+            for i
+                # get top_k
+                # select all that haven't been promoted yet in top_k
+
+                # there is a promotable
+                    #return promotable with one rung (resource) higher
             
+            # return random configuration in base rung
 
 
     def finalize_experiment(self, trials):
