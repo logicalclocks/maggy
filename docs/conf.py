@@ -179,6 +179,6 @@ epub_exclude_files = ['search.html']
 
 # -- Extension configuration -------------------------------------------------
 
-autodoc_mock_imports = ['pyspark', 'pydoop', 'hops']
+autodoc_mock_imports = ['pyspark', 'pydoop', 'hops', 'tensorflow']
 
 exclude_patterns = ['core/config.py']
