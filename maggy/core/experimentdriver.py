@@ -9,7 +9,7 @@ import secrets
 from datetime import datetime
 from maggy import util
 from maggy.optimizer import AbstractOptimizer, RandomSearch
-from maggy.core import config, rpc
+from maggy.core import rpc
 from maggy.trial import Trial
 from maggy.earlystop import AbstractEarlyStop, MedianStoppingRule
 from maggy.searchspace import Searchspace
@@ -80,7 +80,9 @@ class ExperimentDriver(object):
         self.direction = direction.lower()
         self.server = rpc.Server(num_executors)
         self._secret = self._generate_secret(ExperimentDriver.SECRET_BYTES)
-        self.result = None
+        self.result = {'best_val': 'n.a.',
+            'num_trials': 0,
+            'early_stopped': 0}
         self.job_start = datetime.now()
         self.executor_logs = ''
         self.maggy_log = ''
@@ -110,22 +112,14 @@ class ExperimentDriver(object):
 
         self.duration = hopsutil._time_diff(self.job_start, self.job_end)
 
-        if self.direction == 'max':
-            results = '\n------ ' + str(self.optimizer.__class__.__name__) + ' results ------ direction(' + self.direction + ') \n' \
-                'BEST combination ' + json.dumps(self.result['max_hp']) + ' -- metric ' + str(self.result['max_val']) + '\n' \
-                'WORST combination ' + json.dumps(self.result['min_hp']) + ' -- metric ' + str(self.result['min_val']) + '\n' \
-                'AVERAGE metric -- ' + str(self.result['avg']) + '\n' \
-                'EARLY STOPPED Trials -- ' + str(self.result['early_stopped']) + '\n' \
-                'Total job time ' + self.duration + '\n'
-            print(results)
-        elif self.direction == 'min':
-            results = '\n------ ' + str(self.optimizer.__class__.__name__) + ' results ------ direction(' + self.direction + ') \n' \
-                'BEST combination ' + json.dumps(self.result['min_hp']) + ' -- metric ' + str(self.result['min_val']) + '\n' \
-                'WORST combination ' + json.dumps(self.result['max_hp']) + ' -- metric ' + str(self.result['max_val']) + '\n' \
-                'AVERAGE metric -- ' + str(self.result['avg']) + '\n' \
-                'EARLY STOPPED Trials -- ' + str(self.result['early_stopped']) + '\n' \
-                'Total job time ' + self.duration + '\n'
-            print(results)
+
+        results = '\n------ ' + str(self.optimizer.__class__.__name__) + ' results ------ direction(' + self.direction + ') \n' \
+            'BEST combination ' + json.dumps(self.result['best_hp']) + ' -- metric ' + str(self.result['best_val']) + '\n' \
+            'WORST combination ' + json.dumps(self.result['worst_hp']) + ' -- metric ' + str(self.result['worst_val']) + '\n' \
+            'AVERAGE metric -- ' + str(self.result['avg']) + '\n' \
+            'EARLY STOPPED Trials -- ' + str(self.result['early_stopped']) + '\n' \
+            'Total job time ' + self.duration + '\n'
+        print(results)
 
         self._log(results)
 
@@ -181,13 +175,14 @@ class ExperimentDriver(object):
                 # depending on message do the work
                 # 1. METRIC
                 if msg['type'] == 'METRIC':
-                    self.get_trial(msg['trial_id']).append_metric(msg['data'])
-
                     # append executor logs if in the message
                     logs = msg.get('logs', None)
                     if logs is not None:
                         with self.log_lock:
                             self.executor_logs = self.executor_logs + logs
+
+                    if msg['trial_id'] is not None and msg['data'] is not None:
+                        self.get_trial(msg['trial_id']).append_metric(msg['data'])
 
                 # 2. BLACKLIST the trial
                 elif msg['type'] == 'BLACK':
@@ -286,12 +281,8 @@ class ExperimentDriver(object):
             experiment_json['status'] = "FINISHED"
             experiment_json['finished'] = self.job_end.isoformat()
             experiment_json['duration'] = self.duration
-            if self.direction == 'max':
-                experiment_json['hyperparameter'] = json.dumps(self.result['max_hp'])
-                experiment_json['metric'] = self.result['max_val']
-            elif self.direction == 'min':
-                experiment_json['hyperparameter'] = json.dumps(self.result['min_hp'])
-                experiment_json['metric'] = self.result['min_val']
+            experiment_json['hyperparameter'] = json.dumps(self.result['best_hp'])
+            experiment_json['metric'] = self.result['best_val']
 
         else:
             experiment_json['status'] = "RUNNING"
@@ -314,10 +305,10 @@ class ExperimentDriver(object):
         trial_id = trial.trial_id
 
         # First finalized trial
-        if self.result is None:
-            self.result = {'max_id': trial_id, 'max_val': metric,
-                'max_hp': param_string, 'min_id': trial_id,
-                'min_val': metric, 'min_hp': param_string,
+        if self.result.get('best_id', None) is None:
+            self.result = {'best_id': trial_id, 'best_val': metric,
+                'best_hp': param_string, 'worst_id': trial_id,
+                'worst_val': metric, 'worst_hp': param_string,
                 'avg': metric, 'metric_list': [metric], 'num_trials': 1,
                 'early_stopped': 0}
 
@@ -325,15 +316,24 @@ class ExperimentDriver(object):
                 self.result['early_stopped'] += 1
 
             return
-
-        if metric > self.result['max_val']:
-            self.result['max_val'] = metric
-            self.result['max_id'] = trial_id
-            self.result['max_hp'] = param_string
-        if metric < self.result['min_val']:
-            self.result['min_val'] = metric
-            self.result['min_id'] = trial_id
-            self.result['min_hp'] = param_string
+        if self.direction == 'max':
+            if metric > self.result['best_val']:
+                self.result['best_val'] = metric
+                self.result['best_id'] = trial_id
+                self.result['best_hp'] = param_string
+            if metric < self.result['worst_val']:
+                self.result['worst_val'] = metric
+                self.result['worst_id'] = trial_id
+                self.result['worst_hp'] = param_string
+        elif self.direction == 'min':
+            if metric < self.result['best_val']:
+                self.result['best_val'] = metric
+                self.result['best_id'] = trial_id
+                self.result['best_hp'] = param_string
+            if metric > self.result['worst_val']:
+                self.result['worst_val'] = metric
+                self.result['worst_id'] = trial_id
+                self.result['worst_hp'] = param_string
 
         # update average
         self.result['metric_list'].append(metric)
@@ -342,7 +342,7 @@ class ExperimentDriver(object):
             len(self.result['metric_list']))
 
         if trial.early_stop:
-                self.result['early_stopped'] += 1
+            self.result['early_stopped'] += 1
 
     def _update_maggy_log(self):
         """Creates the status of a maggy experiment with a progress bar.
@@ -352,8 +352,8 @@ class ExperimentDriver(object):
         log = 'Maggy ' + str(finished) + '/' + str(self.num_trials) + \
             ' (' + str(self.result['early_stopped']) + ') ' + \
             util._progress_bar(finished, self.num_trials) + ' - BEST ' + \
-            json.dumps(self.result['max_hp']) + ' - metric ' + \
-            str(self.result['max_val'])
+            json.dumps(self.result['best_hp']) + ' - metric ' + \
+            str(self.result['best_val'])
 
         return log
 
