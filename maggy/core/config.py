@@ -6,7 +6,11 @@ HOPSWORKS = "HOPSWORKS"
 SPARK_ONLY = "SPARK_ONLY"
 
 mode = None
-tf_version = int(tf.__version__.split(".")[0])
+tf_full = tf.__version__.split(".")[0]
+if not isinstance(tf_full, str):
+    tf_version = 2
+else:
+    tf_version = int(tf_full)
 
 try:
     mode = os.environ['HOPSWORKS_VERSION']
