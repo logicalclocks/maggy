@@ -13,50 +13,49 @@ class Asha(AbstractOptimizer):
 
     def initialize(self):
 
+        reduction_factor_type = self.searchspace.names().get('reduction_factor', None)
         self.reduction_factor = self.searchspace.get('reduction_factor', None)
-        if self.reduction_factor is None:
+        if reduction_factor_type is None:
             raise Exception(
-                "Can't initialize ASHA optimizer without 'reduction_factor' \
-                parameter in Searchspace.")
+                "Can't initialize ASHA optimizer without 'reduction_factor'" + \
+                "parameter in Searchspace.")
+        elif (reduction_factor_type
+            not in [Searchspace.DISCRETE, Searchspace.CATEGORICAL]):
+            raise Exception(
+                "Can't initialize ASHA optimizer. 'reduction_factor'" + \
+                "not of type DISCRETE or CATEGORICAL.")
+        if len(self.reduction_factor) != 1:
+            raise Exception(
+                "Can't initialize ASHA optimizer. 'reduction_factor'" + \
+                "can only be a single value: {}"
+                .format(self.reduction_factor[1]))
+        elif self.reduction_factor[0] < 2 or not isinstance(self.reduction_factor[0], int):
+            raise Exception(
+                "Can't initialize ASHA optimizer. 'reduction_factor'" + \
+                "has to be an integer equal to or larger than 2: {}"
+                .format(self.reduction_factor))
         else:
-            if (self.reduction_factor[0]
-                not in [Searchspace.DISCRETE, Searchspace.CATEGORICAL]):
-                raise Exception(
-                    "Can't initialize ASHA optimizer. 'reduction_factor' \
-                    not of type DISCRETE or CATEGORICAL.")
-            elif len(self.reduction_factor[1]) > 1:
-                raise Exception(
-                    "Can't initialize ASHA optimizer. 'reduction_factor' \
-                    can only be a single value: {}"
-                    .format(self.reduction_factor[1]))
-            elif self.reduction_factor[1][0] < 2 or not isinstance(self.reduction_factor[1][0], int):
-                raise Exception(
-                    "Can't initialize ASHA optimizer. 'reduction_factor' \
-                    has to be an integer equal to or larger than 2: {}"
-                    .format(self.reduction_factor[1]))
-            else:
-                self.reduction_factor = self.reduction_factor[1][0]
+                self.reduction_factor = self.reduction_factor[0]
 
+        resource_type = self.searchspace.names().get('resource', None)
         self.resource = self.searchspace.get('resource', None)
 
-        if self.resource is None:
+        if resource_type is None:
             raise Exception(
-                "Can't initialize ASHA optimizer without 'resource' \
-                parameter in Searchspace.")
+                "Can't initialize ASHA optimizer without 'resource'" + \
+                "parameter in Searchspace.")
+        elif resource_type != Searchspace.INTEGER:
+            raise Exception(
+                "Can't initialize ASHA optimizer. 'resource'" + \
+                "not of type INTEGER.")
+        if len(self.resource) != 2:
+            raise Exception(
+                "Can't initialize ASHA optimizer. 'resource'" + \
+                "has to be a minimum and maximum value: {}"
+                .format(self.resource[1]))
         else:
-            if self.resource[0] != Searchspace.INTEGER:
-                raise Exception(
-                    "Can't initialize ASHA optimizer. 'resource' \
-                    not of type INTEGER.")
-            elif len(self.resource[1]) > 1:
-                raise Exception(
-                    "Can't initialize ASHA optimizer. 'resource' \
-                    can only be a single value: {}"
-                    .format(self.resource[1]))
-            else:
-                self.resource = self.resource[1]
-                self.resource_min = min(self.resource)
-                self.resource_max = max(self.resource)
+            self.resource_min = min(self.resource)
+            self.resource_max = max(self.resource)
 
         # maps rung index k to trials in that rung
         self.rungs = {0: []}
