@@ -58,8 +58,9 @@ class Reporter(object):
                 str(self.task_attempt) + '): ' + str(log_msg)
             print(msg)
             self.fd.write((msg + '\n').encode())
+            jupyter_log = str(self.partition_id) + ': ' + log_msg
             if verbose:
-                self.logs = self.logs + msg + '\n'
+                self.logs = self.logs + jupyter_log + '\n'
 
     def get_data(self):
         """Returns the metric and logs to be sent to the experiment driver.
