@@ -112,7 +112,7 @@ class Asha(AbstractOptimizer):
                     else:
                         self.rungs[new_rung] = [promote_trial]
 
-                    if new_rung in self.promoted:
+                    if k in self.promoted:
                         self.promoted[k].append(old_trial.trial_id)
                     else:
                         self.promoted[k] = [old_trial.trial_id]
