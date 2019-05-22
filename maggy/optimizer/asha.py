@@ -67,6 +67,9 @@ class Asha(AbstractOptimizer):
 
         assert self.num_trials >= self.reduction_factor**self.max_rung
 
+        print('assert {}'.format(self.reduction_factor**self.max_rung))
+        print('max_rung {}'.format(self.max_rung))
+
 
     def get_suggestion(self, trial=None):
         print('get suggestion calles')
@@ -114,16 +117,16 @@ class Asha(AbstractOptimizer):
                 elif nr_promotable > 1:
                     raise Exception("More than one trial promotable")
 
-            # return random configuration in base rung
-            # get one random combination
-            params = self.searchspace.get_random_parameter_values(1)
-            # set resource to minimum
-            params.pop('reduction_factor', None)
-            params['resource'] = self.resource_min
-            trial = Trial(params)
-            self.rungs[0].append(trial)
-            print('random trial: {}'.format(trial.to_json()))
-            return trial
+        # return random configuration in base rung
+        # get one random combination
+        params = self.searchspace.get_random_parameter_values(1)
+        # set resource to minimum
+        params.pop('reduction_factor', None)
+        params['resource'] = self.resource_min
+        trial = Trial(params)
+        self.rungs[0].append(trial)
+        print('random trial: {}'.format(trial.to_json()))
+        return trial
 
     def finalize_experiment(self, trials):
         return
