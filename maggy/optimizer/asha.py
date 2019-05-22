@@ -102,8 +102,8 @@ class Asha(AbstractOptimizer):
                 nr_promotable = len(promotable)
                 if nr_promotable == 1:
                     new_rung = k + 1
-                    t = promotable[0]
-                    params = t.params.copy()
+                    old_trial = promotable[0]
+                    params = old_trial.params.copy()
                     params.pop('reduction_factor', None)
                     params['resource'] = self.resource_min * (self.reduction_factor**new_rung)
                     promote_trial = Trial(params)
@@ -113,9 +113,9 @@ class Asha(AbstractOptimizer):
                         self.rungs[new_rung] = [promote_trial]
 
                     if new_rung in self.promoted:
-                        self.promoted[k].append(promote_trial.trial_id)
+                        self.promoted[k].append(old_trial.trial_id)
                     else:
-                        self.promoted[k] = [promote_trial.trial_id]
+                        self.promoted[k] = [old_trial.trial_id]
                     print('promoted trial: {}'.format(promote_trial.to_json()))
                     return promote_trial
                 elif nr_promotable > 1:
@@ -127,10 +127,10 @@ class Asha(AbstractOptimizer):
         # set resource to minimum
         params.pop('reduction_factor', None)
         params['resource'] = self.resource_min
-        trial = Trial(params)
-        self.rungs[0].append(trial)
-        print('random trial: {}'.format(trial.to_json()))
-        return trial
+        to_return = Trial(params)
+        self.rungs[0].append(to_return)
+        print('random trial: {}'.format(to_return.to_json()))
+        return to_return
 
     def finalize_experiment(self, trials):
         return
