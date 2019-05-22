@@ -100,8 +100,7 @@ class Asha(AbstractOptimizer):
                     new_rung = k + 1
                     t = promotable[0]
                     params = t.params
-                    print(params)
-                    params.pop('reduction_factor')
+                    params.pop('reduction_factor', None)
                     params['resource'] = self.resource_min * (self.reduction_factor**new_rung)
                     promote_trial = Trial(params)
                     if new_rung in self.rungs:
@@ -120,10 +119,9 @@ class Asha(AbstractOptimizer):
 
         # return random configuration in base rung
         # get one random combination
-        params = self.searchspace.get_random_parameter_values(1)
+        params = self.searchspace.get_random_parameter_values(1)[0]
         # set resource to minimum
-        print(params)
-        params.pop('reduction_factor')
+        params.pop('reduction_factor', None)
         params['resource'] = self.resource_min
         trial = Trial(params)
         self.rungs[0].append(trial)
