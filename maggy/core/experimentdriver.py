@@ -38,6 +38,7 @@ class ExperimentDriver(object):
             if optimizer.lower() == 'randomsearch':
                 self.optimizer = RandomSearch(num_trials, self.searchspace, self._final_store)
             elif optimizer.lower() == 'asha':
+                print('asha initialized')
                 self.optimizer = Asha(num_trials, self.searchspace, self._final_store)
             else:
                 raise Exception(
