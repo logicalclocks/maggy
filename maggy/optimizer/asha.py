@@ -89,7 +89,8 @@ class Asha(AbstractOptimizer):
                     print('skip rung')
                     continue
                 # get top_k
-                candidates = self._top_k(k, len(self.rungs[k])//self.reduction_factor)
+                rung_finished = len([x for x in self.rungs[k] if x.status == Trial.FINALIZED])
+                candidates = self._top_k(k, rung_finished//self.reduction_factor)
                 if not candidates:
                     print('no candidates skip rung')
                     continue
