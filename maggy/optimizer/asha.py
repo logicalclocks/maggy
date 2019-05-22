@@ -84,11 +84,14 @@ class Asha(AbstractOptimizer):
             # for each rung
             for k in range(self.max_rung, -1, -1):
                 # if rung doesn't exist yet go one lower
+                print(k)
                 if k not in self.rungs:
+                    print('skip rung')
                     continue
                 # get top_k
                 candidates = self._top_k(k, len(self.rungs[k])//self.reduction_factor)
                 if not candidates:
+                    print('no candidates skip rung')
                     continue
                 print('candidates: {}'.format(candidates))
                 # select all that haven't been promoted yet in top_k
