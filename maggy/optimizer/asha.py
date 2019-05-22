@@ -99,7 +99,7 @@ class Asha(AbstractOptimizer):
                 if nr_promotable == 1:
                     new_rung = k + 1
                     t = promotable[0]
-                    params = t.params
+                    params = t.params.copy()
                     params.pop('reduction_factor', None)
                     params['resource'] = self.resource_min * (self.reduction_factor**new_rung)
                     promote_trial = Trial(params)
