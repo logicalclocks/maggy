@@ -133,8 +133,9 @@ class Asha(AbstractOptimizer):
 
     def _top_k(self, rung_k, number):
         if number > 0:
-            self.rungs[rung_k].sort(key=lambda x: x.final_metric, reverse=True)
-            print('top_k: {}'.format(self.rungs[rung_k][:number]))
+            filtered = [x for x in self.rungs[rung_k] if x.status == Trial.FINALIZED]
+            filtered.sort(key=lambda x: x.final_metric, reverse=True)
+            print('top_k: {}'.format(filtered[:number]))
             return self.rungs[rung_k][:number]
         else:
             print('top_k: {}'.format([]))
