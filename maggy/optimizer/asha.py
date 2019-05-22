@@ -12,6 +12,7 @@ resource constraint.
 class Asha(AbstractOptimizer):
 
     def initialize(self):
+
         self.reduction_factor = self.searchspace.get('reduction_factor', None)
         if self.reduction_factor is None:
             raise Exception(
@@ -65,12 +66,15 @@ class Asha(AbstractOptimizer):
         self.max_rung = int(math.floor(math.log(
             self.resource_max/self.resource_min, self.reduction_factor)))
 
+        assert self.num_trials >= self.reduction_factor**self.max_rung
+
 
     def get_suggestion(self, trial=None):
 
         if trial is not None:
             # stopping criterium: one trial in max rung
             if self.max_rung in self.rungs:
+                print('finished trial in max rung')
                 # return None to signal end to experiment driver
                 return None
 
@@ -83,8 +87,10 @@ class Asha(AbstractOptimizer):
                 candidates = self._top_k(k, len(self.rungs[k])//self.reduction_factor)
                 if not candidates:
                     continue
+                print('candidates: {}'.format(candidates))
                 # select all that haven't been promoted yet in top_k
                 promotable = [t for t in candidates if t.trial_id not in self.promoted[k]]
+                print('promotable: {}'.format(promotable))
 
                 nr_promotable = len(promotable)
                 if nr_promotable == 1:
@@ -103,7 +109,7 @@ class Asha(AbstractOptimizer):
                         self.promoted[k].append(promote_trial.trial_id)
                     else:
                         self.promoted[k] = [promote_trial.trial_id]
-
+                    print('promoted trial: {}'.format(promote_trial.to_json()))
                     return promote_trial
                 elif nr_promotable > 1:
                     raise Exception("More than one trial promotable")
@@ -116,6 +122,7 @@ class Asha(AbstractOptimizer):
             params['resource'] = self.resource_min
             trial = Trial(params)
             self.rungs[0].append(trial)
+            print('random trial: {}'.format(trial.to_json()))
             return trial
 
     def finalize_experiment(self, trials):
@@ -124,6 +131,8 @@ class Asha(AbstractOptimizer):
     def _top_k(self, rung_k, number):
         if number > 0:
             self.rungs[rung_k].sort(key=lambda x: x.final_metric, reverse=True)
+            print('top_k: {}'.format(self.rungs[rung_k][:number]))
             return self.rungs[rung_k][:number]
         else:
+            print('top_k: {}'.format([]))
             return []
