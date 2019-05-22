@@ -69,6 +69,7 @@ class Asha(AbstractOptimizer):
 
 
     def get_suggestion(self, trial=None):
+        print('get suggestion calles')
 
         if trial is not None:
             # stopping criterium: one trial in max rung
