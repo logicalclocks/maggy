@@ -8,7 +8,7 @@ import os
 import secrets
 from datetime import datetime
 from maggy import util
-from maggy.optimizer import AbstractOptimizer, RandomSearch
+from maggy.optimizer import AbstractOptimizer, RandomSearch, Asha
 from maggy.core import rpc
 from maggy.trial import Trial
 from maggy.earlystop import AbstractEarlyStop, MedianStoppingRule, NoStoppingRule
@@ -37,6 +37,8 @@ class ExperimentDriver(object):
         if isinstance(optimizer, str):
             if optimizer.lower() == 'randomsearch':
                 self.optimizer = RandomSearch(num_trials, self.searchspace, self._final_store)
+            elif optimizer.lower() == 'asha':
+                self.optimizer = Asha(num_trials, self.searchspace, self._final_store)
             else:
                 raise Exception(
                     "Unknown Optimizer. Can't initialize experiment driver.")
