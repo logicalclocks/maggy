@@ -139,7 +139,7 @@ class Asha(AbstractOptimizer):
             filtered = [x for x in self.rungs[rung_k] if x.status == Trial.FINALIZED]
             filtered.sort(key=lambda x: x.final_metric, reverse=True)
             print('top_k: {}'.format(filtered[:number]))
-            return self.rungs[rung_k][:number]
+            return filtered[:number]
         else:
             print('top_k: {}'.format([]))
             return []
