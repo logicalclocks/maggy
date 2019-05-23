@@ -89,14 +89,15 @@ class Asha(AbstractOptimizer):
                     print('skip rung')
                     continue
                 # get top_k
-                rung_finished = len([x for x in self.rungs[k] if x.status == Trial.FINALIZED]) - len(self.promoted.get(k,[]))
-                candidates = self._top_k(k, rung_finished//self.reduction_factor)
+                rung_finished = len([x for x in self.rungs[k] if x.status == Trial.FINALIZED])
+                #candidates = self._top_k(k, (rung_finished//self.reduction_factor) - len(self.promoted.get(k,[])))
+                candidates = self._top_k(k, (rung_finished//self.reduction_factor))
                 if not candidates:
                     print('no candidates skip rung')
                     continue
                 print('candidates: {}'.format(candidates))
                 # select all that haven't been promoted yet in top_k
-                promotable = [t for t in candidates if t.trial_id not in self.promoted[k]]
+                promotable = [t for t in candidates if t.trial_id not in self.promoted.get(k,[])]
                 print('promotable: {}'.format(promotable))
 
                 nr_promotable = len(promotable)
@@ -140,6 +141,7 @@ class Asha(AbstractOptimizer):
             filtered = [x for x in self.rungs[rung_k] if x.status == Trial.FINALIZED]
             filtered.sort(key=lambda x: x.final_metric, reverse=True)
             print('top_k: {}'.format(filtered[:number]))
+            # TODO: if two trials have exactly same performance
             return filtered[:number]
         else:
             print('top_k: {}'.format([]))
