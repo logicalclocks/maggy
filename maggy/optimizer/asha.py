@@ -77,19 +77,19 @@ class Asha(AbstractOptimizer):
         if trial is not None:
             # stopping criterium: one trial in max rung
             if self.max_rung in self.rungs:
-                print('finished trial in max rung')
+                print('trial in max rung running, time to wrap up')
                 # return None to signal end to experiment driver
                 return None
 
             # for each rung
-            for k in range(self.max_rung, -1, -1):
+            for k in range(self.max_rung-1, -1, -1):
                 # if rung doesn't exist yet go one lower
                 print(k)
                 if k not in self.rungs:
                     print('skip rung')
                     continue
                 # get top_k
-                rung_finished = len([x for x in self.rungs[k] if x.status == Trial.FINALIZED])
+                rung_finished = len([x for x in self.rungs[k] if x.status == Trial.FINALIZED]) - len(self.promoted[k])
                 candidates = self._top_k(k, rung_finished//self.reduction_factor)
                 if not candidates:
                     print('no candidates skip rung')
