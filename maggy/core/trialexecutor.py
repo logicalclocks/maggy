@@ -89,6 +89,7 @@ def _prepare_func(app_id, run_id, map_fun, server_addr, hb_interval, secret, app
                     reporter.log("Early Stopped Trial.", False)
                 finally:
                     client.finalize_metric(retval, reporter)
+                    # TODO: send last logs with the finalize
                     reporter.log("Finished Trial: {}".format(trial_id), False)
                     reporter.log("Final Metric: {}".format(retval), False)
 
