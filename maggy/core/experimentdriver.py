@@ -156,6 +156,11 @@ class ExperimentDriver(object):
                     msg = self._message_q.get_nowait()
                 except:
                     msg = {'type': None}
+
+
+                dummy_list = []
+                dummy_list[1]
+
                 hopshdfs.dump('Exception got raised by worker thread', 'hdfs:///Projects/dev_asha/Logs/debug')
                 dummy_list = []
                 dummy_list[1]
