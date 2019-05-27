@@ -225,8 +225,8 @@ class Server(MessageSocket):
             send['type'] = 'QUERY'
             send['data'] = self.reservations.done()
         elif msg_type == 'METRIC':
-            if msg['logs'] is not None:
-                exp_driver.add_message(msg)
+            # add metric msg to the exp driver queue
+            exp_driver.add_message(msg)
 
             if msg['trial_id'] is None:
                 send['type'] = 'OK'
@@ -242,8 +242,6 @@ class Server(MessageSocket):
             trialId = msg['trial_id']
             # get early stopping flag
             flag = exp_driver.get_trial(trialId).get_early_stop()
-            # add metric msg to the exp driver queue
-            exp_driver.add_message(msg)
 
             if flag:
                 send['type'] = 'STOP'
