@@ -157,7 +157,8 @@ class ExperimentDriver(object):
                 except:
                     msg = {'type': None}
                 hopshdfs.dump('Exception got raised by worker thread', 'hdfs:///Projects/dev_asha/Logs/debug')
-                raise Exception
+                dummy_list = []
+                dummy_list[1]
 
                 if (datetime.now() - time_earlystop_check).total_seconds() >= self.es_interval:
                     time_earlystop_check = datetime.now()
