@@ -225,8 +225,8 @@ class Server(MessageSocket):
             send['type'] = 'QUERY'
             send['data'] = self.reservations.done()
         elif msg_type == 'METRIC':
-            if msg['logs'] is not None:
-                exp_driver.add_message(msg)
+            # add metric msg to the exp driver queue
+            exp_driver.add_message(msg)
 
             if msg['trial_id'] is None:
                 send['type'] = 'OK'
@@ -242,8 +242,6 @@ class Server(MessageSocket):
             trialId = msg['trial_id']
             # get early stopping flag
             flag = exp_driver.get_trial(trialId).get_early_stop()
-            # add metric msg to the exp driver queue
-            exp_driver.add_message(msg)
 
             if flag:
                 send['type'] = 'STOP'
@@ -421,10 +419,7 @@ class Client(MessageSocket):
         msg['type'] = msg_type
         msg['secret'] = self._secret
 
-        if msg_type == 'FINAL':
-            msg['trial_id'] = trial_id
-
-        if msg_type == 'METRIC':
+        if msg_type == 'FINAL' or msg_type == 'METRIC':
             msg['trial_id'] = trial_id
             if logs == '':
                 msg['logs'] = None
@@ -548,6 +543,7 @@ class Client(MessageSocket):
         # make sure heartbeat thread can't send between sending final metric
         # and resetting the reporter
         with reporter.lock:
-            resp = self._request(self.sock, 'FINAL', metric, reporter.get_trial_id())
+            _, logs = reporter.get_data()
+            resp = self._request(self.sock, 'FINAL', metric, reporter.get_trial_id(), logs)
             reporter.reset()
         return resp
