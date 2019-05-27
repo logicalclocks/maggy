@@ -421,6 +421,10 @@ class Client(MessageSocket):
 
         if msg_type == 'FINAL':
             msg['trial_id'] = trial_id
+            if logs == '':
+                msg['logs'] = None
+            else:
+                msg['logs'] = logs
 
         if msg_type == 'METRIC':
             msg['trial_id'] = trial_id
@@ -546,6 +550,7 @@ class Client(MessageSocket):
         # make sure heartbeat thread can't send between sending final metric
         # and resetting the reporter
         with reporter.lock:
-            resp = self._request(self.sock, 'FINAL', metric, reporter.get_trial_id())
+            _, logs = reporter.get_data()
+            resp = self._request(self.sock, 'FINAL', metric, reporter.get_trial_id(), logs)
             reporter.reset()
         return resp
