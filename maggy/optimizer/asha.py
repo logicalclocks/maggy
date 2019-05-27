@@ -65,7 +65,7 @@ class Asha(AbstractOptimizer):
         self.max_rung = int(math.floor(math.log(
             self.resource_max/self.resource_min, self.reduction_factor)))
 
-        assert self.num_trials >= self.reduction_factor**self.max_rung
+        assert self.num_trials >= self.reduction_factor**(self.max_rung + 1)
 
         print('assert {}'.format(self.reduction_factor**self.max_rung))
         print('max_rung {}'.format(self.max_rung))
