@@ -157,14 +157,6 @@ class ExperimentDriver(object):
                 except:
                     msg = {'type': None}
 
-
-                dummy_list = []
-                dummy_list[1]
-
-                hopshdfs.dump('Exception got raised by worker thread', 'hdfs:///Projects/dev_asha/Logs/debug')
-                dummy_list = []
-                dummy_list[1]
-
                 if (datetime.now() - time_earlystop_check).total_seconds() >= self.es_interval:
                     time_earlystop_check = datetime.now()
 
@@ -261,7 +253,9 @@ class ExperimentDriver(object):
 
         t = threading.Thread(target=_target_function, args=(self,))
         t.daemon = True
+        hopshdfs.dump('before start', 'hdfs:///Projects/dev_asha/Logs/start')
         t.start()
+        hopshdfs.dump('after start', 'hdfs:///Projects/dev_asha/Logs/afterstart')
 
     def stop(self):
         """Stop the Driver's worker thread and server."""

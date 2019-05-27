@@ -1,4 +1,5 @@
 import statistics
+from hops import hdfs as hopshdfs
 from maggy.earlystop import AbstractEarlyStop
 
 
@@ -15,9 +16,9 @@ class MedianStoppingRule(AbstractEarlyStop):
         try:
             results = []
             median = statistics.median(results)
-        except Exception as e:
-            print(e)
-            raise
+        except statistics.StatisticsError as e:
+            hopshdfs.dump(e, 'hdfs:///Projects/dev_asha/Logs/earlystopfunction')
+            raise Exception
 
         for trial_id, trial in to_check.items():
 
