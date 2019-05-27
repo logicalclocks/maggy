@@ -12,6 +12,13 @@ class MedianStoppingRule(AbstractEarlyStop):
 
         stop = []
 
+        try:
+            results = []
+            median = statistics.median(results)
+        except Exception as e:
+            print(e)
+            raise
+
         for trial_id, trial in to_check.items():
 
             results = []
