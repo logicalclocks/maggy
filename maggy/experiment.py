@@ -144,8 +144,6 @@ def lagom(map_fun, searchspace, optimizer, direction, num_trials, name, hb_inter
         _exception_handler()
         raise
     finally:
-        # grace period to send last logs to sparkmagic
-        time.sleep(6)
         print("queue size: {}".format(exp_driver._message_q.qsize()))
         # cleanup spark jobs
         exp_driver.stop()
