@@ -8,7 +8,6 @@ from maggy.trial import Trial
 resource constraint.
 """
 
-from hops import hdfs as hopshdfs
 
 class Asha(AbstractOptimizer):
 
@@ -77,16 +76,16 @@ class Asha(AbstractOptimizer):
         if trial is not None:
             # stopping criterium: one trial in max rung
             if self.max_rung in self.rungs:
-                hopshdfs.log('trial in max rung running, time to wrap up')
+                print('trial in max rung running, time to wrap up')
                 # return None to signal end to experiment driver
                 return None
 
             # for each rung
             for k in range(self.max_rung-1, -1, -1):
                 # if rung doesn't exist yet go one lower
-                hopshdfs.log(k)
+                print(k)
                 if k not in self.rungs:
-                    hopshdfs.log('skip rung')
+                    print('skip rung')
                     continue
                 # get top_k
                 rung_finished = len([x for x in self.rungs[k] if x.status == Trial.FINALIZED])
@@ -94,18 +93,18 @@ class Asha(AbstractOptimizer):
                 if (rung_finished//self.reduction_factor) - len(self.promoted.get(k,[])) > 0:
                     candidates = self._top_k(k, (rung_finished//self.reduction_factor))
                 else:
-                    hopshdfs.log("not enough trials in rung yet")
+                    print("not enough trials in rung yet")
                     candidates = []
                 if not candidates:
-                    hopshdfs.log('no candidates skip rung')
+                    print('no candidates skip rung')
                     continue
-                hopshdfs.log('candidates: {}'.format(candidates))
+                print('candidates: {}'.format(candidates))
                 # select all that haven't been promoted yet in top_k
                 promotable = [t for t in candidates if t.trial_id not in self.promoted.get(k,[])]
-                hopshdfs.log('promotable: {}'.format(promotable))
+                print('promotable: {}'.format(promotable))
 
                 nr_promotable = len(promotable)
-                if nr_promotable == 1:
+                if nr_promotable >= 1:
                     new_rung = k + 1
                     old_trial = promotable[0]
                     params = old_trial.params.copy()
@@ -121,10 +120,8 @@ class Asha(AbstractOptimizer):
                         self.promoted[k].append(old_trial.trial_id)
                     else:
                         self.promoted[k] = [old_trial.trial_id]
-                    hopshdfs.log('promoted trial: {}'.format(promote_trial.to_json()))
+                    print('promoted trial: {}'.format(promote_trial.to_json()))
                     return promote_trial
-                elif nr_promotable > 1:
-                    raise Exception("More than one trial promotable")
 
         # return random configuration in base rung
         # get one random combination
@@ -134,7 +131,7 @@ class Asha(AbstractOptimizer):
         params['resource'] = self.resource_min
         to_return = Trial(params)
         self.rungs[0].append(to_return)
-        hopshdfs.log('random trial: {}'.format(to_return.to_json()))
+        print('random trial: {}'.format(to_return.to_json()))
         return to_return
 
     def finalize_experiment(self, trials):
@@ -144,9 +141,9 @@ class Asha(AbstractOptimizer):
         if number > 0:
             filtered = [x for x in self.rungs[rung_k] if x.status == Trial.FINALIZED]
             filtered.sort(key=lambda x: x.final_metric, reverse=True)
-            hopshdfs.log('top_k: {}'.format(filtered[:number]))
+            print('top_k: {}'.format(filtered[:number]))
             # TODO: if two trials have exactly same performance
             return filtered[:number]
         else:
-            hopshdfs.log('top_k: {}'.format([]))
+            print('top_k: {}'.format([]))
             return []
