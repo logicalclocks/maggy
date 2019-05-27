@@ -250,6 +250,7 @@ class ExperimentDriver(object):
 
     def stop(self):
         """Stop the Driver's worker thread and server."""
+        print("Remaining logs:\n" + self.executor_logs)
         self.worker_done = True
         self.server.stop()
         self.fd.flush()

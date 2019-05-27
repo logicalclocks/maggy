@@ -99,6 +99,8 @@ def _prepare_func(app_id, run_id, map_fun, server_addr, hb_interval, secret, app
             reporter.fd.close()
             raise
         finally:
+            # hb grace period to send last logs
+            time.sleep(hb_interval+1)
             reporter.fd.close()
             client.stop()
             client.close()
