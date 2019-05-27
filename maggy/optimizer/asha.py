@@ -91,7 +91,10 @@ class Asha(AbstractOptimizer):
                 # get top_k
                 rung_finished = len([x for x in self.rungs[k] if x.status == Trial.FINALIZED])
                 #candidates = self._top_k(k, (rung_finished//self.reduction_factor) - len(self.promoted.get(k,[])))
-                candidates = self._top_k(k, (rung_finished//self.reduction_factor))
+                if (rung_finished//self.reduction_factor) - len(self.promoted.get(k,[])) > 0:
+                    candidates = self._top_k(k, (rung_finished//self.reduction_factor))
+                else:
+                    candidates = []
                 if not candidates:
                     print('no candidates skip rung')
                     continue
