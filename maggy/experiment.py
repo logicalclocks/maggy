@@ -144,7 +144,9 @@ def lagom(map_fun, searchspace, optimizer, direction, num_trials, name, hb_inter
         _exception_handler()
         raise
     finally:
-        print("queue size: {}".format(exp_driver._message_q.qsize()))
+        # grace period to send last logs to sparkmagic
+        # sparkmagic hb poll intervall is 5 seconds, therefore wait 6 seconds
+        time.sleep(6)
         # cleanup spark jobs
         exp_driver.stop()
         elastic_id +=1
