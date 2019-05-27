@@ -67,7 +67,6 @@ class Reporter(object):
         """
         with self.lock:
             log_to_send = self.logs
-            print("sending logs: " + log_to_send)
             self.logs = ''
             return self.metric, log_to_send
 
