@@ -419,14 +419,7 @@ class Client(MessageSocket):
         msg['type'] = msg_type
         msg['secret'] = self._secret
 
-        if msg_type == 'FINAL':
-            msg['trial_id'] = trial_id
-            if logs == '':
-                msg['logs'] = None
-            else:
-                msg['logs'] = logs
-
-        if msg_type == 'METRIC':
+        if msg_type == 'FINAL' or msg_type == 'METRIC':
             msg['trial_id'] = trial_id
             if logs == '':
                 msg['logs'] = None

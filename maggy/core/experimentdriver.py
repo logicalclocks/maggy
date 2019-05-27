@@ -198,6 +198,11 @@ class ExperimentDriver(object):
                     # get trial only once
                     trial = self.get_trial(msg['trial_id'])
 
+                    logs = msg.get('logs', None)
+                    if logs is not None:
+                        with self.log_lock:
+                            self.executor_logs = self.executor_logs + logs
+
                     # finalize the trial object
                     with trial.lock:
                         trial.status = Trial.FINALIZED
