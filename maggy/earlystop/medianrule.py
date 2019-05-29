@@ -13,13 +13,6 @@ class MedianStoppingRule(AbstractEarlyStop):
 
         stop = []
 
-        try:
-            results = []
-            median = statistics.median(results)
-        except statistics.StatisticsError as e:
-            hopshdfs.dump(e, 'hdfs:///Projects/dev_asha/Logs/earlystopfunction')
-            raise Exception
-
         for trial_id, trial in to_check.items():
 
             results = []
@@ -37,7 +30,6 @@ class MedianStoppingRule(AbstractEarlyStop):
                         results.append(avg)
 
                 try:
-                    results = []
                     median = statistics.median(results)
                 except statistics.StatisticsError as e:
                     raise Exception(

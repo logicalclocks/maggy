@@ -163,7 +163,6 @@ def _exception_handler():
     """
     global running
     global experiment_json
-    hopshdfs.dump("exception handler", 'hdfs:///Projects/dev_asha/Logs/exceptionhandler')
     if running and experiment_json != None:
         experiment_json = json.loads(experiment_json)
         experiment_json['status'] = "FAILED"
