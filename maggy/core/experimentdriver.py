@@ -165,7 +165,6 @@ class ExperimentDriver(object):
                                 self._trial_store, self._final_store, self.direction)
                         except Exception as e:
                             self._log(e)
-                        finally:
                             to_stop = []
                         if len(to_stop) > 0:
                             self._log("Trials to stop: {}".format(to_stop))
