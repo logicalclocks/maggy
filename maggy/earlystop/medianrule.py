@@ -30,9 +30,9 @@ class MedianStoppingRule(AbstractEarlyStop):
 
                 try:
                     median = statistics.median(results)
-                except Exception as e:
-                    print(e)
-                    raise
+                except statistics.StatisticsError as e:
+                    raise Exception(
+                        "Warning: StatisticsError when calling early stop method\n{}" .format(e))
 
                 if median is not None:
                     if direction == 'max':

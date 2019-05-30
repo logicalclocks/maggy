@@ -11,7 +11,7 @@ from maggy import util
 from maggy.optimizer import AbstractOptimizer, RandomSearch
 from maggy.core import rpc
 from maggy.trial import Trial
-from maggy.earlystop import AbstractEarlyStop, MedianStoppingRule
+from maggy.earlystop import AbstractEarlyStop, MedianStoppingRule, NoStoppingRule
 from maggy.searchspace import Searchspace
 
 from hops import constants as hopsconstants
@@ -58,6 +58,8 @@ class ExperimentDriver(object):
         if isinstance(es_policy, str):
             if es_policy.lower() == 'median':
                 self.earlystop_check = MedianStoppingRule.earlystop_check
+            elif es_policy.lower() == 'none':
+                self.earlystop_check = NoStoppingRule.earlystop_check
             else:
                 raise Exception(
                     "Unknown Early Stopping Policy. Can't initialize experiment driver.")
@@ -163,10 +165,8 @@ class ExperimentDriver(object):
                                 self._trial_store, self._final_store, self.direction)
                         except Exception as e:
                             self._log(e)
-                            # log the final store in case of median exception
-                            for i in self._final_store:
-                                self._log(json.dumps(i))
-                            raise
+                        finally:
+                            to_stop = []
                         if len(to_stop) > 0:
                             self._log("Trials to stop: {}".format(to_stop))
                         for trial_id in to_stop:
