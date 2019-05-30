@@ -53,7 +53,6 @@ class Reporter(object):
         :type verbose: bool, optional
         """
         with self.lock:
-            # TODO: globally synchronized timestamp
             msg = datetime.now().isoformat() + \
                 ' (' + str(self.partition_id) + '/' + \
                 str(self.task_attempt) + '): ' + str(log_msg)
