@@ -119,6 +119,7 @@ class ExperimentDriver(object):
 
 
         results = '\n------ ' + str(self.optimizer.__class__.__name__) + ' results ------ direction(' + self.direction + ') \n' \
+            'NUMBER TRIALS evaluated -- ' + str(self.result['num_trials']) + '\n' \
             'BEST combination ' + json.dumps(self.result['best_hp']) + ' -- metric ' + str(self.result['best_val']) + '\n' \
             'WORST combination ' + json.dumps(self.result['worst_hp']) + ' -- metric ' + str(self.result['worst_val']) + '\n' \
             'AVERAGE metric -- ' + str(self.result['avg']) + '\n' \

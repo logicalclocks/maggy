@@ -4,12 +4,15 @@ from maggy.optimizer import AbstractOptimizer
 from maggy.searchspace import Searchspace
 from maggy.trial import Trial
 
-"""we need additional parameters that is the promotion rate and the max
-resource constraint.
-"""
-
 
 class Asha(AbstractOptimizer):
+    """Implements the Asynchronous Successiv Halving Algorithm - ASHA
+    (https://arxiv.org/abs/1810.05934). It uses the searchspace class to set
+    additional parameters such as the `reduction_factor` as well as the
+    minimum and maximum resource constraint. In that way the `resource` can be
+    used in a flexible way inside the training function. For example, to set
+    the number of epochs as resource.
+    """
 
     def initialize(self):
 
@@ -67,83 +70,80 @@ class Asha(AbstractOptimizer):
 
         assert self.num_trials >= self.reduction_factor**(self.max_rung + 1)
 
-        print('assert {}'.format(self.reduction_factor**self.max_rung))
-        print('max_rung {}'.format(self.max_rung))
-
-
     def get_suggestion(self, trial=None):
 
         if trial is not None:
             # stopping criterium: one trial in max rung
             if self.max_rung in self.rungs:
-                print('trial in max rung running, time to wrap up')
                 # return None to signal end to experiment driver
                 return None
 
             # for each rung
             for k in range(self.max_rung-1, -1, -1):
                 # if rung doesn't exist yet go one lower
-                print(k)
                 if k not in self.rungs:
-                    print('skip rung')
                     continue
+
                 # get top_k
                 rung_finished = len([x for x in self.rungs[k] if x.status == Trial.FINALIZED])
-                #candidates = self._top_k(k, (rung_finished//self.reduction_factor) - len(self.promoted.get(k,[])))
+
                 if (rung_finished//self.reduction_factor) - len(self.promoted.get(k,[])) > 0:
                     candidates = self._top_k(k, (rung_finished//self.reduction_factor))
                 else:
-                    print("not enough trials in rung yet")
                     candidates = []
+
+                # if there are no candidates, check one rung below
                 if not candidates:
-                    print('no candidates skip rung')
                     continue
-                print('candidates: {}'.format(candidates))
-                # select all that haven't been promoted yet in top_k
+
+                # select all that haven't been promoted yet
                 promotable = [t for t in candidates if t.trial_id not in self.promoted.get(k,[])]
-                print('promotable: {}'.format(promotable))
 
                 nr_promotable = len(promotable)
                 if nr_promotable >= 1:
                     new_rung = k + 1
+                    # sorted in decending order, take highest -> index 0
                     old_trial = promotable[0]
+                    # make copy of params to be able to change resource
                     params = old_trial.params.copy()
                     params.pop('reduction_factor', None)
                     params['resource'] = self.resource_min * (self.reduction_factor**new_rung)
                     promote_trial = Trial(params)
+
+                    # open new rung if not exists
                     if new_rung in self.rungs:
                         self.rungs[new_rung].append(promote_trial)
                     else:
                         self.rungs[new_rung] = [promote_trial]
 
+                    # remember promoted trial
                     if k in self.promoted:
                         self.promoted[k].append(old_trial.trial_id)
                     else:
                         self.promoted[k] = [old_trial.trial_id]
-                    print('promoted trial: {}'.format(promote_trial.to_json()))
+
                     return promote_trial
 
-        # return random configuration in base rung
-        # get one random combination
+        # else return random configuration in base rung
         params = self.searchspace.get_random_parameter_values(1)[0]
         # set resource to minimum
         params.pop('reduction_factor', None)
         params['resource'] = self.resource_min
         to_return = Trial(params)
+        # add to bottom rung
         self.rungs[0].append(to_return)
-        print('random trial: {}'.format(to_return.to_json()))
         return to_return
 
     def finalize_experiment(self, trials):
         return
 
     def _top_k(self, rung_k, number):
+        """Find top-`number` trials in `rung_k`.
+        """
         if number > 0:
             filtered = [x for x in self.rungs[rung_k] if x.status == Trial.FINALIZED]
             filtered.sort(key=lambda x: x.final_metric, reverse=True)
-            print('top_k: {}'.format(filtered[:number]))
-            # TODO: if two trials have exactly same performance
+            # return top k trials if finalized
             return filtered[:number]
         else:
-            print('top_k: {}'.format([]))
             return []
