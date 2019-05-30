@@ -253,9 +253,7 @@ class ExperimentDriver(object):
 
         t = threading.Thread(target=_target_function, args=(self,))
         t.daemon = True
-        hopshdfs.dump('before start', 'hdfs:///Projects/dev_asha/Logs/start')
         t.start()
-        hopshdfs.dump('after start', 'hdfs:///Projects/dev_asha/Logs/afterstart')
 
     def stop(self):
         """Stop the Driver's worker thread and server."""

@@ -1,5 +1,4 @@
 import statistics
-from hops import hdfs as hopshdfs
 from maggy.earlystop import AbstractEarlyStop
 
 
