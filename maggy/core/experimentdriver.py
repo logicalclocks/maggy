@@ -36,9 +36,9 @@ class ExperimentDriver(object):
 
         if isinstance(optimizer, str):
             if optimizer.lower() == 'randomsearch':
-                self.optimizer = RandomSearch(num_trials, self.searchspace, self._final_store)
+                self.optimizer = RandomSearch()
             elif optimizer.lower() == 'asha':
-                self.optimizer = Asha(num_trials, self.searchspace, self._final_store)
+                self.optimizer = Asha()
             else:
                 raise Exception(
                     "Unknown Optimizer. Can't initialize experiment driver.")
@@ -48,6 +48,11 @@ class ExperimentDriver(object):
         else:
             raise Exception(
                 "Unknown Optimizer. Can't initialize experiment driver.")
+
+        # Set references to data in optimizer
+        optimizer.num_trials = num_trials
+        optimizer.searchspace = self.searchspace
+        optimizer.final_store = self._final_store
 
         if isinstance(direction, str):
             if direction.lower() not in ['min', 'max']:

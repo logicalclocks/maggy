@@ -7,58 +7,48 @@ from maggy.trial import Trial
 
 class Asha(AbstractOptimizer):
     """Implements the Asynchronous Successiv Halving Algorithm - ASHA
-    (https://arxiv.org/abs/1810.05934). It uses the searchspace class to set
-    additional parameters such as the `reduction_factor` as well as the
-    minimum and maximum resource constraint. In that way the `resource` can be
-    used in a flexible way inside the training function. For example, to set
-    the number of epochs as resource.
+    (https://arxiv.org/abs/1810.05934). ASHA needs three additional parameters:
+    'reduction_factor', 'resource_min' and 'resource_max'. To set custom values
+    for these, initialize the optimizer first and pass it as an argument to
+    'experiment.lagom()'.
+
+    Sample usage:
+
+    >>> # Import Asha optimizer
+    >>> from maggy.optimizer import Asha
+    >>> # Instantiate the optimizer with custom arguments
+    >>> asha = Asha(3, 1, 9)
+    >>> experiment.lagom(..., optimizer=asha, ...)
     """
 
-    def initialize(self):
+    def __init__(self, reduction_factor=2, resource_min=1, resource_max=4):
+        super().__init__()
 
-        reduction_factor_type = self.searchspace.names().get('reduction_factor', None)
-        self.reduction_factor = self.searchspace.get('reduction_factor', None)
-        if reduction_factor_type is None:
-            raise Exception(
-                "Can't initialize ASHA optimizer without 'reduction_factor'" + \
-                "parameter in Searchspace.")
-        elif (reduction_factor_type
-            not in [Searchspace.DISCRETE, Searchspace.CATEGORICAL]):
-            raise Exception(
-                "Can't initialize ASHA optimizer. 'reduction_factor'" + \
-                "not of type DISCRETE or CATEGORICAL.")
-        if len(self.reduction_factor) != 1:
-            raise Exception(
-                "Can't initialize ASHA optimizer. 'reduction_factor'" + \
-                "can only be a single value: {}"
-                .format(self.reduction_factor[1]))
-        elif self.reduction_factor[0] < 2 or not isinstance(self.reduction_factor[0], int):
+        if reduction_factor < 2 or not isinstance(reduction_factor, int):
             raise Exception(
                 "Can't initialize ASHA optimizer. 'reduction_factor'" + \
                 "has to be an integer equal to or larger than 2: {}"
-                .format(self.reduction_factor))
+                .format(reduction_factor))
         else:
-                self.reduction_factor = self.reduction_factor[0]
+                self.reduction_factor = reduction_factor
 
-        resource_type = self.searchspace.names().get('resource', None)
-        self.resource = self.searchspace.get('resource', None)
-
-        if resource_type is None:
+        if not isinstance(resource_min, int):
             raise Exception(
-                "Can't initialize ASHA optimizer without 'resource'" + \
-                "parameter in Searchspace.")
-        elif resource_type != Searchspace.INTEGER:
-            raise Exception(
-                "Can't initialize ASHA optimizer. 'resource'" + \
+                "Can't initialize ASHA optimizer. 'resource_min'" + \
                 "not of type INTEGER.")
-        if len(self.resource) != 2:
+        if not isinstance(resource_max, int):
             raise Exception(
-                "Can't initialize ASHA optimizer. 'resource'" + \
-                "has to be a minimum and maximum value: {}"
-                .format(self.resource[1]))
-        else:
-            self.resource_min = min(self.resource)
-            self.resource_max = max(self.resource)
+                "Can't initialize ASHA optimizer. 'resource_max'" + \
+                "not of type INTEGER.")
+        if resource_min >= resource_max:
+            raise Exception(
+                "Can't initialize ASHA optimizer. 'resource_min' is larger" + \
+                "than 'resource_max'.")
+
+        self.resource_min = resource_min
+        self.resource_max = resource_max
+
+    def initialize(self):
 
         # maps rung index k to trials in that rung
         self.rungs = {0: []}
@@ -106,7 +96,6 @@ class Asha(AbstractOptimizer):
                     old_trial = promotable[0]
                     # make copy of params to be able to change resource
                     params = old_trial.params.copy()
-                    params.pop('reduction_factor', None)
                     params['resource'] = self.resource_min * (self.reduction_factor**new_rung)
                     promote_trial = Trial(params)
 
@@ -127,7 +116,6 @@ class Asha(AbstractOptimizer):
         # else return random configuration in base rung
         params = self.searchspace.get_random_parameter_values(1)[0]
         # set resource to minimum
-        params.pop('reduction_factor', None)
         params['resource'] = self.resource_min
         to_return = Trial(params)
         # add to bottom rung
