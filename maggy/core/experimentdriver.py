@@ -50,11 +50,9 @@ class ExperimentDriver(object):
                 "Unknown Optimizer. Can't initialize experiment driver.")
 
         # Set references to data in optimizer
-        optimizer.num_trials = num_trials
-        optimizer.searchspace = self.searchspace
-        optimizer.final_store = self._final_store
-
-        raise Exception("After optimizer init")
+        self.optimizer.num_trials = num_trials
+        self.optimizer.searchspace = self.searchspace
+        self.optimizer.final_store = self._final_store
 
         if isinstance(direction, str):
             if direction.lower() not in ['min', 'max']:
