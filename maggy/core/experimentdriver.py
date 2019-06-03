@@ -54,6 +54,8 @@ class ExperimentDriver(object):
         optimizer.searchspace = self.searchspace
         optimizer.final_store = self._final_store
 
+        raise Exception("After optimizer init")
+
         if isinstance(direction, str):
             if direction.lower() not in ['min', 'max']:
                 raise Exception(
