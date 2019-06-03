@@ -3,12 +3,10 @@ from abc import ABC, abstractmethod
 
 class AbstractOptimizer(ABC):
 
-    def __init__(self, num_trials, searchspace, final_store):
-        # Do stuff the user shouldn't see on initialization
-        self.num_trials = num_trials
-        self.searchspace = searchspace
-        self.trial_buffer = []
-        self.final_store = final_store
+    def __init__(self):
+        self.searchspace = None
+        self.num_trials = None
+        self.final_store = None
 
     @abstractmethod
     def initialize(self):

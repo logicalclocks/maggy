@@ -8,7 +8,7 @@ import os
 import secrets
 from datetime import datetime
 from maggy import util
-from maggy.optimizer import AbstractOptimizer, RandomSearch
+from maggy.optimizer import AbstractOptimizer, RandomSearch, Asha
 from maggy.core import rpc
 from maggy.trial import Trial
 from maggy.earlystop import AbstractEarlyStop, MedianStoppingRule, NoStoppingRule
@@ -36,7 +36,9 @@ class ExperimentDriver(object):
 
         if isinstance(optimizer, str):
             if optimizer.lower() == 'randomsearch':
-                self.optimizer = RandomSearch(num_trials, self.searchspace, self._final_store)
+                self.optimizer = RandomSearch()
+            elif optimizer.lower() == 'asha':
+                self.optimizer = Asha()
             else:
                 raise Exception(
                     "Unknown Optimizer. Can't initialize experiment driver.")
@@ -46,6 +48,11 @@ class ExperimentDriver(object):
         else:
             raise Exception(
                 "Unknown Optimizer. Can't initialize experiment driver.")
+
+        # Set references to data in optimizer
+        self.optimizer.num_trials = num_trials
+        self.optimizer.searchspace = self.searchspace
+        self.optimizer.final_store = self._final_store
 
         if isinstance(direction, str):
             if direction.lower() not in ['min', 'max']:
@@ -116,6 +123,7 @@ class ExperimentDriver(object):
 
 
         results = '\n------ ' + str(self.optimizer.__class__.__name__) + ' results ------ direction(' + self.direction + ') \n' \
+            'NUMBER TRIALS evaluated -- ' + str(self.result['num_trials']) + '\n' \
             'BEST combination ' + json.dumps(self.result['best_hp']) + ' -- metric ' + str(self.result['best_val']) + '\n' \
             'WORST combination ' + json.dumps(self.result['worst_hp']) + ' -- metric ' + str(self.result['worst_val']) + '\n' \
             'AVERAGE metric -- ' + str(self.result['avg']) + '\n' \

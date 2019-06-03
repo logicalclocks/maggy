@@ -5,6 +5,10 @@ from maggy.trial import Trial
 
 class RandomSearch(AbstractOptimizer):
 
+    def __init__(self):
+        super().__init__()
+        self.trial_buffer = []
+
     def initialize(self):
 
         if (Searchspace.DOUBLE not in self.searchspace.names().values() and
