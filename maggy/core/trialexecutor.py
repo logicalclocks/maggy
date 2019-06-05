@@ -2,6 +2,7 @@ import builtins as __builtin__
 
 import socket
 import time
+import inspect
 from maggy import util, tensorboard, constants
 from maggy.core import rpc, exceptions, config
 from maggy.core.reporter import Reporter
@@ -82,7 +83,12 @@ def _prepare_func(app_id, run_id, map_fun, server_addr, hb_interval, secret, app
                 try:
                     reporter.log("Starting Trial: {}".format(trial_id), False)
                     reporter.log("Parameter Combination: {}".format(parameters), False)
-                    retval = map_fun(**parameters)
+
+                    sig = inspect.signature(map_fun)
+                    if sig.parameters.get('reporter', None):
+                        retval = map_fun(**parameters, reporter=reporter)
+                    else:
+                        retval = map_fun(**parameters)
 
                     # Make sure user function returns a numeric value
                     if retval is None:
