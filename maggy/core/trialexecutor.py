@@ -82,7 +82,7 @@ def _prepare_func(app_id, run_id, map_fun, server_addr, hb_interval, secret, app
                 try:
                     reporter.log("Starting Trial: {}".format(trial_id), False)
                     reporter.log("Parameter Combination: {}".format(parameters), False)
-                    retval = map_fun(**parameters, reporter=reporter)
+                    retval = map_fun(**parameters)
 
                     # Make sure user function returns a numeric value
                     if retval is None:
