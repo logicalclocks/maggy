@@ -56,7 +56,7 @@ class Reporter(object):
             msg = datetime.now().isoformat() + \
                 ' (' + str(self.partition_id) + '/' + \
                 str(self.task_attempt) + '): ' + str(log_msg)
-            print(msg)
+            # print(msg)
             self.fd.write((msg + '\n').encode())
             jupyter_log = str(self.partition_id) + ': ' + log_msg
             if verbose:
