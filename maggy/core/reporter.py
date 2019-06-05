@@ -43,7 +43,7 @@ class Reporter(object):
             if self.stop:
                 raise exceptions.EarlyStopException(metric)
 
-    def log(self, log_msg, verbose=True):
+    def log(self, log_msg='', verbose=True):
         """Logs a message to the executor logfile and executor stderr and
         optionally prints the message in jupyter.
 
