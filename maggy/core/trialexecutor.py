@@ -38,12 +38,12 @@ def _prepare_func(app_id, run_id, map_fun, server_addr, hb_interval, secret, app
         log_file = app_dir + '/logs/executor_' + str(partition_id) + '_' + str(task_attempt) + '.log'
         reporter = Reporter(log_file, partition_id, task_attempt)
 
-        def print(*args, **kwargs):
+        def test_print(*args, **kwargs):
             """Maggy custom print() function."""
             reporter.log(*args)
             __builtin__.print(*args, **kwargs)
 
-        __builtin__.print = print
+        __builtin__.print = test_print
 
         print("this is the new print outside user fct")
 
