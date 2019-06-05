@@ -9,7 +9,8 @@ class SingleRun(AbstractOptimizer):
         self.trial_buffer = []
 
     def initialize(self):
-        self.trial_buffer.append(Trial({}))
+        for _ in range(self.num_trials):
+            self.trial_buffer.append(Trial({}))
 
     def get_suggestion(self, trial=None):
         if self.trial_buffer:

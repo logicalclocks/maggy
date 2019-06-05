@@ -41,13 +41,13 @@ def _prepare_func(app_id, run_id, map_fun, server_addr, hb_interval, secret, app
         # save the builtin print
         original_print = __builtin__.print
 
-        def test_print(*args, **kwargs):
+        def maggy_print(*args, **kwargs):
             """Maggy custom print() function."""
             reporter.log(' '.join(str(x) for x in args))
             original_print(*args, **kwargs)
 
         # override the builtin print
-        __builtin__.print = test_print
+        __builtin__.print = maggy_print
 
         try:
             client_addr = client.client_addr

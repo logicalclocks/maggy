@@ -8,7 +8,7 @@ import os
 import secrets
 from datetime import datetime
 from maggy import util
-from maggy.optimizer import AbstractOptimizer, RandomSearch, Asha
+from maggy.optimizer import AbstractOptimizer, RandomSearch, Asha, SingleRun
 from maggy.core import rpc
 from maggy.trial import Trial
 from maggy.earlystop import AbstractEarlyStop, MedianStoppingRule, NoStoppingRule
@@ -30,11 +30,19 @@ class ExperimentDriver(object):
         # perform type checks
         if isinstance(searchspace, Searchspace):
             self.searchspace = searchspace
+        elif searchspace is None:
+            self.searchspace = Searchspace()
         else:
             raise Exception(
                 "No valid searchspace. Please use maggy Searchspace class.")
 
-        if isinstance(optimizer, str):
+        if optimizer is None or optimizer.lower() == 'none':
+                if len(self.searchspace.names()) == 0:
+                    self.optimizer = SingleRun()
+                else:
+                    raise Exception(
+                        'Searchspace has to be empty or None to use without optimizer')
+        elif isinstance(optimizer, str):
             if optimizer.lower() == 'randomsearch':
                 self.optimizer = RandomSearch()
             elif optimizer.lower() == 'asha':
