@@ -113,20 +113,3 @@ def _prepare_func(app_id, run_id, map_fun, server_addr, hb_interval, secret, app
             client.close()
 
     return _wrapper_fun
-
-
-from __future__ import print_function
-try:
-   import __builtin__
-except ImportError:
-   # Python 3
-   import builtins as __builtin__
-
-
-def print(*args, **kwargs):
-   """Maggy custom print() function."""
-   reporter.log(*args)
-   # hdfs.log(*args)
-   return __builtin__.print(*args, **kwargs)
-
-print("hello")
