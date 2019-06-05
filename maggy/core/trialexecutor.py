@@ -1,3 +1,10 @@
+from __future__ import print_function
+try:
+   import __builtin__
+except ImportError:
+   # Python 3
+   import builtins as __builtin__
+
 import socket
 import time
 from maggy import util, tensorboard, constants
@@ -35,6 +42,13 @@ def _prepare_func(app_id, run_id, map_fun, server_addr, hb_interval, secret, app
                             task_attempt, hb_interval, secret)
         log_file = app_dir + '/logs/executor_' + str(partition_id) + '_' + str(task_attempt) + '.log'
         reporter = Reporter(log_file, partition_id, task_attempt)
+
+        def print(*args, **kwargs):
+            """Maggy custom print() function."""
+            reporter.log(*args)
+            return __builtin__.print(*args, **kwargs)
+
+        print("this is the new print outside user fct")
 
         try:
             client_addr = client.client_addr
@@ -104,3 +118,20 @@ def _prepare_func(app_id, run_id, map_fun, server_addr, hb_interval, secret, app
             client.close()
 
     return _wrapper_fun
+
+
+from __future__ import print_function
+try:
+   import __builtin__
+except ImportError:
+   # Python 3
+   import builtins as __builtin__
+
+
+def print(*args, **kwargs):
+   """Maggy custom print() function."""
+   reporter.log(*args)
+   # hdfs.log(*args)
+   return __builtin__.print(*args, **kwargs)
+
+print("hello")
