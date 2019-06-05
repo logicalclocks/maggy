@@ -42,7 +42,7 @@ def _prepare_func(app_id, run_id, map_fun, server_addr, hb_interval, secret, app
 
         def test_print(*args, **kwargs):
             """Maggy custom print() function."""
-            reporter.log(*args)
+            reporter.log(''.join(str(x) for x in args))
             original_print(*args, **kwargs)
 
         __builtin__.print = test_print
