@@ -40,7 +40,6 @@ def _prepare_func(app_id, run_id, map_fun, server_addr, hb_interval, secret, app
 
         def print(*args, **kwargs):
             """Maggy custom print() function."""
-             __builtin__.print('My overridden print() function!')
             reporter.log(*args)
             return __builtin__.print(*args, **kwargs)
 
