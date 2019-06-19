@@ -269,15 +269,18 @@ class ExperimentDriver(object):
                 # therefore log the exception and fail experiment
                 self._log('Worker Exception')
                 self._log(worker_exception)
-                self.server.stop()
+                self.stop(worker_exception)
 
 
         t = threading.Thread(target=_target_function, args=(self,))
         t.daemon = True
         t.start()
 
-    def stop(self):
+    def stop(self, worker_exception=None):
         """Stop the Driver's worker thread and server."""
+        if worker_exception:
+            print(worker_exception)
+            return
         self.worker_done = True
         self.server.stop()
         self.fd.flush()
