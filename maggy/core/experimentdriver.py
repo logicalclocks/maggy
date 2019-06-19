@@ -265,9 +265,11 @@ class ExperimentDriver(object):
                                     msg['partition_id'], trial.trial_id)
                                 self.add_trial(trial)
             except Exception as worker_exception:
+                # Exception can't be propagated to parent thread
+                # therefore log the exception and fail experiment
                 self._log('Worker Exception')
                 self._log(worker_exception)
-                self.stop()
+                self.server.stop()
 
 
         t = threading.Thread(target=_target_function, args=(self,))
