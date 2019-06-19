@@ -37,10 +37,11 @@ def _prepare_func(app_id, run_id, map_fun, server_addr, hb_interval, secret, app
         client = rpc.Client(server_addr, partition_id,
                             task_attempt, hb_interval, secret)
         log_file = app_dir + '/logs/executor_' + str(partition_id) + '_' + str(task_attempt) + '.log'
-        reporter = Reporter(log_file, partition_id, task_attempt)
 
         # save the builtin print
         original_print = __builtin__.print
+
+        reporter = Reporter(log_file, partition_id, task_attempt, original_print)
 
         def maggy_print(*args, **kwargs):
             """Maggy custom print() function."""
