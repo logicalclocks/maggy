@@ -282,7 +282,7 @@ class ExperimentDriver(object):
         """Stop the Driver's worker thread and server."""
         if self.worker_exception:
             raise Exception(
-                "Worker exception: {}".format(self.worker_exception))
+                "Worker: {}".format(self.worker_exception))
         self.worker_done = True
         self.server.stop()
         self.fd.flush()
