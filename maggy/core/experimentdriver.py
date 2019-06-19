@@ -280,13 +280,13 @@ class ExperimentDriver(object):
 
     def stop(self):
         """Stop the Driver's worker thread and server."""
-        if self.worker_exception:
-            raise Exception(
-                "Worker: {}".format(self.worker_exception))
         self.worker_done = True
         self.server.stop()
         self.fd.flush()
         self.fd.close()
+        if self.worker_exception:
+            raise Exception(
+                "Worker: {}".format(self.worker_exception))
 
     def json(self, sc):
         """Get all relevant experiment information in JSON format.
