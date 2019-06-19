@@ -107,6 +107,7 @@ class ExperimentDriver(object):
         self.log_file = log_dir + '/maggy.log'
         self.trial_dir = trial_dir
         self.app_dir = app_dir
+        self.worker_exception = None
 
         #Open File desc for HDFS to log
         if not hopshdfs.exists(self.log_file):
@@ -269,18 +270,19 @@ class ExperimentDriver(object):
                 # therefore log the exception and fail experiment
                 self._log('Worker Exception')
                 self._log(worker_exception)
-                self.stop(worker_exception)
+                self.worker_exception = worker_exception
+                self.server.stop()
 
 
         t = threading.Thread(target=_target_function, args=(self,))
         t.daemon = True
         t.start()
 
-    def stop(self, worker_exception=None):
+    def stop(self):
         """Stop the Driver's worker thread and server."""
-        if worker_exception:
-            print(worker_exception)
-            return
+        if self.worker_exception:
+            raise Exception(
+                "Worker exception: {}".format(self.worker_exception))
         self.worker_done = True
         self.server.stop()
         self.fd.flush()
