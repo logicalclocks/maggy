@@ -18,12 +18,16 @@ from hops import constants as hopsconstants
 from hops import hdfs as hopshdfs
 from hops import util as hopsutil
 
+driver_secret = None
+
 
 class ExperimentDriver(object):
 
     SECRET_BYTES = 8
 
     def __init__(self, searchspace, optimizer, direction, num_trials, name, num_executors, hb_interval, es_policy, es_interval, es_min, description, app_dir, log_dir, trial_dir):
+
+        global driver_secret
 
         self._final_store = []
 
@@ -96,7 +100,9 @@ class ExperimentDriver(object):
         self.description = description
         self.direction = direction.lower()
         self.server = rpc.Server(num_executors)
-        self._secret = self._generate_secret(ExperimentDriver.SECRET_BYTES)
+        if not driver_secret:
+            driver_secret = self._generate_secret(ExperimentDriver.SECRET_BYTES)
+        self._secret = driver_secret
         self.result = {'best_val': 'n.a.',
             'num_trials': 0,
             'early_stopped': 0}
