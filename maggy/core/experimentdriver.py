@@ -142,7 +142,8 @@ class ExperimentDriver(object):
 
         self._log(results)
 
-        hopshdfs.dump(json.dumps(self.result), self.app_dir + '/result.json')
+        hopshdfs.dump(json.dumps(self.result, default=util.json_default_numpy),
+            self.app_dir + '/result.json')
         sc = hopsutil._find_spark().sparkContext
         hopshdfs.dump(self.json(sc), self.app_dir + '/maggy.json')
 
@@ -320,7 +321,7 @@ class ExperimentDriver(object):
         else:
             experiment_json['status'] = "RUNNING"
 
-        return json.dumps(experiment_json)
+        return json.dumps(experiment_json, default=util.json_default_numpy)
 
     def _generate_secret(self, nbytes):
         """Generates a secret to be used by all clients during the experiment
