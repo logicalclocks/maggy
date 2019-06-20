@@ -1,5 +1,6 @@
 import socket
 import math
+import numpy as np
 from pyspark.sql import SparkSession
 from pyspark import TaskContext
 
@@ -100,3 +101,14 @@ def _progress_bar(done, total):
 
             bar += ']'
             return bar
+
+def json_default_numpy(obj):
+    if isinstance(obj, np.integer):
+        return int(obj)
+    elif isinstance(obj, np.floating):
+        return float(obj)
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    else:
+        raise TypeError("Object of type {0}: {1} is not JSON serializable"
+            .format(type(obj), obj))
