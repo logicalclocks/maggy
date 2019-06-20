@@ -2,6 +2,8 @@ import json
 import threading
 import hashlib
 
+from maggy import util
+
 
 class Trial(object):
     """A Trial object contains all relevant information about the evaluation
@@ -80,7 +82,7 @@ class Trial(object):
         raise ValueError("Hyperparameters need to be a dictionary.")
 
     def to_json(self):
-        return json.dumps(self.to_dict())
+        return json.dumps(self.to_dict(), default=util.json_default_numpy)
 
     def to_dict(self):
         obj_dict = {

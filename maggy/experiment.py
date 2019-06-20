@@ -29,7 +29,7 @@ elastic_id = 1
 experiment_json = None
 
 
-def lagom(map_fun, searchspace, optimizer, direction, num_trials, name, hb_interval=1, es_policy='median', es_interval=300, es_min=10, description=''):
+def lagom(map_fun, searchspace=None, optimizer=None, direction='max', num_trials=1, name='no-name', hb_interval=1, es_policy='median', es_interval=300, es_min=10, description=''):
     """Launches a maggy experiment for hyperparameter optimization.
 
     Given a search space, objective and a model training procedure `map_fun`

@@ -16,6 +16,8 @@ from hops import util as hopsutil
 MAX_RETRIES = 3
 BUFSIZE = 1024 * 2
 
+server_host_port = None
+
 
 class Reservations(object):
     """Thread-safe store for worker reservations.
@@ -310,41 +312,45 @@ class Server(MessageSocket):
         Returns:
             address of the Server as a tuple of (host, port)
         """
+        global server_host_port
+
         server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        server_sock.bind(('', 0))
+        if not server_host_port:
+            server_sock.bind(('', 0))
+            # hostname may not be resolvable but IP address probably will be
+            host = hopsutil._get_ip_address()
+            port = server_sock.getsockname()[1]
+            server_host_port = (host, port)
+
+            # register this driver with Hopsworks
+            sc = hopsutil._find_spark().sparkContext
+            app_id = str(sc.applicationId)
+
+            method = hopsconstants.HTTP_CONFIG.HTTP_POST
+            connection = hopsutil._get_http_connection(https=True)
+            resource_url = hopsconstants.DELIMITERS.SLASH_DELIMITER + \
+                        hopsconstants.REST_CONFIG.HOPSWORKS_REST_RESOURCE + hopsconstants.DELIMITERS.SLASH_DELIMITER + \
+                        "maggy" + hopsconstants.DELIMITERS.SLASH_DELIMITER + "drivers"
+            json_contents = {"hostIp": host,
+                            "port": port,
+                            "appId": app_id,
+                            "secret" : exp_driver._secret }
+            json_embeddable = json.dumps(json_contents)
+            headers = {hopsconstants.HTTP_CONFIG.HTTP_CONTENT_TYPE: hopsconstants.HTTP_CONFIG.HTTP_APPLICATION_JSON}
+
+            try:
+                response = hopsutil.send_request(connection, method, resource_url, body=json_embeddable, headers=headers)
+                if (response.status != 200):
+                    print("No connection to Hopsworks for logging.")
+                    exp_driver._log("No connection to Hopsworks for logging.")
+            except Exception as e:
+                print("Connection failed to Hopsworks. No logging.")
+                exp_driver._log(e)
+                exp_driver._log("Connection failed to Hopsworks. No logging.")
+        else:
+            server_sock.bind(server_host_port)
         server_sock.listen(10)
-
-        # hostname may not be resolvable but IP address probably will be
-        host = hopsutil._get_ip_address()
-        port = server_sock.getsockname()[1]
-        addr = (host, port)
-
-        # register this driver with Hopsworks
-        sc = hopsutil._find_spark().sparkContext
-        app_id = str(sc.applicationId)
-
-        method = hopsconstants.HTTP_CONFIG.HTTP_POST
-        connection = hopsutil._get_http_connection(https=True)
-        resource_url = hopsconstants.DELIMITERS.SLASH_DELIMITER + \
-                       hopsconstants.REST_CONFIG.HOPSWORKS_REST_RESOURCE + hopsconstants.DELIMITERS.SLASH_DELIMITER + \
-                       "maggy" + hopsconstants.DELIMITERS.SLASH_DELIMITER + "drivers"
-        json_contents = {"hostIp": host,
-                         "port": port,
-                         "appId": app_id,
-                         "secret" : exp_driver._secret }
-        json_embeddable = json.dumps(json_contents)
-        headers = {hopsconstants.HTTP_CONFIG.HTTP_CONTENT_TYPE: hopsconstants.HTTP_CONFIG.HTTP_APPLICATION_JSON}
-
-        try:
-            response = hopsutil.send_request(connection, method, resource_url, body=json_embeddable, headers=headers)
-            if (response.status != 200):
-                print("No connection to Hopsworks for logging.")
-                exp_driver._log("No connection to Hopsworks for logging.")
-        except Exception as e:
-            print("Connection failed to Hopsworks. No logging.")
-            exp_driver._log(e)
-            exp_driver._log("Connection failed to Hopsworks. No logging.")
 
         def _listen(self, sock, driver):
             CONNECTIONS = []
@@ -382,7 +388,7 @@ class Server(MessageSocket):
         t.daemon = True
         t.start()
 
-        return addr
+        return server_host_port
 
     def stop(self):
         """
