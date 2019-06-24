@@ -4,6 +4,7 @@ import socket
 import time
 import inspect
 import threading
+import os
 from maggy import util, tensorboard, constants
 from maggy.core import rpc, exceptions, config
 from maggy.core.reporter import Reporter
@@ -53,7 +54,24 @@ def _prepare_func(app_id, run_id, map_fun, server_addr, hb_interval, secret, app
         # override the builtin print
         __builtin__.print = maggy_print
 
-        t = threading.Thread(target=hopsdevices._print_periodic_gpu_utilization)
+        def _print_periodic_gpu_utilization():
+            """
+
+            Returns:
+
+            """
+            t = threading.currentThread()
+            rocm_gpu = hopsdevices._count_rocm_gpus()
+            nvidia_gpu = hopsdevices._count_nvidia_gpus()
+            while getattr(t, "do_run", True):
+                time.sleep(60)
+                if rocm_gpu > 0 and not 'HIP_VISIBLE_DEVICES' in os.environ:
+                    reporter.log(hopsdevices._get_rocm_gpu_util(), False)
+                if nvidia_gpu > 0:
+                    reporter.log(hopsdevices._get_nvidia_gpu_util(), False)
+
+
+        t = threading.Thread(target=_print_periodic_gpu_utilization)
         if hopsdevices.get_num_gpus() > 0:
             t.start()
 
@@ -123,17 +141,13 @@ def _prepare_func(app_id, run_id, map_fun, server_addr, hb_interval, secret, app
 
         except:
             reporter.fd.close()
+            raise
+        finally:
             if hopsdevices.get_num_gpus() > 0:
                 t.do_run = False
                 t.join()
-            raise
-        finally:
             reporter.fd.close()
             client.stop()
             client.close()
-
-        if hopsdevices.get_num_gpus() > 0:
-                t.do_run = False
-                t.join()
 
     return _wrapper_fun
