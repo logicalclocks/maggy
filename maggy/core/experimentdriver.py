@@ -169,6 +169,11 @@ class ExperimentDriver(object):
         def _target_function(self):
 
             try:
+                time_start = datetime.now()
+                header = "time;best_id;best_val;worst_id;worst_val;avg;num_trials_fin;early_stopped;fin_id;fin_metric;fin_time\n"
+                hopshdfs.dump(header,
+                    self.app_dir + '/experiment')
+
                 time_earlystop_check = datetime.now()
 
                 while not self.worker_done:
@@ -245,6 +250,24 @@ class ExperimentDriver(object):
                         self._log(self.maggy_log)
 
                         hopshdfs.dump(trial.to_json(), self.trial_dir + '/' + trial.trial_id + '/trial.json')
+
+                        fd_experiment = hopshdfs.open_file(self.app_dir + '/experiment', flags='w')
+                        # "time;best_id;best_val;worst_id;worst_val;avg;num_trials_fin;early_stopped;fin_id;fin_metric;fin_time\n"
+                        line = (str((datetime.now()-time_start).total_seconds()) + ';' +
+                            self.result['best_id'] + ';' +
+                            str(self.result['best_val']) + ';' +
+                            self.result['worst_id'] + ';' +
+                            str(self.result['worst_val']) + ';' +
+                            str(self.result['avg']) + ';' +
+                            str(self.result['num_trials']) + ';' +
+                            str(self.result['early_stopped']) + ';' +
+                            trial.trial_id + ';' +
+                            str(trial.final_metric) + ';' +
+                            str((datetime.now()-trial.start).total_seconds()))
+
+                        fd_experiment.write((line + '\n').encode())
+                        fd_experiment.flush()
+                        fd_experiment.close()
 
                         # assign new trial
                         trial = self.optimizer.get_suggestion(trial)
