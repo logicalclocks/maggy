@@ -132,7 +132,7 @@ def _prepare_func(app_id, run_id, map_fun, server_addr, hb_interval, secret, app
             client.stop()
             client.close()
 
-        if devices.get_num_gpus() > 0:
+        if hopsdevices.get_num_gpus() > 0:
                 t.do_run = False
                 t.join()
 
