@@ -3,6 +3,7 @@ import builtins as __builtin__
 import socket
 import time
 import inspect
+import threading
 from maggy import util, tensorboard, constants
 from maggy.core import rpc, exceptions, config
 from maggy.core.reporter import Reporter
@@ -122,10 +123,17 @@ def _prepare_func(app_id, run_id, map_fun, server_addr, hb_interval, secret, app
 
         except:
             reporter.fd.close()
+            if hopsdevices.get_num_gpus() > 0:
+                t.do_run = False
+                t.join()
             raise
         finally:
             reporter.fd.close()
             client.stop()
             client.close()
+
+        if devices.get_num_gpus() > 0:
+                t.do_run = False
+                t.join()
 
     return _wrapper_fun
