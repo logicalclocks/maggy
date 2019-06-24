@@ -9,6 +9,7 @@ from maggy.core.reporter import Reporter
 from pyspark import TaskContext
 
 from hops import hdfs as hopshdfs
+from hops import devices as hopsdevices
 import tensorflow as tf
 
 if config.tf_version >= 2:
@@ -50,6 +51,10 @@ def _prepare_func(app_id, run_id, map_fun, server_addr, hb_interval, secret, app
 
         # override the builtin print
         __builtin__.print = maggy_print
+
+        t = threading.Thread(target=hopsdevices._print_periodic_gpu_utilization)
+        if hopsdevices.get_num_gpus() > 0:
+            t.start()
 
         try:
             client_addr = client.client_addr
