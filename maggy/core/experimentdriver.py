@@ -251,7 +251,7 @@ class ExperimentDriver(object):
 
                         hopshdfs.dump(trial.to_json(), self.trial_dir + '/' + trial.trial_id + '/trial.json')
 
-                        fd_experiment = hopshdfs.open_file(self.app_dir + '/experiment', flags='w')
+                        fd_experiment = hopshdfs.open_file(self.app_dir + '/experiment', flags='a')
                         # "time;best_id;best_val;worst_id;worst_val;avg;num_trials_fin;early_stopped;fin_id;fin_metric;fin_time\n"
                         line = (str((datetime.now()-time_start).total_seconds()) + ';' +
                             self.result['best_id'] + ';' +
