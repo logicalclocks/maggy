@@ -4,6 +4,8 @@ from maggy.optimizer import AbstractOptimizer
 from maggy.searchspace import Searchspace
 from maggy.trial import Trial
 
+from hops import hdfs as hopshdfs
+
 
 class Asha(AbstractOptimizer):
     """Implements the Asynchronous Successiv Halving Algorithm - ASHA
@@ -122,8 +124,24 @@ class Asha(AbstractOptimizer):
         self.rungs[0].append(to_return)
         return to_return
 
-    def finalize_experiment(self, trials):
-        return
+    def finalize_experiment(self, trials, app_dir):
+
+        for key, value in self.rungs.items():
+            hopshdfs.dump('', app_dir + '/asha/' + str(key))
+            fd_experiment = hopshdfs.open_file(app_dir + '/asha/' + str(key), flags='a')
+            for i in value:
+                fd_experiment.write((i.to_json() + '\n').encode())
+
+            fd_experiment.flush()
+            fd_experiment.close()
+
+        hopshdfs.dump('', app_dir + '/asha/promoted')
+        fd_experiment = hopshdfs.open_file(app_dir + '/asha/promoted', flags='a')
+        for key, value in self.promoted.items():
+            fd_experiment.write((str(key)+';'+ ' '.join(value) + '\n').encode())
+        fd_experiment.flush()
+        fd_experiment.close()
+
 
     def _top_k(self, rung_k, number):
         """Find top-`number` trials in `rung_k`.

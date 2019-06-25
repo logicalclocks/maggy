@@ -130,7 +130,7 @@ class ExperimentDriver(object):
 
     def finalize(self, job_start, job_end):
 
-        _ = self.optimizer.finalize_experiment(self._final_store)
+        _ = self.optimizer.finalize_experiment(self._final_store, self.app_dir)
 
         self.job_end = datetime.now()
 

@@ -17,5 +17,5 @@ class AbstractOptimizer(ABC):
         pass
 
     @abstractmethod
-    def finalize_experiment(self, trials):
+    def finalize_experiment(self, trials, app_dir):
         pass
