@@ -101,21 +101,22 @@ def lagom(map_fun, searchspace=None, optimizer=None, direction='max', num_trials
         tensorboard._register(trial_dir)
         #tensorboard.write_hparams_proto(trial_dir, searchspace)
         #hopshdfs.dump('writing proto buf worked', log_dir+'/maggy.log')
-        try:
-            num_executors = util.num_executors()
 
-            if num_executors > num_trials:
-                num_executors = num_trials
+        num_executors = util.num_executors()
 
-            nodeRDD = sc.parallelize(range(num_executors), num_executors)
+        if num_executors > num_trials:
+            num_executors = num_trials
 
-            # start experiment driver
-            
-            exp_driver = ExperimentDriver(searchspace, optimizer, direction,
-                num_trials, name, num_executors, hb_interval, es_policy,
-                es_interval, es_min, description, app_dir, log_dir, trial_dir)
-        except Exception as e:
-            hopshdfs.dump(e, log_dir+'/test.log')
+        nodeRDD = sc.parallelize(range(num_executors), num_executors)
+
+        hopshdfs.dump('e', log_dir+'/parallelize')
+
+        raise Exception('test with this')
+
+        # start experiment driver
+        exp_driver = ExperimentDriver(searchspace, optimizer, direction,
+            num_trials, name, num_executors, hb_interval, es_policy,
+            es_interval, es_min, description, app_dir, log_dir, trial_dir)
         # Make SparkUI intuitive by grouping jobs
         sc.setJobGroup("Maggy Experiment", "{}".format(name))
         exp_driver._log("Started Maggy Experiment: {0}, run {1}".format(name, run_id))
