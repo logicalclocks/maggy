@@ -143,9 +143,9 @@ def lagom(map_fun, searchspace=None, optimizer=None, direction='max', num_trials
 
         exp_driver._log("Finished Experiment")
 
-    except:
+    except Exception as e:
         _exception_handler()
-        raise
+        raise Exception(e)
     finally:
         # grace period to send last logs to sparkmagic
         # sparkmagic hb poll intervall is 5 seconds, therefore wait 6 seconds
