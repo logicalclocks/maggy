@@ -43,18 +43,24 @@ class ExperimentDriver(object):
 
         hopshdfs.dump('e', log_dir+'/sp_init')
 
-        if optimizer is None or optimizer.lower() == 'none':
+        if optimizer is None:
+            if len(self.searchspace.names()) == 0:
+                self.optimizer = SingleRun()
+            else:
+                hopshdfs.dump('e', log_dir+'/sp_excp')
+                raise Exception(
+                    'Searchspace has to be empty or None to use without optimizer')
+        elif isinstance(optimizer, str):
+            hopshdfs.dump('e', log_dir+'/str_if')
+            if optimizer.lower() == 'randomsearch':
+                self.optimizer = RandomSearch()
+            elif optimizer.lower() == 'none':
                 if len(self.searchspace.names()) == 0:
                     self.optimizer = SingleRun()
                 else:
                     hopshdfs.dump('e', log_dir+'/sp_excp')
                     raise Exception(
                         'Searchspace has to be empty or None to use without optimizer')
-        elif isinstance(optimizer, str):
-            hopshdfs.dump('e', log_dir+'/str_if')
-            if optimizer.lower() == 'randomsearch':
-
-                self.optimizer = RandomSearch()
             elif optimizer.lower() == 'asha':
                 hopshdfs.dump('e', log_dir+'/asha_if')
                 self.optimizer = Asha()
