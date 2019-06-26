@@ -200,14 +200,22 @@ class ExperimentDriver(object):
 
                         fd_experiment = hopshdfs.open_file(self.app_dir + '/experiment_time', flags='a')
                         # "time;best_id;best_val;worst_id;worst_val;avg;num_trials_fin;early_stopped;fin_id;fin_metric;fin_time\n"
-                        line = (str((datetime.now()-time_start).total_seconds()) + ';' +
-                            self.result['best_id'] + ';' +
-                            str(self.result['best_val']) + ';' +
-                            self.result['worst_id'] + ';' +
-                            str(self.result['worst_val']) + ';' +
-                            str(self.result['avg']) + ';' +
-                            str(self.result['num_trials']) + ';' +
-                            str(self.result['early_stopped']))
+                        if self.result.get('best_id', None):
+                            line = (str((datetime.now()-time_start).total_seconds()) + ';' +
+                                self.result['best_id'] + ';' +
+                                str(self.result['best_val']) + ';' +
+                                self.result['worst_id'] + ';' +
+                                str(self.result['worst_val']) + ';' +
+                                str(self.result['avg']) + ';' +
+                                str(self.result['num_trials']) + ';' +
+                                str(self.result['early_stopped']))
+                        else:
+                            line = (str((datetime.now()-time_start).total_seconds()) + ';;' +
+                                str(1) + ';;' +
+                                str(1) + ';' +
+                                str(1) + ';' +
+                                str(self.result['num_trials']) + ';' +
+                                str(self.result['early_stopped']))
 
                         fd_experiment.write((line + '\n').encode())
                         fd_experiment.flush()
