@@ -101,16 +101,16 @@ def lagom(map_fun, searchspace=None, optimizer=None, direction='max', num_trials
         tensorboard._register(trial_dir)
         #tensorboard.write_hparams_proto(trial_dir, searchspace)
         #hopshdfs.dump('writing proto buf worked', log_dir+'/maggy.log')
-
-        num_executors = util.num_executors()
-
-        if num_executors > num_trials:
-            num_executors = num_trials
-
-        nodeRDD = sc.parallelize(range(num_executors), num_executors)
-
-        # start experiment driver
         try:
+            num_executors = util.num_executors()
+
+            if num_executors > num_trials:
+                num_executors = num_trials
+
+            nodeRDD = sc.parallelize(range(num_executors), num_executors)
+
+            # start experiment driver
+            
             exp_driver = ExperimentDriver(searchspace, optimizer, direction,
                 num_trials, name, num_executors, hb_interval, es_policy,
                 es_interval, es_min, description, app_dir, log_dir, trial_dir)
