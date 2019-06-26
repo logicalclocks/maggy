@@ -53,13 +53,14 @@ class ExperimentDriver(object):
         elif isinstance(optimizer, str):
             hopshdfs.dump('e', log_dir+'/str_if')
             if optimizer.lower() == 'randomsearch':
+
                 self.optimizer = RandomSearch()
             elif optimizer.lower() == 'asha':
                 hopshdfs.dump('e', log_dir+'/asha_if')
                 self.optimizer = Asha()
                 hopshdfs.dump('e', log_dir+'/after_asha_if')
             else:
-                hopshdfs.dump('e', log_dir+'/str_excpt')
+                hopshdfs.dump(optimizer, log_dir+'/str_excpt')
                 raise Exception(
                     "Unknown Optimizer. Can't initialize experiment driver.")
         elif isinstance(optimizer, AbstractOptimizer):
@@ -78,7 +79,7 @@ class ExperimentDriver(object):
         self.optimizer.searchspace = self.searchspace
         self.optimizer.final_store = self._final_store
 
-        hopshdfs.dump(e, log_dir+'/setvars_of_opt_init')
+        hopshdfs.dump('e', log_dir+'/setvars_of_opt_init')
 
         if isinstance(direction, str):
             if direction.lower() not in ['min', 'max']:
