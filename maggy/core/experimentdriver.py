@@ -47,9 +47,11 @@ class ExperimentDriver(object):
                 if len(self.searchspace.names()) == 0:
                     self.optimizer = SingleRun()
                 else:
+                    hopshdfs.dump('e', log_dir+'/sp_excp')
                     raise Exception(
                         'Searchspace has to be empty or None to use without optimizer')
         elif isinstance(optimizer, str):
+            hopshdfs.dump('e', log_dir+'/str_if')
             if optimizer.lower() == 'randomsearch':
                 self.optimizer = RandomSearch()
             elif optimizer.lower() == 'asha':
@@ -58,9 +60,11 @@ class ExperimentDriver(object):
                 raise Exception(
                     "Unknown Optimizer. Can't initialize experiment driver.")
         elif isinstance(optimizer, AbstractOptimizer):
+            hopshdfs.dump('e', log_dir+'/abstr_if')
             print("Custom Optimizer initialized.")
             self.optimizer = optimizer
         else:
+            hopshdfs.dump('e', log_dir+'/excp_if')
             raise Exception(
                 "Unknown Optimizer. Can't initialize experiment driver.")
         
