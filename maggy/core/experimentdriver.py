@@ -176,9 +176,14 @@ class ExperimentDriver(object):
 
             try:
                 time_start = datetime.now()
+                time_last_best = datetime.now()
                 header = "time;best_id;best_val;worst_id;worst_val;avg;num_trials_fin;early_stopped;fin_id;fin_metric;fin_time\n"
                 hopshdfs.dump(header,
                     self.app_dir + '/experiment')
+
+                header = "time;best_id;best_val;worst_id;worst_val;avg;num_trials_fin;early_stopped\n"
+                hopshdfs.dump(header,
+                    self.app_dir + '/experiment_time')
 
                 time_earlystop_check = datetime.now()
 
@@ -189,6 +194,24 @@ class ExperimentDriver(object):
                         msg = self._message_q.get_nowait()
                     except:
                         msg = {'type': None}
+
+                    if (datetime.now() - time_last_best).total_seconds() >= 180:
+                        time_last_best = datetime.now()
+
+                        fd_experiment = hopshdfs.open_file(self.app_dir + '/experiment_time', flags='a')
+                        # "time;best_id;best_val;worst_id;worst_val;avg;num_trials_fin;early_stopped;fin_id;fin_metric;fin_time\n"
+                        line = (str((datetime.now()-time_start).total_seconds()) + ';' +
+                            self.result['best_id'] + ';' +
+                            str(self.result['best_val']) + ';' +
+                            self.result['worst_id'] + ';' +
+                            str(self.result['worst_val']) + ';' +
+                            str(self.result['avg']) + ';' +
+                            str(self.result['num_trials']) + ';' +
+                            str(self.result['early_stopped']))
+
+                        fd_experiment.write((line + '\n').encode())
+                        fd_experiment.flush()
+                        fd_experiment.close()
 
                     if (datetime.now() - time_earlystop_check).total_seconds() >= self.es_interval:
                         time_earlystop_check = datetime.now()
