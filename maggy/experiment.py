@@ -109,8 +109,6 @@ def lagom(map_fun, searchspace=None, optimizer=None, direction='max', num_trials
 
         nodeRDD = sc.parallelize(range(num_executors), num_executors)
 
-        hopshdfs.dump('e', log_dir+'/parallelize')
-
         # start experiment driver
         exp_driver = ExperimentDriver(searchspace, optimizer, direction,
             num_trials, name, num_executors, hb_interval, es_policy,

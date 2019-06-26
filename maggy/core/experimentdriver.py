@@ -30,7 +30,6 @@ class ExperimentDriver(object):
         global driver_secret
 
         self._final_store = []
-        hopshdfs.dump('e', log_dir+'/start_exp_init')
 
         # perform type checks
         if isinstance(searchspace, Searchspace):
@@ -41,51 +40,37 @@ class ExperimentDriver(object):
             raise Exception(
                 "No valid searchspace. Please use maggy Searchspace class.")
 
-        hopshdfs.dump('e', log_dir+'/sp_init')
-
         if optimizer is None:
             if len(self.searchspace.names()) == 0:
                 self.optimizer = SingleRun()
             else:
-                hopshdfs.dump('e', log_dir+'/sp_excp')
                 raise Exception(
                     'Searchspace has to be empty or None to use without optimizer')
         elif isinstance(optimizer, str):
-            hopshdfs.dump('e', log_dir+'/str_if')
             if optimizer.lower() == 'randomsearch':
                 self.optimizer = RandomSearch()
             elif optimizer.lower() == 'none':
                 if len(self.searchspace.names()) == 0:
                     self.optimizer = SingleRun()
                 else:
-                    hopshdfs.dump('e', log_dir+'/sp_excp')
                     raise Exception(
                         'Searchspace has to be empty or None to use without optimizer')
             elif optimizer.lower() == 'asha':
-                hopshdfs.dump('e', log_dir+'/asha_if')
                 self.optimizer = Asha()
-                hopshdfs.dump('e', log_dir+'/after_asha_if')
             else:
-                hopshdfs.dump(optimizer, log_dir+'/str_excpt')
                 raise Exception(
                     "Unknown Optimizer. Can't initialize experiment driver.")
         elif isinstance(optimizer, AbstractOptimizer):
-            hopshdfs.dump('e', log_dir+'/abstr_if')
             print("Custom Optimizer initialized.")
             self.optimizer = optimizer
         else:
-            hopshdfs.dump('e', log_dir+'/excp_if')
             raise Exception(
                 "Unknown Optimizer. Can't initialize experiment driver.")
-        
-        hopshdfs.dump('e', log_dir+'/opt_init')
 
         # Set references to data in optimizer
         self.optimizer.num_trials = num_trials
         self.optimizer.searchspace = self.searchspace
         self.optimizer.final_store = self._final_store
-
-        hopshdfs.dump('e', log_dir+'/setvars_of_opt_init')
 
         if isinstance(direction, str):
             if direction.lower() not in ['min', 'max']:
@@ -135,8 +120,6 @@ class ExperimentDriver(object):
         self.trial_dir = trial_dir
         self.app_dir = app_dir
         self.worker_exception = None
-
-        hopshdfs.dump('e', log_dir+'/setvars')
 
         #Open File desc for HDFS to log
         if not hopshdfs.exists(self.log_file):
