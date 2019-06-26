@@ -30,6 +30,7 @@ class ExperimentDriver(object):
         global driver_secret
 
         self._final_store = []
+        hopshdfs.dump('e', log_dir+'/start_exp_init')
 
         # perform type checks
         if isinstance(searchspace, Searchspace):
@@ -39,6 +40,8 @@ class ExperimentDriver(object):
         else:
             raise Exception(
                 "No valid searchspace. Please use maggy Searchspace class.")
+
+        hopshdfs.dump('e', log_dir+'/sp_init')
 
         if optimizer is None or optimizer.lower() == 'none':
                 if len(self.searchspace.names()) == 0:
@@ -60,11 +63,15 @@ class ExperimentDriver(object):
         else:
             raise Exception(
                 "Unknown Optimizer. Can't initialize experiment driver.")
+        
+        hopshdfs.dump('e', log_dir+'/opt_init')
 
         # Set references to data in optimizer
         self.optimizer.num_trials = num_trials
         self.optimizer.searchspace = self.searchspace
         self.optimizer.final_store = self._final_store
+
+        hopshdfs.dump(e, log_dir+'/setvars_of_opt_init')
 
         if isinstance(direction, str):
             if direction.lower() not in ['min', 'max']:
@@ -114,6 +121,8 @@ class ExperimentDriver(object):
         self.trial_dir = trial_dir
         self.app_dir = app_dir
         self.worker_exception = None
+
+        hopshdfs.dump('e', log_dir+'/setvars')
 
         #Open File desc for HDFS to log
         if not hopshdfs.exists(self.log_file):

@@ -111,8 +111,6 @@ def lagom(map_fun, searchspace=None, optimizer=None, direction='max', num_trials
 
         hopshdfs.dump('e', log_dir+'/parallelize')
 
-        raise Exception('test with this')
-
         # start experiment driver
         exp_driver = ExperimentDriver(searchspace, optimizer, direction,
             num_trials, name, num_executors, hb_interval, es_policy,
