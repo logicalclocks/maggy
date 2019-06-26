@@ -12,6 +12,7 @@ from pyspark import TaskContext
 
 from hops import hdfs as hopshdfs
 from hops import devices as hopsdevices
+os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
 import tensorflow as tf
 
 if config.tf_version >= 2:
