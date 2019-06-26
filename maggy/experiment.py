@@ -103,6 +103,7 @@ def lagom(map_fun, searchspace=None, optimizer=None, direction='max', num_trials
         #hopshdfs.dump('writing proto buf worked', log_dir+'/maggy.log')
 
         num_executors = util.num_executors()
+        hopshdfs.dump('writing proto buf worked', log_dir+'/logdirs')
 
         if num_executors > num_trials:
             num_executors = num_trials
@@ -114,11 +115,14 @@ def lagom(map_fun, searchspace=None, optimizer=None, direction='max', num_trials
             num_trials, name, num_executors, hb_interval, es_policy,
             es_interval, es_min, description, app_dir, log_dir, trial_dir)
 
+        hopshdfs.dump('writing proto buf worked', log_dir+'/exp_driver')
+
         # Make SparkUI intuitive by grouping jobs
         sc.setJobGroup("Maggy Experiment", "{}".format(name))
         exp_driver._log("Started Maggy Experiment: {0}, run {1}".format(name, run_id))
 
         exp_driver.init()
+        hopshdfs.dump('writing proto buf worked', log_dir+'/expdriver_init')
 
         server_addr = exp_driver.server_addr
 
