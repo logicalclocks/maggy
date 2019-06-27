@@ -141,7 +141,7 @@ def lagom(map_fun, searchspace=None, optimizer=None, direction='max', num_trials
 
     except Exception as e:
         _exception_handler()
-        #raise Exception(e)
+        raise Exception(e)
     finally:
         # grace period to send last logs to sparkmagic
         # sparkmagic hb poll intervall is 5 seconds, therefore wait 6 seconds
@@ -151,7 +151,6 @@ def lagom(map_fun, searchspace=None, optimizer=None, direction='max', num_trials
         elastic_id +=1
         running = False
         sc.setJobGroup("", "")
-        raise Exception
 
     return result
 
