@@ -221,7 +221,30 @@ class ExperimentDriver(object):
                         fd_experiment.flush()
                         fd_experiment.close()
 
-                        self.experiment_done = True
+                        _ = self.optimizer.finalize_experiment(self._final_store, self.app_dir)
+
+                        self.job_end = datetime.now()
+
+                        self.duration = hopsutil._time_diff(self.job_start, self.job_end)
+
+
+                        results = '\n------ ' + str(self.optimizer.__class__.__name__) + ' results ------ direction(' + self.direction + ') \n' \
+                            'NUMBER TRIALS evaluated -- ' + str(self.result['num_trials']) + '\n' \
+                            'BEST combination ' + json.dumps(self.result['best_hp']) + ' -- metric ' + str(self.result['best_val']) + '\n' \
+                            'WORST combination ' + json.dumps(self.result['worst_hp']) + ' -- metric ' + str(self.result['worst_val']) + '\n' \
+                            'AVERAGE metric -- ' + str(self.result['avg']) + '\n' \
+                            'EARLY STOPPED Trials -- ' + str(self.result['early_stopped']) + '\n' \
+                            'Total job time ' + self.duration + '\n'
+                        print(results)
+
+                        self._log(results)
+
+                        hopshdfs.dump(json.dumps(self.result, default=util.json_default_numpy),
+                            self.app_dir + '/result.json')
+                        sc = hopsutil._find_spark().sparkContext
+                        hopshdfs.dump(self.json(sc), self.app_dir + '/maggy.json')
+
+                        raise Exception('Time is up')
 
                     if (datetime.now() - time_last_best).total_seconds() >= 180:
                         time_last_best = datetime.now()
@@ -335,10 +358,7 @@ class ExperimentDriver(object):
                         fd_experiment.close()
 
                         # assign new trial
-                        if not self.experiment_done:
-                            trial = self.optimizer.get_suggestion(trial)
-                        else:
-                            trial = None
+                        trial = self.optimizer.get_suggestion(trial)
                         if trial is None:
                             self.server.reservations.assign_trial(
                                 msg['partition_id'], None)
@@ -353,10 +373,7 @@ class ExperimentDriver(object):
 
                     # 4. REG
                     elif msg['type'] == 'REG':
-                        if not self.experiment_done:
-                            trial = self.optimizer.get_suggestion(trial)
-                        else:
-                            trial = None
+                        trial = self.optimizer.get_suggestion(trial)
                         if trial is None:
                             self.experiment_done = True
                         else:
