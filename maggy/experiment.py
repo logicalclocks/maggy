@@ -29,7 +29,7 @@ elastic_id = 1
 experiment_json = None
 
 
-def lagom(map_fun, searchspace=None, optimizer=None, direction='max', num_trials=1, name='no-name', hb_interval=1, es_policy='median', es_interval=300, es_min=10, description=''):
+def lagom(map_fun, searchspace=None, optimizer=None, direction='max', num_trials=1, name='no-name', hb_interval=1, es_policy='median', es_interval=300, es_min=10, description='', total_time=9000):
     """Launches a maggy experiment for hyperparameter optimization.
 
     Given a search space, objective and a model training procedure `map_fun`
@@ -112,7 +112,7 @@ def lagom(map_fun, searchspace=None, optimizer=None, direction='max', num_trials
         # start experiment driver
         exp_driver = ExperimentDriver(searchspace, optimizer, direction,
             num_trials, name, num_executors, hb_interval, es_policy,
-            es_interval, es_min, description, app_dir, log_dir, trial_dir)
+            es_interval, es_min, description, app_dir, log_dir, trial_dir, total_time)
         # Make SparkUI intuitive by grouping jobs
         sc.setJobGroup("Maggy Experiment", "{}".format(name))
         exp_driver._log("Started Maggy Experiment: {0}, run {1}".format(name, run_id))

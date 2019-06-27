@@ -25,7 +25,7 @@ class ExperimentDriver(object):
 
     SECRET_BYTES = 8
 
-    def __init__(self, searchspace, optimizer, direction, num_trials, name, num_executors, hb_interval, es_policy, es_interval, es_min, description, app_dir, log_dir, trial_dir):
+    def __init__(self, searchspace, optimizer, direction, num_trials, name, num_executors, hb_interval, es_policy, es_interval, es_min, description, app_dir, log_dir, trial_dir, total_time):
 
         global driver_secret
 
@@ -92,6 +92,7 @@ class ExperimentDriver(object):
             print("Custom Early Stopping policy initialized.")
             self.earlystop_check = es_policy.earlystop_check
 
+        self.total_time = total_time
         self.direction = direction.lower()
         self._trial_store = {}
         self.num_executors = num_executors
@@ -194,6 +195,33 @@ class ExperimentDriver(object):
                         msg = self._message_q.get_nowait()
                     except:
                         msg = {'type': None}
+
+                    if (datetime.now() - time_start).total_seconds() >= self.total_time:
+
+                        fd_experiment = hopshdfs.open_file(self.app_dir + '/experiment_time', flags='a')
+                        # "time;best_id;best_val;worst_id;worst_val;avg;num_trials_fin;early_stopped;fin_id;fin_metric;fin_time\n"
+                        if self.result.get('best_id', None):
+                            line = (str((datetime.now()-time_start).total_seconds()) + ';' +
+                                self.result['best_id'] + ';' +
+                                str(self.result['best_val']) + ';' +
+                                self.result['worst_id'] + ';' +
+                                str(self.result['worst_val']) + ';' +
+                                str(self.result['avg']) + ';' +
+                                str(self.result['num_trials']) + ';' +
+                                str(self.result['early_stopped']))
+                        else:
+                            line = (str((datetime.now()-time_start).total_seconds()) + ';;' +
+                                str(1) + ';;' +
+                                str(1) + ';' +
+                                str(1) + ';' +
+                                str(self.result['num_trials']) + ';' +
+                                str(self.result['early_stopped']))
+
+                        fd_experiment.write((line + '\n').encode())
+                        fd_experiment.flush()
+                        fd_experiment.close()
+
+                        self.experiment_done = True
 
                     if (datetime.now() - time_last_best).total_seconds() >= 180:
                         time_last_best = datetime.now()
@@ -307,7 +335,10 @@ class ExperimentDriver(object):
                         fd_experiment.close()
 
                         # assign new trial
-                        trial = self.optimizer.get_suggestion(trial)
+                        if not self.experiment_done:
+                            trial = self.optimizer.get_suggestion(trial)
+                        else:
+                            trial = None
                         if trial is None:
                             self.server.reservations.assign_trial(
                                 msg['partition_id'], None)
@@ -322,7 +353,10 @@ class ExperimentDriver(object):
 
                     # 4. REG
                     elif msg['type'] == 'REG':
-                        trial = self.optimizer.get_suggestion()
+                        if not self.experiment_done:
+                            trial = self.optimizer.get_suggestion(trial)
+                        else:
+                            trial = None
                         if trial is None:
                             self.experiment_done = True
                         else:
