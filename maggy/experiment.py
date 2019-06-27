@@ -141,12 +141,6 @@ def lagom(map_fun, searchspace=None, optimizer=None, direction='max', num_trials
 
     except Exception as e:
         _exception_handler()
-        time.sleep(6)
-        # cleanup spark jobs
-        exp_driver.stop()
-        elastic_id +=1
-        running = False
-        sc.setJobGroup("", "")
         raise Exception(e)
     finally:
         # grace period to send last logs to sparkmagic
