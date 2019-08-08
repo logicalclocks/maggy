@@ -8,15 +8,17 @@ import os
 import secrets
 from datetime import datetime
 from maggy import util
-from maggy.optimizer import AbstractOptimizer, RandomSearch
+from maggy.optimizer import AbstractOptimizer, RandomSearch, Asha, SingleRun
 from maggy.core import rpc
 from maggy.trial import Trial
-from maggy.earlystop import AbstractEarlyStop, MedianStoppingRule
+from maggy.earlystop import AbstractEarlyStop, MedianStoppingRule, NoStoppingRule
 from maggy.searchspace import Searchspace
 
 from hops import constants as hopsconstants
 from hops import hdfs as hopshdfs
 from hops import util as hopsutil
+
+driver_secret = None
 
 
 class ExperimentDriver(object):
@@ -25,18 +27,30 @@ class ExperimentDriver(object):
 
     def __init__(self, searchspace, optimizer, direction, num_trials, name, num_executors, hb_interval, es_policy, es_interval, es_min, description, app_dir, log_dir, trial_dir):
 
+        global driver_secret
+
         self._final_store = []
 
         # perform type checks
         if isinstance(searchspace, Searchspace):
             self.searchspace = searchspace
+        elif searchspace is None:
+            self.searchspace = Searchspace()
         else:
             raise Exception(
                 "No valid searchspace. Please use maggy Searchspace class.")
 
-        if isinstance(optimizer, str):
+        if optimizer is None or optimizer.lower() == 'none':
+                if len(self.searchspace.names()) == 0:
+                    self.optimizer = SingleRun()
+                else:
+                    raise Exception(
+                        'Searchspace has to be empty or None to use without optimizer')
+        elif isinstance(optimizer, str):
             if optimizer.lower() == 'randomsearch':
-                self.optimizer = RandomSearch(num_trials, self.searchspace, self._final_store)
+                self.optimizer = RandomSearch()
+            elif optimizer.lower() == 'asha':
+                self.optimizer = Asha()
             else:
                 raise Exception(
                     "Unknown Optimizer. Can't initialize experiment driver.")
@@ -46,6 +60,11 @@ class ExperimentDriver(object):
         else:
             raise Exception(
                 "Unknown Optimizer. Can't initialize experiment driver.")
+
+        # Set references to data in optimizer
+        self.optimizer.num_trials = num_trials
+        self.optimizer.searchspace = self.searchspace
+        self.optimizer.final_store = self._final_store
 
         if isinstance(direction, str):
             if direction.lower() not in ['min', 'max']:
@@ -58,6 +77,8 @@ class ExperimentDriver(object):
         if isinstance(es_policy, str):
             if es_policy.lower() == 'median':
                 self.earlystop_check = MedianStoppingRule.earlystop_check
+            elif es_policy.lower() == 'none':
+                self.earlystop_check = NoStoppingRule.earlystop_check
             else:
                 raise Exception(
                     "Unknown Early Stopping Policy. Can't initialize experiment driver.")
@@ -79,7 +100,9 @@ class ExperimentDriver(object):
         self.description = description
         self.direction = direction.lower()
         self.server = rpc.Server(num_executors)
-        self._secret = self._generate_secret(ExperimentDriver.SECRET_BYTES)
+        if not driver_secret:
+            driver_secret = self._generate_secret(ExperimentDriver.SECRET_BYTES)
+        self._secret = driver_secret
         self.result = {'best_val': 'n.a.',
             'num_trials': 0,
             'early_stopped': 0}
@@ -90,6 +113,7 @@ class ExperimentDriver(object):
         self.log_file = log_dir + '/maggy.log'
         self.trial_dir = trial_dir
         self.app_dir = app_dir
+        self.worker_exception = None
 
         #Open File desc for HDFS to log
         if not hopshdfs.exists(self.log_file):
@@ -114,6 +138,7 @@ class ExperimentDriver(object):
 
 
         results = '\n------ ' + str(self.optimizer.__class__.__name__) + ' results ------ direction(' + self.direction + ') \n' \
+            'NUMBER TRIALS evaluated -- ' + str(self.result['num_trials']) + '\n' \
             'BEST combination ' + json.dumps(self.result['best_hp']) + ' -- metric ' + str(self.result['best_val']) + '\n' \
             'WORST combination ' + json.dumps(self.result['worst_hp']) + ' -- metric ' + str(self.result['worst_val']) + '\n' \
             'AVERAGE metric -- ' + str(self.result['avg']) + '\n' \
@@ -123,7 +148,8 @@ class ExperimentDriver(object):
 
         self._log(results)
 
-        hopshdfs.dump(json.dumps(self.result), self.app_dir + '/result.json')
+        hopshdfs.dump(json.dumps(self.result, default=util.json_default_numpy),
+            self.app_dir + '/result.json')
         sc = hopsutil._find_spark().sparkContext
         hopshdfs.dump(self.json(sc), self.app_dir + '/maggy.json')
 
@@ -142,107 +168,118 @@ class ExperimentDriver(object):
 
         def _target_function(self):
 
-            time_earlystop_check = datetime.now()
+            try:
+                time_earlystop_check = datetime.now()
 
-            while not self.worker_done:
-                trial = None
-                # get a message
-                try:
-                    msg = self._message_q.get_nowait()
-                except:
-                    msg = {'type': None}
+                while not self.worker_done:
+                    trial = None
+                    # get a message
+                    try:
+                        msg = self._message_q.get_nowait()
+                    except:
+                        msg = {'type': None}
 
-                if (datetime.now() - time_earlystop_check).total_seconds() >= self.es_interval:
-                    time_earlystop_check = datetime.now()
+                    if (datetime.now() - time_earlystop_check).total_seconds() >= self.es_interval:
+                        time_earlystop_check = datetime.now()
 
-                    # pass currently running trials to early stop component
-                    if len(self._final_store) > self.es_min:
-                        self._log("Check for early stopping.")
-                        try:
-                            to_stop = self.earlystop_check(
-                                self._trial_store, self._final_store, self.direction)
-                        except Exception as e:
-                            self._log(e)
-                            # log the final store in case of median exception
-                            for i in self._final_store:
-                                self._log(json.dumps(i))
-                            raise
-                        if len(to_stop) > 0:
-                            self._log("Trials to stop: {}".format(to_stop))
-                        for trial_id in to_stop:
-                            self.get_trial(trial_id).set_early_stop()
+                        # pass currently running trials to early stop component
+                        if len(self._final_store) > self.es_min:
+                            self._log("Check for early stopping.")
+                            try:
+                                to_stop = self.earlystop_check(
+                                    self._trial_store, self._final_store, self.direction)
+                            except Exception as e:
+                                self._log(e)
+                                to_stop = []
+                            if len(to_stop) > 0:
+                                self._log("Trials to stop: {}".format(to_stop))
+                            for trial_id in to_stop:
+                                self.get_trial(trial_id).set_early_stop()
 
-                # depending on message do the work
-                # 1. METRIC
-                if msg['type'] == 'METRIC':
-                    # append executor logs if in the message
-                    logs = msg.get('logs', None)
-                    if logs is not None:
-                        with self.log_lock:
-                            self.executor_logs = self.executor_logs + logs
+                    # depending on message do the work
+                    # 1. METRIC
+                    if msg['type'] == 'METRIC':
+                        # append executor logs if in the message
+                        logs = msg.get('logs', None)
+                        if logs is not None:
+                            with self.log_lock:
+                                self.executor_logs = self.executor_logs + logs
 
-                    if msg['trial_id'] is not None and msg['data'] is not None:
-                        self.get_trial(msg['trial_id']).append_metric(msg['data'])
+                        if msg['trial_id'] is not None and msg['data'] is not None:
+                            self.get_trial(msg['trial_id']).append_metric(msg['data'])
 
-                # 2. BLACKLIST the trial
-                elif msg['type'] == 'BLACK':
-                    trial = self.get_trial(msg['trial_id'])
-                    with trial.lock:
-                        trial.status = Trial.SCHEDULED
-                        self.server.reservations.assign_trial(
-                            msg['partition_id'], msg['trial_id'])
-
-                # 3. FINAL
-                elif msg['type'] == 'FINAL':
-                    # set status
-                    # get trial only once
-                    trial = self.get_trial(msg['trial_id'])
-
-                    # finalize the trial object
-                    with trial.lock:
-                        trial.status = Trial.FINALIZED
-                        trial.final_metric = msg['data']
-                        trial.duration = hopsutil._time_diff(
-                            trial.start, datetime.now())
-
-                    # move trial to the finalized ones
-                    self._final_store.append(trial)
-                    self._trial_store.pop(trial.trial_id)
-
-                    # update result dictionary
-                    self._update_result(trial)
-                    # keep for later in case tqdm doesn't work
-                    self.maggy_log = self._update_maggy_log()
-                    self._log(self.maggy_log)
-
-                    hopshdfs.dump(trial.to_json(), self.trial_dir + '/' + trial.trial_id + '/trial.json')
-
-                    # assign new trial
-                    trial = self.optimizer.get_suggestion(trial)
-                    if trial is None:
-                        self.server.reservations.assign_trial(
-                            msg['partition_id'], None)
-                        self.experiment_done = True
-                    else:
+                    # 2. BLACKLIST the trial
+                    elif msg['type'] == 'BLACK':
+                        trial = self.get_trial(msg['trial_id'])
                         with trial.lock:
-                            trial.start = datetime.now()
                             trial.status = Trial.SCHEDULED
                             self.server.reservations.assign_trial(
-                                msg['partition_id'], trial.trial_id)
-                            self.add_trial(trial)
+                                msg['partition_id'], msg['trial_id'])
 
-                # 4. REG
-                elif msg['type'] == 'REG':
-                    trial = self.optimizer.get_suggestion()
-                    if trial is None:
-                        self.experiment_done = True
-                    else:
+                    # 3. FINAL
+                    elif msg['type'] == 'FINAL':
+                        # set status
+                        # get trial only once
+                        trial = self.get_trial(msg['trial_id'])
+
+                        logs = msg.get('logs', None)
+                        if logs is not None:
+                            with self.log_lock:
+                                self.executor_logs = self.executor_logs + logs
+
+                        # finalize the trial object
                         with trial.lock:
-                            trial.start = datetime.now()
-                            trial.status = Trial.SCHEDULED
+                            trial.status = Trial.FINALIZED
+                            trial.final_metric = msg['data']
+                            trial.duration = hopsutil._time_diff(
+                                trial.start, datetime.now())
+
+                        # move trial to the finalized ones
+                        self._final_store.append(trial)
+                        self._trial_store.pop(trial.trial_id)
+
+                        # update result dictionary
+                        self._update_result(trial)
+                        # keep for later in case tqdm doesn't work
+                        self.maggy_log = self._update_maggy_log()
+                        self._log(self.maggy_log)
+
+                        hopshdfs.dump(trial.to_json(), self.trial_dir + '/' + trial.trial_id + '/trial.json')
+
+                        # assign new trial
+                        trial = self.optimizer.get_suggestion(trial)
+                        if trial is None:
                             self.server.reservations.assign_trial(
-                                msg['partition_id'], trial.trial_id)
-                            self.add_trial(trial)
+                                msg['partition_id'], None)
+                            self.experiment_done = True
+                        else:
+                            with trial.lock:
+                                trial.start = datetime.now()
+                                trial.status = Trial.SCHEDULED
+                                self.server.reservations.assign_trial(
+                                    msg['partition_id'], trial.trial_id)
+                                self.add_trial(trial)
+
+                    # 4. REG
+                    elif msg['type'] == 'REG':
+                        trial = self.optimizer.get_suggestion()
+                        if trial is None:
+                            self.experiment_done = True
+                        else:
+                            with trial.lock:
+                                trial.start = datetime.now()
+                                trial.status = Trial.SCHEDULED
+                                self.server.reservations.assign_trial(
+                                    msg['partition_id'], trial.trial_id)
+                                self.add_trial(trial)
+            except Exception as worker_exception:
+                # Exception can't be propagated to parent thread
+                # therefore log the exception and fail experiment
+                self._log('Worker Exception')
+                self._log(worker_exception)
+                self.worker_exception = worker_exception
+                self.server.stop()
+
 
         t = threading.Thread(target=_target_function, args=(self,))
         t.daemon = True
@@ -254,6 +291,9 @@ class ExperimentDriver(object):
         self.server.stop()
         self.fd.flush()
         self.fd.close()
+        if self.worker_exception:
+            raise Exception(
+                "Worker: {}".format(self.worker_exception))
 
     def json(self, sc):
         """Get all relevant experiment information in JSON format.
@@ -287,7 +327,7 @@ class ExperimentDriver(object):
         else:
             experiment_json['status'] = "RUNNING"
 
-        return json.dumps(experiment_json)
+        return json.dumps(experiment_json, default=util.json_default_numpy)
 
     def _generate_secret(self, nbytes):
         """Generates a secret to be used by all clients during the experiment

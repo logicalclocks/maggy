@@ -14,7 +14,7 @@ class Reporter(object):
     Thread-safe store for sending a metric and logs from executor to driver
     """
 
-    def __init__(self, log_file, partition_id, task_attempt):
+    def __init__(self, log_file, partition_id, task_attempt, print_executor):
         self.metric = None
         self.lock = threading.RLock()
         self.stop = False
@@ -23,6 +23,7 @@ class Reporter(object):
         self.log_file = log_file
         self.partition_id = partition_id
         self.task_attempt = task_attempt
+        self.print_executor = print_executor
 
         #Open File desc for HDFS to log
         if not hopshdfs.exists(log_file):
@@ -56,11 +57,12 @@ class Reporter(object):
             msg = datetime.now().isoformat() + \
                 ' (' + str(self.partition_id) + '/' + \
                 str(self.task_attempt) + '): ' + str(log_msg)
-            print(msg)
             self.fd.write((msg + '\n').encode())
             jupyter_log = str(self.partition_id) + ': ' + log_msg
             if verbose:
                 self.logs = self.logs + jupyter_log + '\n'
+            else:
+                self.print_executor(msg)
 
     def get_data(self):
         """Returns the metric and logs to be sent to the experiment driver.
