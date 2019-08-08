@@ -17,7 +17,7 @@ if config.tf_version >= 2:
     from tensorboard.plugins.hparams import summary_v2
 
 
-def _prepare_func(app_id, run_id, map_fun, server_addr, hb_interval, secret, app_dir):
+def _prepare_func(app_id, run_id, experiment_type, map_fun, server_addr, hb_interval, secret, app_dir):
 
     def _wrapper_fun(iter):
         """
@@ -71,9 +71,13 @@ def _prepare_func(app_id, run_id, map_fun, server_addr, hb_interval, secret, app
             client.start_heartbeat(reporter)
 
             # blocking
+            # XXX separate suggestion calls for different types?
             trial_id, parameters = client.get_suggestion()
 
             while not client.done:
+                if experiment_type == 'ablation':
+                    parameters.pop('ablated_feature')
+                    parameters.pop('ablated_layer')
 
                 reporter.set_trial_id(trial_id)
 
@@ -83,7 +87,7 @@ def _prepare_func(app_id, run_id, map_fun, server_addr, hb_interval, secret, app
 
                 try:
                     reporter.log("Starting Trial: {}".format(trial_id), False)
-                    reporter.log("Parameter Combination: {}".format(parameters), False)
+                    reporter.log("Trial Configuration: {}".format(parameters), False)
 
                     sig = inspect.signature(map_fun)
                     if sig.parameters.get('reporter', None):
