@@ -5,7 +5,6 @@ from hops import hdfs as hopshdfs
 import tensorflow as tf
 from maggy.trial import Trial
 import json
-from datetime import datetime
 
 
 class LOCO(AbstractAblator):
@@ -15,25 +14,12 @@ class LOCO(AbstractAblator):
         self.base_dataset_generator = self.get_dataset_generator(ablated_feature=None)
 
     def get_number_of_trials(self):
-        # plus one is because of the base trial with all the components
+        # plus one is for the base (reference) trial with all the components
         return len(self.ablation_study.features.included_features) + \
             len(self.ablation_study.model.layers.included_layers) +  \
             len(self.ablation_study.model.layers.included_groups) + 1
 
     def get_dataset_generator(self, ablated_feature=None, dataset_type='tfrecord'):
-        """
-        Create and return a dataset generator function based on the ablation policy
-        (NO! THIS IS FOR THE ABSTRACT METHOD)
-        to be used in a trial.
-        The returned function will be executed on the executor per each trial.
-
-        :param ablated_feature: the name of the feature to be excluded from the training dataset.
-        Must match a feature name in the corresponding feature group in the feature store.
-        :type ablated_feature: str
-        :param dataset_type: type of the dataset. For now, we only support 'tfrecord'.
-        :return: A function that generates a TFRecordDataset
-        :rtype: function
-        """
 
         if self.ablation_study.custom_dataset_generator:
             pass  # TODO process and change the custom dataset generator

@@ -2,6 +2,7 @@ class AblationStudy(object):
     def __init__(self, training_dataset_name, training_dataset_version,
                  label_name, **kwargs):
         self.features = Features()
+        # TODO upgrade for Featurestore V2
         # TODO call the featurestore and save the list of features of the dataset
         self.model = Model()
         self.hops_training_dataset_name = training_dataset_name
@@ -34,6 +35,13 @@ class Features(object):
         self.included_features = set()  # TODO set or list?
 
     def include(self, *args):
+        """
+        Add one or several features of the dataset to the ablation study. Features can be included one by one or
+        as a list of strings.
+        :param args: Strings or lists of strings, that should match feature names.
+        :type args: str or list
+        :return:
+        """
         for arg in args:
             if type(arg) is list:
                 for feature in arg:
@@ -44,13 +52,20 @@ class Features(object):
     def _include_single_feature(self, feature):
         if type(feature) is str:
             self.included_features.add(feature)  # TODO should check with the list retrieved from the featurestore
-            # print("included {}".format(feature))  # this still prints even if was duplicate
         else:
             raise ValueError("features.include() only accepts strings or lists of strings, "
                              "but it received {0} which is of type '{1}'."
                              .format(str(feature), type(feature).__name__))
 
     def exclude(self, *args):
+        """
+        Exclude one or several features of the dataset from the list of features that have been included in the
+        ablation study. Features can be excluded one by one or as a list of strings. This method will check to see
+        if the feature has already been included in the study before excluding it.
+        :param args: Strings or lists of strings, that should match feature names.
+        :type args: str or list
+        :return:
+        """
         for arg in args:
             if type(arg) is list:
                 for feature in arg:
@@ -62,6 +77,7 @@ class Features(object):
         if type(feature) is str:
             if feature in self.included_features:
                 self.included_features.remove(feature)
+                print("Feature '{0}' is excluded from the ablation study.")
         else:
             raise ValueError("features.exclude() only accepts strings or lists of strings, "
                              "but it received {0} (of type '{1}')."
