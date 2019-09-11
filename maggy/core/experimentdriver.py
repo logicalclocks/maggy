@@ -40,17 +40,23 @@ class ExperimentDriver(object):
             raise Exception(
                 "No valid searchspace. Please use maggy Searchspace class.")
 
-        if optimizer is None or optimizer.lower() == 'none':
-                if len(self.searchspace.names()) == 0:
-                    self.optimizer = SingleRun()
-                else:
-                    raise Exception(
-                        'Searchspace has to be empty or None to use without optimizer')
+        if optimizer is None:
+            if len(self.searchspace.names()) == 0:
+                self.optimizer = SingleRun()
+            else:
+                raise Exception(
+                    "Searchspace has to be empty or None to use without optimizer")
         elif isinstance(optimizer, str):
             if optimizer.lower() == 'randomsearch':
                 self.optimizer = RandomSearch()
             elif optimizer.lower() == 'asha':
                 self.optimizer = Asha()
+            elif optimizer.lower() == 'none':
+                if len(self.searchspace.names()) == 0:
+                    self.optimizer == SingleRun()
+                else:
+                    raise Exception(
+                        "Searchspace has to be empty or None to use without Optimizer.")
             else:
                 raise Exception(
                     "Unknown Optimizer. Can't initialize experiment driver.")
