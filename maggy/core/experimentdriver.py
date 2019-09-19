@@ -286,7 +286,7 @@ class ExperimentDriver(object):
                     except:
                         msg = {'type': None}
 
-                    if self.earlystop_check == NoStoppingRule.earlystop_check:
+                    if self.earlystop_check != NoStoppingRule.earlystop_check:
                         if (datetime.now() - time_earlystop_check).total_seconds() >= self.es_interval:
                             time_earlystop_check = datetime.now()
 
