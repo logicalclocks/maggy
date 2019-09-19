@@ -36,7 +36,6 @@ def lagom(map_fun, experiment_type,
           es_policy='median', es_interval=300, es_min=10, description=''):
     """Launches a maggy experiment, which depending on `experiment_type` can
     either be a hyperparameter optimization or an ablation study experiment.
-    
     Given a search space, objective and a model training procedure `map_fun`
     (black-box function), an experiment is the whole process of finding the
     best hyperparameter combination in the search space, optimizing the
@@ -80,8 +79,6 @@ def lagom(map_fun, experiment_type,
     :rtype: dict
     """
     global running
-    # exp_driver = None  # TODO to fix UnboundLocalError (calling exp_driver.stop() in finally block)
-
     if running:
         raise RuntimeError("An experiment is currently running.")
 
@@ -117,17 +114,19 @@ def lagom(map_fun, experiment_type,
             if num_executors > num_trials:
                 num_executors = num_trials
 
-            exp_driver = ExperimentDriver('optimization', searchspace=searchspace, optimizer=optimizer,
-                                          direction=direction, num_trials=num_trials, name=name,
-                                          num_executors=num_executors, hb_interval=hb_interval, es_policy=es_policy,
-                                          es_interval=es_interval, es_min=es_min, description=description,
-                                          app_dir=app_dir, log_dir=log_dir, trial_dir=trial_dir)
+            exp_driver = ExperimentDriver(
+                'optimization', searchspace=searchspace, optimizer=optimizer,
+                direction=direction, num_trials=num_trials, name=name,
+                num_executors=num_executors, hb_interval=hb_interval, es_policy=es_policy,
+                es_interval=es_interval, es_min=es_min, description=description,
+                app_dir=app_dir, log_dir=log_dir, trial_dir=trial_dir)
 
         elif experiment_type == 'ablation':
-            exp_driver = ExperimentDriver('ablation', ablation_study=ablation_study, ablator=ablator,
-                                          name=name, num_executors=num_executors,
-                                          hb_interval=hb_interval, description=description,
-                                          app_dir=app_dir, log_dir=log_dir, trial_dir=trial_dir)
+            exp_driver = ExperimentDriver(
+                'ablation', ablation_study=ablation_study, ablator=ablator,
+                name=name, num_executors=num_executors,
+                hb_interval=hb_interval, description=description,
+                app_dir=app_dir, log_dir=log_dir, trial_dir=trial_dir)
             # using exp_driver.num_executor since
             # it has been set using ablator.get_number_of_trials() in experiment.py
             if num_executors > exp_driver.num_executors:
@@ -175,7 +174,6 @@ def lagom(map_fun, experiment_type,
         # sparkmagic hb poll intervall is 5 seconds, therefore wait 6 seconds
         time.sleep(6)
         # cleanup spark jobs
-        # if running is True and exp_driver is not None:
         exp_driver.stop()
         elastic_id += 1
         running = False

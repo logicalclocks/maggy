@@ -28,7 +28,6 @@ driver_secret = None
 class ExperimentDriver(object):
 
     SECRET_BYTES = 8
-    # TODO rewrite with @classmethod
 
     # @Moritz:
     # for now, we infer the experiment type (an optimization experiment or an ablation study)
@@ -54,8 +53,8 @@ class ExperimentDriver(object):
         self.hb_interval = kwargs.get('hb_interval')
         self.description = kwargs.get('description')
         self.experiment_type = experiment_type
-        self.es_interval = integer_max  # XXX not the cleanest way
-        self.es_min = integer_max
+        self.es_interval = kwargs.get('es_interval')
+        self.es_min = kwargs.get('es_min')
 
         # TYPE-SPECIFIC EXPERIMENT SETUP
         if self.experiment_type == 'optimization':
@@ -116,7 +115,6 @@ class ExperimentDriver(object):
                     .format(str(direction), type(direction).__name__))
 
             es_policy = kwargs.get('es_policy')
-            # XXX check self.early_stop_check vs. self.earlystop_check
             if isinstance(es_policy, str):
                 if es_policy.lower() == 'median':
                     self.earlystop_check = MedianStoppingRule.earlystop_check
@@ -182,7 +180,6 @@ class ExperimentDriver(object):
                     "but it is {0} (of type '{1}')."
                     .format(str(ablator), type(ablator).__name__))
 
-            # XXX setup ablation result schema
             self.result = {'best_val': 'n.a.',
                            'num_trials': 0,
                            'early_stopped': 'n.a'}
@@ -247,7 +244,6 @@ class ExperimentDriver(object):
             self.job_end = datetime.now()
             self.duration = hopsutil._time_diff(self.job_start, self.job_end)
 
-            # TODO modify so that "None" is not printed
             results = "\n------ " + str(self.ablator.__class__.__name__) + " Results ------ \n" + \
                 "BEST Config Excludes " + json.dumps(self.result['best_config']) + " -- metric " + \
                       str(self.result['best_val']) + "\n" + \
@@ -290,22 +286,23 @@ class ExperimentDriver(object):
                     except:
                         msg = {'type': None}
 
-                    if (datetime.now() - time_earlystop_check).total_seconds() >= self.es_interval:
-                        time_earlystop_check = datetime.now()
+                    if self.earlystop_check == NoStoppingRule.earlystop_check:
+                        if (datetime.now() - time_earlystop_check).total_seconds() >= self.es_interval:
+                            time_earlystop_check = datetime.now()
 
-                    # pass currently running trials to early stop component
-                        if len(self._final_store) > self.es_min:
-                            self._log("Check for early stopping.")
-                            try:
-                                to_stop = self.earlystop_check(
-                                    self._trial_store, self._final_store, self.direction)
-                            except Exception as e:
-                                self._log(e)
-                                to_stop = []
-                            if len(to_stop) > 0:
-                                self._log("Trials to stop: {}".format(to_stop))
-                            for trial_id in to_stop:
-                                self.get_trial(trial_id).set_early_stop()
+                        # pass currently running trials to early stop component
+                            if len(self._final_store) > self.es_min:
+                                self._log("Check for early stopping.")
+                                try:
+                                    to_stop = self.earlystop_check(
+                                        self._trial_store, self._final_store, self.direction)
+                                except Exception as e:
+                                    self._log(e)
+                                    to_stop = []
+                                if len(to_stop) > 0:
+                                    self._log("Trials to stop: {}".format(to_stop))
+                                for trial_id in to_stop:
+                                    self.get_trial(trial_id).set_early_stop()
 
                     # depending on message do the work
                     # 1. METRIC
@@ -355,9 +352,7 @@ class ExperimentDriver(object):
                         self.maggy_log = self._update_maggy_log()
                         self._log(self.maggy_log)
 
-                        if self.experiment_type == 'optimization':
-                            hopshdfs.dump(trial.to_json(), self.trial_dir + '/' + trial.trial_id + '/trial.json')
-                        # XXX what about ablation? forgot to dump to json?
+                        hopshdfs.dump(trial.to_json(), self.trial_dir + '/' + trial.trial_id + '/trial.json')
 
                         # assign new trial
                         if self.experiment_type == 'optimization':
@@ -517,7 +512,6 @@ class ExperimentDriver(object):
                     'worst_id': trial_id, 'worst_val': metric, 'worst_config': param_string,
                     'avg': metric, 'metric_list': [metric], 'num_trials': 1,
                     'early_stopped': 0,
-                    # TODO earlystop included temporarily for compatibility with sparkmagic, remove before release
                 }
                 return
 
@@ -554,7 +548,6 @@ class ExperimentDriver(object):
                 str(self.result['best_val'])
 
         elif self.experiment_type == 'ablation':
-            # TODO modify so that "None" is not printed
             log = "Maggy Ablation " + str(finished) + "/" + str(self.num_trials) + \
                 util._progress_bar(finished, self.num_trials) + ' - BEST Excludes' + \
                 json.dumps(self.result['best_config']) + ' - metric ' + \

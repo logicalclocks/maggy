@@ -53,9 +53,10 @@ class Features(object):
         if type(feature) is str:
             self.included_features.add(feature)  # TODO should check with the list retrieved from the featurestore
         else:
-            raise ValueError("features.include() only accepts strings or lists of strings, "
-                             "but it received {0} which is of type '{1}'."
-                             .format(str(feature), type(feature).__name__))
+            raise ValueError(
+                "features.include() only accepts strings or lists of strings, "
+                "but it received {0} which is of type '{1}'."
+                .format(str(feature), type(feature).__name__))
 
     def exclude(self, *args):
         """

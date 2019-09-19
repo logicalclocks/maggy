@@ -1,6 +1,6 @@
 import threading
 import struct
-import cloudpickle
+from pyspark import cloudpickle
 import time
 import select
 import socket

@@ -19,7 +19,7 @@ class LOCO(AbstractAblator):
             len(self.ablation_study.model.layers.included_layers) +  \
             len(self.ablation_study.model.layers.included_groups) + 1
 
-    def get_dataset_generator(self, ablated_feature=None, dataset_type='tfrecord'):
+    def get_dataset_generator(self, ablated_feature=None, dataset_type='tfrecord', shuffle_buffer_size=10000):
 
         if self.ablation_study.custom_dataset_generator:
             pass  # TODO process and change the custom dataset generator
@@ -31,14 +31,12 @@ class LOCO(AbstractAblator):
             if dataset_type == 'tfrecord':
 
                 def create_tf_dataset(num_epochs, batch_size):
-                    # TODO @Moritz: go with shadowing? i.e., def create_tf_dataset(ablated_feature)?
-                    SHUFFLE_BUFFER_SIZE = 10000  # XXX parametrize?
                     dataset_dir = featurestore.get_training_dataset_path(training_dataset_name,
                                                                          training_dataset_version)
                     input_files = tf.gfile.Glob(dataset_dir + '/part-r-*')
                     dataset = tf.data.TFRecordDataset(input_files)
                     tf_record_schema = featurestore.get_training_dataset_tf_record_schema(training_dataset_name)
-                    meta = featurestore.get_featurestore_metadata()  # XXX move outside the function?
+                    meta = featurestore.get_featurestore_metadata()
                     training_features = [feature.name
                                          for feature
                                          in meta.training_datasets[training_dataset_name +
@@ -51,7 +49,7 @@ class LOCO(AbstractAblator):
                     training_features.remove(label_name)
 
                     def decode(example_proto):
-                        example = tf.parse_single_example( example_proto, tf_record_schema)
+                        example = tf.parse_single_example(example_proto, tf_record_schema)
                         # prepare the features
                         x = []
                         for feature_name in training_features:
@@ -68,7 +66,7 @@ class LOCO(AbstractAblator):
                             y = [example[label_name]]
 
                         return x, y
-                    dataset = dataset.map(decode).shuffle(SHUFFLE_BUFFER_SIZE).batch(batch_size).repeat(num_epochs)
+                    dataset = dataset.map(decode).shuffle(shuffle_buffer_size).batch(batch_size).repeat(num_epochs)
                     return dataset
 
                 return create_tf_dataset
@@ -121,20 +119,19 @@ class LOCO(AbstractAblator):
         can be regarded as the base for comparison.
         """
 
-        # add first trial with all the components
+        # 0 - add first trial with all the components (base/reference trial)
         self.trial_buffer.append(Trial(self.create_trial_dict(None, None), trial_type='ablation'))
 
-        # generate remaining trials based on the ablation study configuration
-
-        # generate feature ablation trials
+        # generate remaining trials based on the ablation study configuration:
+        # 1 - generate feature ablation trials
         for feature in self.ablation_study.features.included_features:
             self.trial_buffer.append(Trial(self.create_trial_dict(ablated_feature=feature), trial_type='ablation'))
 
-        # generate single-layer ablation trials
+        # 2 - generate single-layer ablation trials
         for layer in self.ablation_study.model.layers.included_layers:
             self.trial_buffer.append(Trial(self.create_trial_dict(layer_identifier=layer), trial_type='ablation'))
 
-        # generate layer groups ablation trials
+        # 3 - generate layer-groups ablation trials
         # each element of `included_groups` is a frozenset of a set, so we cast again to get a set
         # why frozensets in the first place? because a set can only contain immutable elements
         # hence elements (layer group identifiers) are frozensets
@@ -145,7 +142,7 @@ class LOCO(AbstractAblator):
 
     def get_trial(self, trial=None):
         if self.trial_buffer:
-            return self.trial_buffer.pop()  # but why `pop()`? :D
+            return self.trial_buffer.pop()
         else:
             return None
 
