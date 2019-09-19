@@ -29,8 +29,8 @@ elastic_id = 1
 experiment_json = None
 
 
-def lagom(map_fun, experiment_type,
-          name, hb_interval=1,
+def lagom(map_fun, name,
+          experiment_type='optimization', hb_interval=1,
           num_trials=None, searchspace=None, optimizer=None, direction=None,
           ablation_study=None, ablator=None,
           es_policy='median', es_interval=300, es_min=10, description=''):
@@ -46,7 +46,7 @@ def lagom(map_fun, experiment_type,
 
     :param map_fun: User defined experiment containing the model training.
     :type map_fun: function
-    :param experiment_type: Type of Maggy experiment, either 'optimization' or 'ablation'
+    :param experiment_type: Type of Maggy experiment, either 'optimization' (default) or 'ablation'.
     :type experiment_type: str
     :param searchspace: A maggy Searchspace object from which samples are drawn.
     :type searchspace: Searchspace
