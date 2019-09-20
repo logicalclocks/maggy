@@ -22,7 +22,7 @@ class LOCO(AbstractAblator):
     def get_dataset_generator(self, ablated_feature=None, dataset_type='tfrecord', shuffle_buffer_size=10000):
 
         if self.ablation_study.custom_dataset_generator:
-            pass  # TODO process and change the custom dataset generator
+            pass
         else:
             training_dataset_name = self.ablation_study.hops_training_dataset_name
             training_dataset_version = self.ablation_study.hops_training_dataset_version
@@ -101,7 +101,7 @@ class LOCO(AbstractAblator):
                         if base_layer['config']['name'].lower().startswith(prefix):
                             list_of_layers.remove(base_layer)
 
-            base_json = base_model.to_json()  # TODO support YAML and maybe custom serializers
+            base_json = base_model.to_json()
             new_dict = json.loads(base_json)
             new_dict['config']['layers'] = list_of_layers
             new_json = json.dumps(new_dict)

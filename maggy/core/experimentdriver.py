@@ -92,7 +92,7 @@ class ExperimentDriver(object):
                         "Unknown Optimizer. Can't initialize experiment driver.")
             elif isinstance(optimizer, AbstractOptimizer):
                 self.optimizer = optimizer
-                print("Custom Optimizer initialized.")  # TODO do we need this print?
+                print("Custom Optimizer initialized.")
             else:
                 raise Exception(
                     "The experiment's optimizer should either be an string indicating the name "
@@ -128,7 +128,7 @@ class ExperimentDriver(object):
                         .format(str(es_policy), type(es_policy).__name__))
             elif isinstance(es_policy, AbstractEarlyStop):
                 self.earlystop_check = es_policy.earlystop_check
-                print("Custom Early Stopping policy initialized.")  # TODO do we need this print?
+                print("Custom Early Stopping policy initialized.")
             else:
                 raise Exception(
                     "The experiment's early stopping policy should either be a string ('median' or 'none') "

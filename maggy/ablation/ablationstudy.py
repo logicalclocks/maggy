@@ -2,8 +2,6 @@ class AblationStudy(object):
     def __init__(self, training_dataset_name, training_dataset_version,
                  label_name, **kwargs):
         self.features = Features()
-        # TODO upgrade for Featurestore V2
-        # TODO call the featurestore and save the list of features of the dataset
         self.model = Model()
         self.hops_training_dataset_name = training_dataset_name
         self.hops_training_dataset_version = training_dataset_version
@@ -30,9 +28,8 @@ class AblationStudy(object):
 
 
 class Features(object):
-    # TODO type-checking for all the methods
     def __init__(self):
-        self.included_features = set()  # TODO set or list?
+        self.included_features = set()
 
     def include(self, *args):
         """
@@ -51,7 +48,7 @@ class Features(object):
 
     def _include_single_feature(self, feature):
         if type(feature) is str:
-            self.included_features.add(feature)  # TODO should check with the list retrieved from the featurestore
+            self.included_features.add(feature)
         else:
             raise ValueError(
                 "features.include() only accepts strings or lists of strings, "
@@ -86,7 +83,7 @@ class Features(object):
 
     def list_all(self):
         for feature in self.included_features:
-            print(feature)  # TODO proper printing
+            print(feature)
 
 
 class Model(object):
@@ -213,7 +210,7 @@ class Layers(object):
         Prints all single layers that are included in the current ablation study configuration.
         """
         if len(self.included_layers) > 0:
-            print("Included single layers are: \n")  # TODO proper printing
+            print("Included single layers are: \n")
             for layer in self.included_layers:
                 print(layer)
         else:
@@ -224,7 +221,7 @@ class Layers(object):
         Prints all layer groups that are included in the current ablation study configuration.
         """
         if len(self.included_groups) > 0:
-            print("Included layer groups are: \n")  # TODO proper printing
+            print("Included layer groups are: \n")
             for layer_group in self.included_groups:
                 if len(layer_group) > 1:
                     print("--- Layer group " + str(list(layer_group)))
