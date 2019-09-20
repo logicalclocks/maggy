@@ -74,7 +74,7 @@ class ExperimentDriver(object):
                     .format(str(searchspace), type(searchspace).__name__))
 
             optimizer = kwargs.get('optimizer')
-
+            
             if optimizer is None:
                 if len(self.searchspace.names()) == 0:
                     self.optimizer = SingleRun()
