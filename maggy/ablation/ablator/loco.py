@@ -1,5 +1,6 @@
 from maggy.ablation.ablator import AbstractAblator
 from maggy.ablation.ablationstudy import AblationStudy
+from maggy.core.exceptions import NotSupportedError
 from hops import featurestore
 from hops import hdfs as hopshdfs
 import tensorflow as tf
@@ -70,6 +71,10 @@ class LOCO(AbstractAblator):
                     return dataset
 
                 return create_tf_dataset
+            else:
+                raise NotSupportedError(
+                    "dataset type", dataset_type,
+                    "Use 'tfrecord' or write your own custom dataset generator.")s
 
     def get_model_generator(self, layer_identifier=None):
 
