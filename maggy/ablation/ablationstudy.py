@@ -75,7 +75,7 @@ class Features(object):
         if type(feature) is str:
             if feature in self.included_features:
                 self.included_features.remove(feature)
-                print("Feature '{0}' is excluded from the ablation study.")
+                print("Feature '{0}' is excluded from the ablation study.").format(str(feature))
         else:
             raise ValueError("features.exclude() only accepts strings or lists of strings, "
                              "but it received {0} (of type '{1}')."
