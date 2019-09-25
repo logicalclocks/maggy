@@ -20,14 +20,27 @@ class Trial(object):
     ERROR = "ERROR"
     FINALIZED = "FINALIZED"
 
-    def __init__(self, params):
+    def __init__(self, params, trial_type='optimization'):
         """Create a new trial object from a hyperparameter combination
         ``params``.
 
         :param params: A dictionary of Hyperparameters as key value pairs.
         :type params: dict
         """
-        self.trial_id = Trial._generate_id(params)
+        # XXX before merge, we should remove the default value for trial_type
+        # and make sure everywhere Trial() is called (e.g. in all optimizers)
+        # trial_type is passed
+        # @Moritz
+
+        self.trial_type = trial_type
+        # XXX temp fix, have to come up with abstractions
+        if self.trial_type == 'optimization':
+            self.trial_id = Trial._generate_id(params)
+        elif self.trial_type == 'ablation':
+            serializable_params = {'ablated_feature': params.get('ablated_feature', None),
+                                   'ablated_layer': params.get('ablated_layer', None),
+                                   }
+            self.trial_id = Trial._generate_id(serializable_params)
         self.params = params
         self.status = Trial.PENDING
         self.early_stop = False
@@ -116,7 +129,7 @@ class Trial(object):
             instance = cls(temp_dict.get('params'))
             instance.trial_id = temp_dict['trial_id']
             instance.status = temp_dict['status']
-            instance.early_stop = temp_dict['early_stop']
+            instance.early_stop = temp_dict.get('early_stop', False)
             instance.final_metric = temp_dict['final_metric']
             instance.metric_history = temp_dict['metric_history']
             instance.duration = temp_dict['duration']

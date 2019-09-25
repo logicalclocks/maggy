@@ -18,7 +18,7 @@ class RandomSearch(AbstractOptimizer):
 
         list_of_random_trials = self.searchspace.get_random_parameter_values(self.num_trials)
         for parameters_dict in list_of_random_trials:
-            self.trial_buffer.append(Trial(parameters_dict))
+            self.trial_buffer.append(Trial(parameters_dict, trial_type='optimization'))
 
     def get_suggestion(self, trial=None):
         if self.trial_buffer:

@@ -1,7 +1,6 @@
-
 import threading
 import struct
-import pickle
+from pyspark import cloudpickle
 import time
 import select
 import socket
@@ -128,7 +127,7 @@ class MessageSocket(object):
                 recv_len -= len(buf)
             recv_done = (recv_len == 0)
 
-        msg = pickle.loads(data)
+        msg = cloudpickle.loads(data)
         return msg
 
     def send(self, sock, msg):
@@ -142,7 +141,7 @@ class MessageSocket(object):
         Returns:
 
         """
-        data = pickle.dumps(msg)
+        data = cloudpickle.dumps(msg)
         buf = struct.pack('>I', len(data)) + data
         sock.sendall(buf)
 
@@ -242,8 +241,10 @@ class Server(MessageSocket):
 
             # lookup executor reservation to find assigned trial
             trialId = msg['trial_id']
-            # get early stopping flag
-            flag = exp_driver.get_trial(trialId).get_early_stop()
+            # get early stopping flag for hyperparameter optimization trials
+            flag = False
+            if exp_driver.experiment_type == 'optimization':
+                flag = exp_driver.get_trial(trialId).get_early_stop()
 
             if flag:
                 send['type'] = 'STOP'
