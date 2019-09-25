@@ -74,7 +74,7 @@ class LOCO(AbstractAblator):
             else:
                 raise NotSupportedError(
                     "dataset type", dataset_type,
-                    "Use 'tfrecord' or write your own custom dataset generator.")s
+                    "Use 'tfrecord' or write your own custom dataset generator.")
 
     def get_model_generator(self, layer_identifier=None):
 
