@@ -3,21 +3,26 @@ import builtins as __builtin__
 import socket
 import time
 import inspect
-from maggy import util, tensorboard, constants
+import json
+
+from maggy import util, tensorboard, constants, trial
 from maggy.core import rpc, exceptions, config
 from maggy.core.reporter import Reporter
 from pyspark import TaskContext
 
 from hops import hdfs as hopshdfs
-import tensorflow as tf
+from hops.experiment_impl.util import experiment_utils
 
-if config.tf_version >= 2:
-    from tensorboard.plugins.hparams import api_pb2
-    from tensorboard.plugins.hparams import summary
-    from tensorboard.plugins.hparams import summary_v2
+__import__("tensorflow").compat.v1.enable_eager_execution()
+import tensorflow.compat.v2 as tf
+from tensorboard.plugins.hparams import api_pb2
+from tensorboard.plugins.hparams import summary
+from tensorboard.plugins.hparams import summary_v2
 
 
-def _prepare_func(app_id, run_id, experiment_type, map_fun, server_addr, hb_interval, secret, app_dir):
+def _prepare_func(
+        app_id, run_id, experiment_type, map_fun, server_addr, hb_interval,
+        secret, optimization_key, log_dir):
 
     def _wrapper_fun(iter):
         """
@@ -36,7 +41,7 @@ def _prepare_func(app_id, run_id, experiment_type, map_fun, server_addr, hb_inte
 
         client = rpc.Client(server_addr, partition_id,
                             task_attempt, hb_interval, secret)
-        log_file = app_dir + '/logs/executor_' + str(partition_id) + '_' + str(task_attempt) + '.log'
+        log_file = log_dir + '/executor_' + str(partition_id) + '_' + str(task_attempt) + '.log'
 
         # save the builtin print
         original_print = __builtin__.print
@@ -50,6 +55,10 @@ def _prepare_func(app_id, run_id, experiment_type, map_fun, server_addr, hb_inte
 
         # override the builtin print
         __builtin__.print = maggy_print
+
+        # override HParams id with our trial id
+        # 1.15.0 will have functionality to pass custom id
+        summary_v2._derive_session_group_name = trial.Trial._generate_id
 
         try:
             client_addr = client.client_addr
@@ -81,32 +90,52 @@ def _prepare_func(app_id, run_id, experiment_type, map_fun, server_addr, hb_inte
 
                 reporter.set_trial_id(trial_id)
 
-                tb_logdir = app_dir + '/trials/' + trial_id
-                tensorboard._register(tb_logdir)
+                tb_logdir = log_dir + '/' + trial_id
+
+                # If trial is repeated, delete trial directory
+                if hopshdfs.exists(tb_logdir):
+                    hopshdfs.delete(tb_logdir, recursive=True)
+
                 hopshdfs.mkdir(tb_logdir)
+                tensorboard._register(tb_logdir)
+                hopshdfs.dump(json.dumps(parameters, default=util.json_default_numpy), tb_logdir + '/.hparams.json')
+
+                _writer = tf.summary.create_file_writer(tb_logdir)
 
                 try:
                     reporter.log("Starting Trial: {}".format(trial_id), False)
                     reporter.log("Trial Configuration: {}".format(parameters), False)
 
+                    with _writer.as_default():
+                        summary_v2.hparams(parameters)
+
                     sig = inspect.signature(map_fun)
                     if sig.parameters.get('reporter', None):
+                        #TODO if killed by user, it might be that retval is not assigned and experiments will show running
                         retval = map_fun(**parameters, reporter=reporter)
                     else:
                         retval = map_fun(**parameters)
 
+                    with _writer.as_default():
+                        pb = summary.session_end_pb(api_pb2.STATUS_SUCCESS)
+                        raw_pb = pb.SerializeToString()
+                        tf.summary.experimental.write_raw_pb(raw_pb, step=0)
+                    _writer = None
+
+                    experiment_utils._handle_return(retval, tb_logdir, optimization_key)
+
                     # Make sure user function returns a numeric value
-                    if retval is None:
-                        reporter.log(
-                            "ERROR: Training function can't return None", False)
-                        raise Exception("Training function can't return None")
-                    elif not isinstance(retval, constants.USER_FCT.RETURN_TYPES):
-                        reporter.log(
-                            "ERROR: Training function returns non numeric value: {}"
-                            .format(type(retval)), False)
-                        raise Exception(
-                            "ERROR: Training function returns non numeric value: {}"
-                            .format(type(retval)))
+                    #if retval is None:
+                    #    reporter.log(
+                    #        "ERROR: Training function can't return None", False)
+                    #    raise Exception("Training function can't return None")
+                    #elif not isinstance(retval, constants.USER_FCT.RETURN_TYPES):
+                    #    reporter.log(
+                    #        "ERROR: Training function returns non numeric value: {}"
+                    #        .format(type(retval)), False)
+                    #    raise Exception(
+                    #        "ERROR: Training function returns non numeric value: {}"
+                    #        .format(type(retval)))
 
                 except exceptions.EarlyStopException as e:
                     retval = e.metric

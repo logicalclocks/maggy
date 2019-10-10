@@ -8,32 +8,29 @@ experiment, see examples below. Whenever a function to run an experiment is
 invoked it is also registered in the Experiments service along with the
 provided information.
 """
-import socket
 import os
 import json
 import atexit
 import time
-from datetime import datetime
-
-from maggy import util, tensorboard
-from maggy.core import rpc, trialexecutor, ExperimentDriver
-from maggy.trial import Trial
 
 from hops import util as hopsutil
-from hops import hdfs as hopshdfs
+from hops.experiment_impl.util import experiment_utils
+
+from maggy import util, tensorboard
+from maggy.core import trialexecutor, ExperimentDriver
 
 app_id = None
 running = False
-run_id = None
-elastic_id = 1
+run_id = 1
 experiment_json = None
 
 
-def lagom(map_fun, name='no-name',
-          experiment_type='optimization', hb_interval=1,
-          num_trials=1, searchspace=None, optimizer=None, direction='max',
-          ablation_study=None, ablator=None,
-          es_policy='median', es_interval=300, es_min=10, description=''):
+def lagom(
+        map_fun, name='no-name', experiment_type='optimization',
+        searchspace=None, optimizer=None, direction='max', num_trials=1,
+        versioned_resources=None, ablation_study=None, ablator=None,
+        optimization_key='metric', hb_interval=1, es_policy='median',
+        es_interval=300, es_min=10, description=''):
     """Launches a maggy experiment, which depending on `experiment_type` can
     either be a hyperparameter optimization or an ablation study experiment.
     Given a search space, objective and a model training procedure `map_fun`
@@ -46,9 +43,13 @@ def lagom(map_fun, name='no-name',
 
     :param map_fun: User defined experiment containing the model training.
     :type map_fun: function
-    :param experiment_type: Type of Maggy experiment, either 'optimization' (default) or 'ablation'.
+    :param name: A user defined experiment identifier.
+    :type name: str
+    :param experiment_type: Type of Maggy experiment, either 'optimization'
+        (default) or 'ablation'.
     :type experiment_type: str
-    :param searchspace: A maggy Searchspace object from which samples are drawn.
+    :param searchspace: A maggy Searchspace object from which samples are
+        drawn.
     :type searchspace: Searchspace
     :param optimizer: The optimizer is the part generating new trials.
     :type optimizer: str, AbstractOptimizer
@@ -58,8 +59,16 @@ def lagom(map_fun, name='no-name',
     :param num_trials: the number of trials to evaluate given the search space,
         each containing a different hyperparameter combination
     :type num_trials: int
-    :param name: A user defined experiment identifier.
-    :type name: str
+    :param versioned_resources: A list of HDFS paths of resources to version
+        with this experiment
+    :type versioned_resources: list, optional
+    :param ablation_study: Ablation study object. Can be None for optimization
+        experiment type.
+    :type ablation_study: AblationStudy
+    :param ablator: Ablator to use for experiment type 'ablation'.
+    :type ablator: str, AbstractAblator
+    :param optimization_key: Name of the metric to be optimized
+    :type optimization_key: str, optional
     :param hb_interval: The heartbeat interval in seconds from trial executor
         to experiment driver, defaults to 1
     :type hb_interval: int, optional
@@ -82,54 +91,56 @@ def lagom(map_fun, name='no-name',
     if running:
         raise RuntimeError("An experiment is currently running.")
 
+    job_start = time.time()
+    sc = hopsutil._find_spark().sparkContext
+
     try:
         global app_id
         global experiment_json
-        global elastic_id
+        #TODO check if another experiment/run exists form same appid
         global run_id
+        app_id = str(sc.applicationId)
+
+         # start run
         running = True
         exp_driver = None
+        experiment_utils._set_ml_id(app_id, run_id)
 
-        sc = hopsutil._find_spark().sparkContext
-        app_id = str(sc.applicationId)
-        app_dir = ''
+        versioned_path = experiment_utils._setup_experiment(
+            versioned_resources, experiment_utils._get_logdir(app_id, run_id),
+            app_id, run_id)
 
-        # Create the root dir if not existing
-        _ = util._get_experiments_dir(name)
-        # get run_id and run_dir
-        run_id, run_dir = util._get_run_dir(name)
-        # set elastic id to run_id
-        elastic_id = run_id
-        # trial dir will be for tensorboard
-        app_dir, trial_dir, log_dir = util._init_run(run_dir, app_id)
-        tensorboard._register(trial_dir)
-        #tensorboard.write_hparams_proto(trial_dir, searchspace)
-        #hopshdfs.dump('writing proto buf worked', log_dir+'/maggy.log')
+        tensorboard._register(experiment_utils._get_logdir(app_id, run_id))
+        tensorboard.write_hparams_config(
+            experiment_utils._get_logdir(app_id, run_id), searchspace)
 
-        num_executors = util.num_executors()
+        num_executors = util.num_executors(sc)
 
         # start experiment driver
         if experiment_type == 'optimization':
 
-            assert num_trials > 0, "number of trials should be greater than zero"
+            assert num_trials > 0, "number of trials should be greater " + \
+                "than zero"
             if num_executors > num_trials:
                 num_executors = num_trials
 
             exp_driver = ExperimentDriver(
                 'optimization', searchspace=searchspace, optimizer=optimizer,
                 direction=direction, num_trials=num_trials, name=name,
-                num_executors=num_executors, hb_interval=hb_interval, es_policy=es_policy,
-                es_interval=es_interval, es_min=es_min, description=description,
-                app_dir=app_dir, log_dir=log_dir, trial_dir=trial_dir)
+                num_executors=num_executors, hb_interval=hb_interval,
+                es_policy=es_policy, es_interval=es_interval, es_min=es_min,
+                description=description,
+                log_dir=experiment_utils._get_logdir(app_id, run_id))
 
         elif experiment_type == 'ablation':
             exp_driver = ExperimentDriver(
                 'ablation', ablation_study=ablation_study, ablator=ablator,
                 name=name, num_executors=num_executors,
                 hb_interval=hb_interval, description=description,
-                app_dir=app_dir, log_dir=log_dir, trial_dir=trial_dir)
+                log_dir=experiment_utils._get_logdir(app_id, run_id))
             # using exp_driver.num_executor since
-            # it has been set using ablator.get_number_of_trials() in experiment.py
+            # it has been set using ablator.get_number_of_trials()
+            # in experiment.py
             if num_executors > exp_driver.num_executors:
                 num_executors = exp_driver.num_executors
         else:
@@ -141,34 +152,56 @@ def lagom(map_fun, name='no-name',
 
         nodeRDD = sc.parallelize(range(num_executors), num_executors)
 
+        # Do provenance after initializing exp_driver, because exp_driver does
+        # the type checks for optimizer and searchspace
         # Make SparkUI intuitive by grouping jobs
-        sc.setJobGroup("Maggy Experiment", "{}".format(name))
-        exp_driver._log("Started Maggy Experiment: {0}, run {1}".format(name, run_id))
+        sc.setJobGroup(
+            os.environ['ML_ID'], "{0} | {1}"
+            .format(name, exp_driver.optimizer.name()))
 
-        exp_driver.init()
+        experiment_json = experiment_utils._populate_experiment(
+            name, exp_driver.optimizer.name(), 'MAGGY', searchspace.json(),
+            versioned_path, description, app_id, direction, optimization_key)
+
+        experiment_json = experiment_utils._attach_experiment_xattr(
+            app_id, run_id, experiment_json, 'CREATE')
+
+        util._log(
+            "Started Maggy Experiment: {0}, {1}, run {2}"
+            .format(name, app_id, run_id))
+
+        exp_driver.init(job_start)
 
         server_addr = exp_driver.server_addr
 
-        experiment_json = exp_driver.json(sc)
-        hopsutil._put_elastic(hopshdfs.project_name(), app_id, run_id,
-            experiment_json)
-
         # Force execution on executor, since GPU is located on executor
-        job_start = datetime.now()
-        nodeRDD.foreachPartition(trialexecutor._prepare_func(app_id, run_id, experiment_type,
-                                 map_fun, server_addr, hb_interval, exp_driver._secret, app_dir))
-        job_end = datetime.now()
+        # TODO: should return logdir, best_param, best_metric, return_dict
+        # logdir is bestLogdir
+        nodeRDD.foreachPartition(
+            trialexecutor._prepare_func(
+                app_id, run_id, experiment_type, map_fun, server_addr,
+                hb_interval, exp_driver._secret, optimization_key,
+                experiment_utils._get_logdir(app_id, run_id)))
+        job_end = time.time()
 
-        result = exp_driver.finalize(job_start, job_end)
+        result = exp_driver.finalize(job_end)
+        best_logdir = experiment_utils._get_logdir(app_id, run_id) + \
+            '/' + result['best_id']
 
-        experiment_json = exp_driver.json(sc)
-        hopsutil._put_elastic(hopshdfs.project_name(), app_id, elastic_id,
-            experiment_json)
+        # TODO: change the casting of best_val
+        util._finalize_experiment(
+            experiment_json, float(result['best_val']), app_id, run_id,
+            'FINISHED', exp_driver.duration,
+            experiment_utils._get_logdir(app_id, run_id), best_logdir,
+            optimization_key)
 
-        exp_driver._log("Finished Experiment")
+        util._log("Finished Experiment")
+
+        return result
 
     except:
-        _exception_handler()
+        _exception_handler(experiment_utils._seconds_to_milliseconds(
+            time.time() - job_start))
         raise
     finally:
         # grace period to send last logs to sparkmagic
@@ -177,41 +210,43 @@ def lagom(map_fun, name='no-name',
         # cleanup spark jobs
         if running and exp_driver is not None:
             exp_driver.stop()
-        elastic_id += 1
+        run_id += 1
         running = False
         sc.setJobGroup("", "")
 
     return result
 
-
-def _exception_handler():
+def _exception_handler(duration):
     """
+    Handles exceptions during execution of an experiment
 
-    Returns:
-
+    :param duration: duration of the experiment until exception in milliseconds
+    :type duration: int
     """
-    global running
-    global experiment_json
-    if running and experiment_json is not None:
-        experiment_json = json.loads(experiment_json)
-        experiment_json['status'] = "FAILED"
-        experiment_json['finished'] = datetime.now().isoformat()
-        experiment_json = json.dumps(experiment_json)
-        hopsutil._put_elastic(hopshdfs.project_name(), app_id, elastic_id, experiment_json)
+    try:
+        global running
+        global experiment_json
+        if running and experiment_json is not None:
+            experiment_json['status'] = "FAILED"
+            experiment_json['duration'] = duration
+            experiment_utils._attach_experiment_xattr(
+                app_id, run_id, experiment_json, 'REPLACE')
+    except Exception as err:
+        util._log(err)
+
 
 def _exit_handler():
     """
-
-    Returns:
-
+    Handles jobs killed by the user.
     """
-    global running
-    global experiment_json
-    if running and experiment_json != None:
-        experiment_json = json.loads(experiment_json)
-        experiment_json['status'] = "KILLED"
-        experiment_json['finished'] = datetime.now().isoformat()
-        experiment_json = json.dumps(experiment_json)
-        hopsutil._put_elastic(hopshdfs.project_name(), app_id, elastic_id, experiment_json)
+    try:
+        global running
+        global experiment_json
+        if running and experiment_json is not None:
+            experiment_json['status'] = "KILLED"
+            experiment_utils._attach_experiment_xattr(
+                app_id, run_id, experiment_json, 'REPLACE')
+    except Exception as err:
+        util._log(err)
 
 atexit.register(_exit_handler)

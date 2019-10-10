@@ -67,3 +67,6 @@ class AbstractAblator(ABC):
         """
         pass
 
+    def name(self):
+        return str(self.__class__.__name__)
+

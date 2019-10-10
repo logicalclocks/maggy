@@ -1,8 +1,6 @@
 
 from maggy.core import config
-
-if config.tf_version >= 2:
-    from maggy.tb_experimental import write_hparams_proto
+from maggy.tb_experimental import write_hparams_config
 
 tensorboard_dir = None
 

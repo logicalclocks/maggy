@@ -1,6 +1,6 @@
-
-import tensorflow as tf
-from tensorboard.plugins.hparams import api as hp
+__import__("tensorflow").compat.v1.enable_eager_execution()
+import tensorflow.compat.v2 as tf
+from tensorboard.plugins.hparams import summary_v2 as hp
 
 def create_hparams_config(sp):
     hparams = []
@@ -17,12 +17,12 @@ def create_hparams_config(sp):
 
     return hparams
 
-def write_hparams_proto(logdir, searchspace):
+def write_hparams_config(logdir, searchspace):
 
     HPARAMS = create_hparams_config(searchspace)
     METRICS = [
         hp.Metric(
-            "epoch_accuracy",
+            "epoch_acc",
             group="validation",
             display_name="accuracy (val.)",
         ),
@@ -32,12 +32,12 @@ def write_hparams_proto(logdir, searchspace):
             display_name="loss (val.)",
         ),
         hp.Metric(
-            "batch_accuracy",
+            "epoch_acc",
             group="train",
             display_name="accuracy (train)",
         ),
         hp.Metric(
-            "batch_loss",
+            "epoch_loss",
             group="train",
             display_name="loss (train)",
         ),

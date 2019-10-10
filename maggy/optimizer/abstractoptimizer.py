@@ -32,3 +32,6 @@ class AbstractOptimizer(ABC):
         can implement this method e.g. for cleanup or extra logging.
         """
         pass
+
+    def name(self):
+        return str(self.__class__.__name__)

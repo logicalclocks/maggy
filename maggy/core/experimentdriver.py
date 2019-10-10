@@ -1,27 +1,31 @@
 """
-The experiment driver implements the functionality for scheduling trials on maggy.
+The experiment driver implements the functionality for scheduling trials on
+maggy.
 """
 import queue
 import threading
 import json
 import os
 import secrets
+import time
 from datetime import datetime
-from sys import maxsize as integer_max
+
+from hops import constants as hopsconstants
+from hops import hdfs as hopshdfs
+from hops import util as hopsutil
+from hops.experiment_impl.util import experiment_utils
+
 from maggy import util
 from maggy.optimizer import AbstractOptimizer, RandomSearch, Asha, SingleRun
 from maggy.core import rpc
 from maggy.trial import Trial
-from maggy.earlystop import AbstractEarlyStop, MedianStoppingRule, NoStoppingRule
+from maggy.earlystop import AbstractEarlyStop, MedianStoppingRule, \
+    NoStoppingRule
 from maggy.searchspace import Searchspace
 
 from maggy.ablation.ablator import AbstractAblator
 from maggy.ablation.ablator.loco import LOCO
 from maggy.ablation.ablationstudy import AblationStudy
-
-from hops import constants as hopsconstants
-from hops import hdfs as hopshdfs
-from hops import util as hopsutil
 
 driver_secret = None
 
@@ -75,7 +79,7 @@ class ExperimentDriver(object):
                     .format(str(searchspace), type(searchspace).__name__))
 
             optimizer = kwargs.get('optimizer')
-            
+
             if optimizer is None:
                 if len(self.searchspace.names()) == 0:
                     self.optimizer = SingleRun()
@@ -205,8 +209,7 @@ class ExperimentDriver(object):
         self.maggy_log = ''
         self.log_lock = threading.RLock()
         self.log_file = kwargs.get('log_dir') + '/maggy.log'
-        self.trial_dir = kwargs.get('trial_dir')
-        self.app_dir = kwargs.get('app_dir')
+        self.log_dir = kwargs.get('log_dir')
         self.worker_exception = None
 
     # Open File desc for HDFS to log
@@ -214,9 +217,11 @@ class ExperimentDriver(object):
             hopshdfs.dump('', self.log_file)
         self.fd = hopshdfs.open_file(self.log_file, flags='w')
 
-    def init(self):
+    def init(self, job_start):
 
         self.server_addr = self.server.start(self)
+
+        self.job_start = job_start
 
         if self.experiment_type == 'optimization':
             self.optimizer.initialize()
@@ -225,7 +230,7 @@ class ExperimentDriver(object):
 
         self._start_worker()
 
-    def finalize(self, job_start, job_end):
+    def finalize(self, job_end):
 
         results = ''
 
@@ -233,39 +238,48 @@ class ExperimentDriver(object):
 
             _ = self.optimizer.finalize_experiment(self._final_store)
 
-            self.job_end = datetime.now()
+            self.job_end = job_end
 
-            self.duration = hopsutil._time_diff(self.job_start, self.job_end)
+            self.duration = experiment_utils._seconds_to_milliseconds(
+                self.job_end - self.job_start)
 
-            results = '\n------ ' + str(self.optimizer.__class__.__name__) + ' Results ------ direction(' + self.direction + ') \n' \
+            self.duration_str = experiment_utils._time_diff(
+                self.job_start, self.job_end)
+
+            results = '\n------ ' + self.optimizer.name() + ' Results ------ direction(' + self.direction + ') \n' \
                 'BEST combination ' + json.dumps(self.result['best_hp']) + ' -- metric ' + str(self.result['best_val']) + '\n' \
                 'WORST combination ' + json.dumps(self.result['worst_hp']) + ' -- metric ' + str(self.result['worst_val']) + '\n' \
                 'AVERAGE metric -- ' + str(self.result['avg']) + '\n' \
                 'EARLY STOPPED Trials -- ' + str(self.result['early_stopped']) + '\n' \
-                'Total job time ' + self.duration + '\n'
+                'Total job time ' + self.duration_str + '\n'
 
         elif self.experiment_type == 'ablation':
 
             _ = self.ablator.finalize_experiment(self._final_store)
-            self.job_end = datetime.now()
-            self.duration = hopsutil._time_diff(self.job_start, self.job_end)
+            self.job_end = job_end
 
-            results = "\n------ " + str(self.ablator.__class__.__name__) + " Results ------ \n" + \
+            self.duration = experiment_utils._seconds_to_milliseconds(
+                self.job_end - self.job_start)
+
+            self.duration_str = experiment_utils._time_diff(
+                self.job_start, self.job_end)
+
+            results = "\n------ " + self.ablator.name() + " Results ------ \n" + \
                 "BEST Config Excludes " + json.dumps(self.result['best_config']) + " -- metric " + \
                       str(self.result['best_val']) + "\n" + \
                 "WORST Config Excludes " + json.dumps(self.result['worst_config']) + " -- metric " + \
                       str(self.result['worst_val']) + "\n" + \
                 "AVERAGE metric -- " + str(self.result['avg']) + "\n" + \
-                "Total Job Time " + self.duration + "\n"
+                "Total Job Time " + self.duration_str + "\n"
 
         print(results)
 
         self._log(results)
 
         hopshdfs.dump(json.dumps(self.result, default=util.json_default_numpy),
-                      self.app_dir + '/result.json')
+                      self.log_dir + '/result.json')
         sc = hopsutil._find_spark().sparkContext
-        hopshdfs.dump(self.json(sc), self.app_dir + '/maggy.json')
+        hopshdfs.dump(self.json(sc), self.log_dir + '/maggy.json')
 
         return self.result
 
@@ -283,18 +297,19 @@ class ExperimentDriver(object):
         def _target_function(self):
 
             try:
-                time_earlystop_check = datetime.now()  # only used by earlystop-supporting experiments
+                time_earlystop_check = time.time()  # only used by earlystop-supporting experiments
+
                 while not self.worker_done:
                     trial = None
                     # get a message
                     try:
                         msg = self._message_q.get_nowait()
-                    except:
+                    except queue.Empty:
                         msg = {'type': None}
 
                     if self.earlystop_check != NoStoppingRule.earlystop_check:
-                        if (datetime.now() - time_earlystop_check).total_seconds() >= self.es_interval:
-                            time_earlystop_check = datetime.now()
+                        if (time.time() - time_earlystop_check) >= self.es_interval:
+                            time_earlystop_check = time.time()
 
                         # pass currently running trials to early stop component
                             if len(self._final_store) > self.es_min:
@@ -345,8 +360,8 @@ class ExperimentDriver(object):
                         with trial.lock:
                             trial.status = Trial.FINALIZED
                             trial.final_metric = msg['data']
-                            trial.duration = hopsutil._time_diff(
-                                trial.start, datetime.now())
+                            trial.duration = experiment_utils._seconds_to_milliseconds(
+                                time.time() - trial.start)
 
                         # move trial to the finalized ones
                         self._final_store.append(trial)
@@ -358,7 +373,7 @@ class ExperimentDriver(object):
                         self.maggy_log = self._update_maggy_log()
                         self._log(self.maggy_log)
 
-                        hopshdfs.dump(trial.to_json(), self.trial_dir + '/' + trial.trial_id + '/trial.json')
+                        hopshdfs.dump(trial.to_json(), self.log_dir + '/' + trial.trial_id + '/trial.json')
 
                         # assign new trial
                         if self.experiment_type == 'optimization':
@@ -371,7 +386,7 @@ class ExperimentDriver(object):
                             self.experiment_done = True
                         else:
                             with trial.lock:
-                                trial.start = datetime.now()
+                                trial.start = time.time()
                                 trial.status = Trial.SCHEDULED
                                 self.server.reservations.assign_trial(
                                     msg['partition_id'], trial.trial_id)
@@ -387,7 +402,7 @@ class ExperimentDriver(object):
                             self.experiment_done = True
                         else:
                             with trial.lock:
-                                trial.start = datetime.now()
+                                trial.start = time.time()
                                 trial.status = Trial.SCHEDULED
                                 self.server.reservations.assign_trial(
                                     msg['partition_id'], trial.trial_id)
@@ -427,11 +442,11 @@ class ExperimentDriver(object):
             'name': self.name,
             'module': 'maggy',
             'app_id': str(sc.applicationId),
-            'start': self.job_start.isoformat(),
+            'start': time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(self.job_start)),
             'memory_per_executor': str(sc._conf.get("spark.executor.memory")),
             'gpus_per_executor': str(sc._conf.get("spark.executor.gpus")),
             'executors': self.num_executors,
-            'logdir': self.trial_dir,
+            'logdir': self.log_dir,
             # 'versioned_resources': versioned_resources,
             'description': self.description,
             'experiment_type': self.experiment_type,
@@ -439,14 +454,14 @@ class ExperimentDriver(object):
 
         if self.experiment_type == 'optimization':
             experiment_json['hyperparameter_space'] = json.dumps(self.searchspace.to_dict())
-            experiment_json['function'] = self.optimizer.__class__.__name__
+            experiment_json['function'] = self.optimizer.name()
         elif self.experiment_type == 'ablation':
             experiment_json['ablation_study'] = json.dumps(self.ablation_study.to_dict())
-            experiment_json['ablator'] = self.ablator.__class__.__name__
+            experiment_json['ablator'] = self.ablator.name()
 
         if self.experiment_done:
             experiment_json['status'] = "FINISHED"
-            experiment_json['finished'] = self.job_end.isoformat()
+            experiment_json['finished'] = time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(self.job_end))
             experiment_json['duration'] = self.duration
             if self.experiment_type == 'optimization':
                 experiment_json['hyperparameter'] = json.dumps(self.result['best_hp'])

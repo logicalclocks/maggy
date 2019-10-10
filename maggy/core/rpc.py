@@ -11,6 +11,7 @@ from maggy.trial import Trial
 
 from hops import constants as hopsconstants
 from hops import util as hopsutil
+from hops.experiment_impl.util import experiment_utils
 
 MAX_RETRIES = 3
 BUFSIZE = 1024 * 2
@@ -320,7 +321,7 @@ class Server(MessageSocket):
         if not server_host_port:
             server_sock.bind(('', 0))
             # hostname may not be resolvable but IP address probably will be
-            host = hopsutil._get_ip_address()
+            host = experiment_utils._get_ip_address()
             port = server_sock.getsockname()[1]
             server_host_port = (host, port)
 
@@ -413,7 +414,7 @@ class Client(MessageSocket):
         self.hb_sock.connect(server_addr)
         self.server_addr = server_addr
         self.done = False
-        self.client_addr = (hopsutil._get_ip_address(), self.sock.getsockname()[1])
+        self.client_addr = (experiment_utils._get_ip_address(), self.sock.getsockname()[1])
         self.partition_id = partition_id
         self.task_attempt = task_attempt
         self.hb_interval = hb_interval
