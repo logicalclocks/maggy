@@ -11,7 +11,8 @@ able to make extensive use of early stopping in order to achieve efficient
 resource utilization.
 
 Right now, maggy supports asynchronous hyperparameter tuning of machine
-learning and deep learning models, and ablation studies.
+learning and deep learning models, and ablation studies on neural network
+layers as well as input features.
 
 Moreover, it provides a developer API that allows advanced usage by
 implementing custom optimization algorithms and early stopping criteria.
