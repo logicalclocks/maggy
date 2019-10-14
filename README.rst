@@ -1,7 +1,7 @@
 Maggy
 =====
 
-|Downloads| |PypiStatus| |PythonVersions| |License| |Docs|
+|Downloads| |PypiStatus| |PythonVersions| |Docs|
 
 
 Maggy is a framework for efficient asynchronous optimization of expensive
@@ -102,8 +102,6 @@ API documentation is available `here <https://maggy.readthedocs.io/en/latest/>`_
 .. |PypiStatus| image:: https://img.shields.io/pypi/v/maggy?color=blue
     :target: https://pypi.org/project/hops
 .. |PythonVersions| image:: https://img.shields.io/pypi/pyversions/maggy.svg
-    :target: https://pypi.org/project/hops
-.. |License| image:: https://img.shields.io/pypi/l/maggy?color=blue
     :target: https://pypi.org/project/hops
 .. |Docs| image:: https://img.shields.io/readthedocs/maggy
     :target: https://maggy.readthedocs.io/en/latest/
