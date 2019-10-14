@@ -1,7 +1,7 @@
 Maggy
 =====
 
-|Downloads| |PypiStatus| |PythonVersions| |License|
+|Downloads| |PypiStatus| |PythonVersions| |License| |Docs|
 
 
 Maggy is a framework for efficient asynchronous optimization of expensive
