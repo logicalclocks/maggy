@@ -1,6 +1,91 @@
 class AblationStudy(object):
-    def __init__(self, training_dataset_name, training_dataset_version,
-                 label_name, **kwargs):
+    """The `AblationStudy` object is the entry point to define an ablation
+    study with maggy. This object can subsequently be passed as an argument
+    when the experiment is launched with `experiment.lagom()`.
+
+    Sample usage:
+
+    >>> from maggy.ablation import AblationStudy
+    >>> ablation_study = AblationStudy('titanic_train_dataset',
+    >>>     label_name='survived')
+
+    Define your study by including layers and features, which should be
+    ablated:
+
+    >>> ablation_study.features.include('pclass', 'fare')
+    >>> ablation_study.model.layers.include('my_dense_two',
+    >>>     'my_dense_three')
+
+    You can also add a layer group using a list:
+
+    >>> ablation_study.model.layers.include_groups(['my_dense_two',
+    >>>     'my_dense_four'])
+
+    Or add a layer group using a prefix:
+
+    >>> ablation_study.model.layers.include_groups(prefix='my_dense')
+
+    Next you should define a base model function using the layer and feature
+    names you previously specified:
+
+    >>> # you only need to add the `name` parameter to layer initializers
+    >>> def base_model_generator():
+    >>>     model = tf.keras.Sequential()
+    >>>     model.add(tf.keras.layers.Dense(64, activation='relu'))
+    >>>     model.add(tf.keras.layers.Dense(..., name='my_dense_two', ...)
+    >>>     model.add(tf.keras.layers.Dense(32, activation='relu'))
+    >>>     model.add(tf.keras.layers.Dense(..., name='my_dense_sigmoid', ...)
+    >>>     # output layer
+    >>>     model.add(tf.keras.layers.Dense(1, activation='linear'))
+    >>>     return model
+
+    Make sure to include the generator function in the study:
+
+    >>> ablation_study.model.set_base_model_generator(base_model_generator)
+
+    Last but not least you can define your actual training function:
+
+    >>> from maggy import experiment
+    >>> from maggy.callbacks import KerasBatchEnd
+    ​
+    >>> def training_function(dataset_function, model_function, reporter):
+    >>>     import tensorflow as tf
+    >>>     epochs = 5
+    >>>     batch_size = 10
+    >>>     tf_dataset = dataset_function(epochs, batch_size)
+    >>>     model = model_function()
+    >>>     model.compile(optimizer=tf.train.AdamOptimizer(0.001),
+    >>>             loss='binary_crossentropy',
+    >>>             metrics=['accuracy'])
+    >>>     ### Maggy REPORTER
+    >>>     callbacks = [KerasBatchEnd(reporter, metric='acc')]
+    >>>     history = model.fit(tf_dataset, epochs=5, steps_per_epoch=30)
+    >>>     return float(history.history['acc'][-1])
+
+    Lagom the experiment:
+
+    >>> result = experiment.lagom(map_fun=training_function,
+    >>>                         experiment_type='ablation',
+    >>>                         ablation_study=ablation_study,
+    >>>                         ablator='loco',
+    >>>                         name='Titanic-LOCO',
+    >>>                         hb_interval=5)
+    """
+
+    def __init__(
+        self, training_dataset_name, training_dataset_version, label_name,
+        **kwargs):
+        """Initializes the ablation study.
+
+        :param training_dataset_name: Name of the training dataset in the
+            featurestore.
+        :type training_dataset_name: str
+        :param training_dataset_version: Version of the training dataset to be
+            used.
+        :type training_dataset_version: int
+        :param label_name: Name of the target prediction label.
+        :type label_name: str
+        """
         self.features = Features()
         self.model = Model()
         self.hops_training_dataset_name = training_dataset_name
@@ -11,8 +96,9 @@ class AblationStudy(object):
     def to_dict(self):
         """
         Returns the ablation study configuration as a Python dictionary.
-        :return: A dictionary with ablation study configuration parameters as keys
-        (i.e. 'training_dataset_name', 'included_features', etc.)
+
+        :return: A dictionary with ablation study configuration parameters as
+            keys (i.e. 'training_dataset_name', 'included_features', etc.)
         :rtype: dict
         """
         ablation_dict = {
