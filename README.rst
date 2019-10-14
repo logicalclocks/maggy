@@ -1,6 +1,9 @@
 Maggy
 =====
 
+|Downloads| |PypiStatus| |PythonVersions|
+
+
 Maggy is a framework for efficient asynchronous optimization of expensive
 black-box functions on top of Apache Spark. Compared to existing frameworks,
 maggy is not bound to stage based optimization algorithms and therefore it is
@@ -8,21 +11,17 @@ able to make extensive use of early stopping in order to achieve efficient
 resource utilization.
 
 Right now, maggy supports asynchronous hyperparameter tuning of machine
-learning and deep learning models, but other use cases include ablation studies
-and asynchronous distributed training.
+learning and deep learning models, and ablation studies.
 
 Moreover, it provides a developer API that allows advanced usage by
 implementing custom optimization algorithms and early stopping criteria.
 
-In order to make decisions on early stopping, the Spark executors are sending
-heart beats with the current performance of the model they are training to the
-maggy experiment driver which is running on the Spark driver. We call the
-process of training a model with a certain hyperparameter combination a
-*trial*. The experiment driver then uses all information of finished trials and
-the currently running ones to check in a specified interval, which of the
-trials should be stopped early.
-Subsequently, the experiment driver provides a new trial to the Spark
-executor.
+To accomodate asynchronous algorithms, support for communication between the
+Driver and Executors via RPCs added. The Optimizer that guides hyperparameter
+search is located on the Driver and it assigns trials to Executors. Executors
+periodically send back to the Driver the current performance of their trial,
+and the Optimizer can decide to early-stop its ongoing trial, followed by
+sending the Executor with a new trial.
 
 Quick Start
 -----------
@@ -31,8 +30,8 @@ To Install:
 
 >>> pip install maggy
 
-The programming model is that you wrap the code containing the model training
-inside a wrapper function. Inside that wrapper function provide all imports and
+The programming model consists of wrapping the code containing the model training
+inside a function. Inside that wrapper function provide all imports and
 parts that make up your experiment.
 
 There are three requirements for this wrapper function:
@@ -94,4 +93,12 @@ see the Jupyter Notebook in the `examples` folder.
 Documentation
 -------------
 
+Read our `blog post <https://www.logicalclocks.com/blog/scaling-machine-learning-and-deep-learning-with-pyspark-on-hopsworks>` for more details.
 API documentation is available `here <https://maggy.readthedocs.io/en/latest/>`_.
+
+.. |Downloads| image:: https://pepy.tech/badge/maggy
+   :target: https://pepy.tech/project/maggy
+.. |PypiStatus| image:: https://img.shields.io/pypi/v/maggy.svg
+    :target: https://pypi.org/project/hops
+.. |PythonVersions| image:: https://img.shields.io/pypi/pyversions/maggy.svg
+    :target: https://pypi.org/project/hops
