@@ -1,7 +1,7 @@
 Maggy
 =====
 
-|Downloads| |PypiStatus| |PythonVersions|
+|Downloads| |PypiStatus| |PythonVersions| |License|
 
 
 Maggy is a framework for efficient asynchronous optimization of expensive
@@ -93,12 +93,16 @@ see the Jupyter Notebook in the `examples` folder.
 Documentation
 -------------
 
-Read our `blog post <https://www.logicalclocks.com/blog/scaling-machine-learning-and-deep-learning-with-pyspark-on-hopsworks>` for more details.
+Read our `blog post <https://www.logicalclocks.com/blog/scaling-machine-learning-and-deep-learning-with-pyspark-on-hopsworks>`_ for more details.
 API documentation is available `here <https://maggy.readthedocs.io/en/latest/>`_.
 
-.. |Downloads| image:: https://pepy.tech/badge/maggy
+.. |Downloads| image:: https://pepy.tech/badge/maggy/month
    :target: https://pepy.tech/project/maggy
-.. |PypiStatus| image:: https://img.shields.io/pypi/v/maggy.svg
+.. |PypiStatus| image:: https://img.shields.io/pypi/v/maggy?color=blue
     :target: https://pypi.org/project/hops
 .. |PythonVersions| image:: https://img.shields.io/pypi/pyversions/maggy.svg
     :target: https://pypi.org/project/hops
+.. |License| image:: https://img.shields.io/pypi/l/maggy?color=blue
+    :target: https://pypi.org/project/hops
+.. |Docs| image:: https://img.shields.io/readthedocs/maggy
+    :target: https://maggy.readthedocs.io/en/latest/
