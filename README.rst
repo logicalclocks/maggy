@@ -17,11 +17,11 @@ Moreover, it provides a developer API that allows advanced usage by
 implementing custom optimization algorithms and early stopping criteria.
 
 To accomodate asynchronous algorithms, support for communication between the
-Driver and Executors via RPCs added. The Optimizer that guides hyperparameter
-search is located on the Driver and it assigns trials to Executors. Executors
-periodically send back to the Driver the current performance of their trial,
-and the Optimizer can decide to early-stop its ongoing trial, followed by
-sending the Executor with a new trial.
+Driver and Executors via RPCs was added. The Optimizer that guides
+hyperparameter search is located on the Driver and it assigns trials to
+Executors. Executors periodically send back to the Driver the current
+performance of their trial, and the Optimizer can decide to early-stop its
+ongoing trial, followed by sending the Executor with a new trial.
 
 Quick Start
 -----------
@@ -94,6 +94,7 @@ Documentation
 -------------
 
 Read our `blog post <https://www.logicalclocks.com/blog/scaling-machine-learning-and-deep-learning-with-pyspark-on-hopsworks>`_ for more details.
+
 API documentation is available `here <https://maggy.readthedocs.io/en/latest/>`_.
 
 .. |Downloads| image:: https://pepy.tech/badge/maggy/month
