@@ -31,7 +31,7 @@ setup(
     },
     author='Moritz Meister',
     author_email='meister.mo@gmail.com',
-    description='',
+    description='Efficient asynchronous optimization of expensive black-box functions on top of Apache Spark',
     license='GNU Affero General Public License v3',
     keywords='Hyperparameter, Optimization, Auto-ML, Hops, Hadoop, TensorFlow, Spark',
     url='https://github.com/logicalclocks/maggy',
