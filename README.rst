@@ -18,11 +18,11 @@ Moreover, it provides a developer API that allows advanced usage by
 implementing custom optimization algorithms and early stopping criteria.
 
 To accomodate asynchronous algorithms, support for communication between the
-Driver and Executors via RPCs was added. The Optimizer that guides
+Driver and Executors via RPCs through Maggy was added. The Optimizer that guides
 hyperparameter search is located on the Driver and it assigns trials to
 Executors. Executors periodically send back to the Driver the current
-performance of their trial, and the Optimizer can decide to early-stop its
-ongoing trial, followed by sending the Executor with a new trial.
+performance of their trial, and the Optimizer can decide to early-stop any
+ongoing trial and send the Executor a new trial instead.
 
 Quick Start
 -----------
