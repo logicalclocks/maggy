@@ -329,7 +329,6 @@ class Server(MessageSocket):
             app_id = str(sc.applicationId)
 
             method = hopsconstants.HTTP_CONFIG.HTTP_POST
-            connection = hopsutil._get_http_connection(https=True)
             resource_url = hopsconstants.DELIMITERS.SLASH_DELIMITER + \
                         hopsconstants.REST_CONFIG.HOPSWORKS_REST_RESOURCE + hopsconstants.DELIMITERS.SLASH_DELIMITER + \
                         "maggy" + hopsconstants.DELIMITERS.SLASH_DELIMITER + "drivers"
@@ -341,8 +340,9 @@ class Server(MessageSocket):
             headers = {hopsconstants.HTTP_CONFIG.HTTP_CONTENT_TYPE: hopsconstants.HTTP_CONFIG.HTTP_APPLICATION_JSON}
 
             try:
-                response = hopsutil.send_request(connection, method, resource_url, body=json_embeddable, headers=headers)
-                if (response.status != 200):
+                response = hopsutil.send_request(method, resource_url, data=json_embeddable, headers=headers)
+
+                if (response.status_code // 100) != 2:
                     print("No connection to Hopsworks for logging.")
                     exp_driver._log("No connection to Hopsworks for logging.")
             except Exception as e:
