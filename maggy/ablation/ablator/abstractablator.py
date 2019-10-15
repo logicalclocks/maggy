@@ -13,6 +13,7 @@ class AbstractAblator(ABC):
         """
         If applicable, calculate and return the total number of trials of the ablation experiment.
         Make sure to also include the base (reference) trial in the count.
+
         :return: total number of trials of the ablation study experiment
         :rtype: int
         """
@@ -25,7 +26,7 @@ class AbstractAblator(ABC):
         The returned function will be executed on the executor per each trial.
 
         :param ablated_feature: the name of the feature to be excluded from the training dataset.
-        Must match a feature name in the corresponding feature group in the feature store.
+            Must match a feature name in the corresponding feature group in the feature store.
         :type ablated_feature: str
         :param dataset_type: type of the dataset. For now, we only support 'tfrecord'.
         :return: A function that generates a TFRecordDataset
@@ -53,6 +54,7 @@ class AbstractAblator(ABC):
         The trial should contain a dataset generator and a model generator.
         Depending on the ablator policy, the trials could come from a list (buffer) of pre-made trials,
         or generated on the fly.
+
         :rtype: `Trial` or `None`
         """
         pass

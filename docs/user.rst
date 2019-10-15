@@ -23,3 +23,11 @@ maggy.callbacks module
 
 .. autoclass:: maggy.callbacks.KerasEpochEnd
     :members:
+
+maggy.ablation module
+---------------------
+
+.. autoclass:: maggy.ablation.AblationStudy
+    :members:
+
+    .. automethod:: __init__

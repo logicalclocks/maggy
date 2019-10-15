@@ -15,7 +15,8 @@ from maggy.trial import Trial
 from maggy.earlystop import AbstractEarlyStop, MedianStoppingRule, NoStoppingRule
 from maggy.searchspace import Searchspace
 
-from maggy.ablation.ablator import AbstractAblator, LOCO
+from maggy.ablation.ablator import AbstractAblator
+from maggy.ablation.ablator.loco import LOCO
 from maggy.ablation.ablationstudy import AblationStudy
 
 from hops import constants as hopsconstants
