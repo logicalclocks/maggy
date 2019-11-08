@@ -88,6 +88,7 @@ def lagom(map_fun, name='no-name',
         global elastic_id
         global run_id
         running = True
+        exp_driver = None
 
         sc = hopsutil._find_spark().sparkContext
         app_id = str(sc.applicationId)
