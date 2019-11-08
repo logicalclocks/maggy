@@ -29,7 +29,7 @@ elastic_id = 1
 experiment_json = None
 
 
-def lagom(map_fun, name,
+def lagom(map_fun, name='no-name',
           experiment_type='optimization', hb_interval=1,
           num_trials=None, searchspace=None, optimizer=None, direction=None,
           ablation_study=None, ablator=None,
@@ -88,6 +88,7 @@ def lagom(map_fun, name,
         global elastic_id
         global run_id
         running = True
+        exp_driver = None
 
         sc = hopsutil._find_spark().sparkContext
         app_id = str(sc.applicationId)
@@ -174,7 +175,8 @@ def lagom(map_fun, name,
         # sparkmagic hb poll intervall is 5 seconds, therefore wait 6 seconds
         time.sleep(6)
         # cleanup spark jobs
-        exp_driver.stop()
+        if running and exp_driver is not None:
+            exp_driver.stop()
         elastic_id += 1
         running = False
         sc.setJobGroup("", "")
