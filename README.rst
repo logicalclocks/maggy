@@ -10,6 +10,8 @@ maggy is not bound to stage based optimization algorithms and therefore it is
 able to make extensive use of early stopping in order to achieve efficient
 resource utilization.
 
+For a video describing Maggy, see [this talk at the Spark/AI Summit](https://www.youtube.com/watch?v=0Hd1iYEL03w).
+
 Right now, maggy supports asynchronous hyperparameter tuning of machine
 learning and deep learning models, and ablation studies on neural network
 layers as well as input features.
