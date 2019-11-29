@@ -9,8 +9,26 @@ class AblationStudy(object):
     >>> ablation_study = AblationStudy('titanic_train_dataset',
     >>>     label_name='survived')
 
-    Define your study by including layers and features, which should be
-    ablated:
+    The above code will create an `AblationStudy` instance with a default
+    dataset generator function, which uses the project feature store to
+    return a `TFRecordDataset` based on the feature ablation configuration
+    (for an example, look at `ablator.LOCO.get_dataset_generator()`).
+    If you want to provide your own dataset generator function,
+    define it before creating the `AblationStudy` instance and pass it to
+    the initializer. In the example below we assume the user has created
+    a function called `create_tf_dataset()` that returns a `TFRecordDataset`:
+
+    >>> ablation_study = AblationStudy('titanic_train_dataset',
+            label_name='survived', dataset_generator=create_tf_dataset)
+
+    In case you want to perform feature ablation with your custom dataset
+    generator function, then of course your function should be able to return
+    specific datasets based on the feature ablation configuration.
+    For an example implementation of such logic, look at
+    `ablator.LOCO.get_dataset_generator()`.
+
+    After creating your `AblationStudy` instance, you should define your study
+    configuration by including layers and features that you want to be ablated:
 
     >>> ablation_study.features.include('pclass', 'fare')
     >>> ablation_study.model.layers.include('my_dense_two',
@@ -46,9 +64,8 @@ class AblationStudy(object):
     Last but not least you can define your actual training function:
 
     >>> from maggy import experiment
-    >>> from maggy.callbacks import KerasBatchEnd
     ​
-    >>> def training_function(dataset_function, model_function, reporter):
+    >>> def training_function(dataset_function, model_function):
     >>>     import tensorflow as tf
     >>>     epochs = 5
     >>>     batch_size = 10
@@ -57,9 +74,8 @@ class AblationStudy(object):
     >>>     model.compile(optimizer=tf.train.AdamOptimizer(0.001),
     >>>             loss='binary_crossentropy',
     >>>             metrics=['accuracy'])
-    >>>     ### Maggy REPORTER
-    >>>     callbacks = [KerasBatchEnd(reporter, metric='acc')]
-    >>>     history = model.fit(tf_dataset, epochs=5, steps_per_epoch=30)
+
+    >>>     history = model.fit(tf_dataset, epochs=epochs, steps_per_epoch=30)
     >>>     return float(history.history['acc'][-1])
 
     Lagom the experiment:
@@ -68,8 +84,7 @@ class AblationStudy(object):
     >>>                         experiment_type='ablation',
     >>>                         ablation_study=ablation_study,
     >>>                         ablator='loco',
-    >>>                         name='Titanic-LOCO',
-    >>>                         hb_interval=5)
+    >>>                         name='Titanic-LOCO')
     """
 
     def __init__(
