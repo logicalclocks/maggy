@@ -17,7 +17,7 @@ from hops.experiment_impl.util import experiment_utils
 
 from maggy import util
 from maggy.optimizer import AbstractOptimizer, RandomSearch, Asha, SingleRun
-from maggy.core import rpc
+from maggy.core import rpc, exceptions
 from maggy.trial import Trial
 from maggy.earlystop import AbstractEarlyStop, MedianStoppingRule, \
     NoStoppingRule
@@ -210,7 +210,7 @@ class ExperimentDriver(object):
         self.log_lock = threading.RLock()
         self.log_file = kwargs.get('log_dir') + '/maggy.log'
         self.log_dir = kwargs.get('log_dir')
-        self.worker_exception = None
+        self.exception = None
 
     # Open File desc for HDFS to log
         if not hopshdfs.exists(self.log_file):
@@ -407,12 +407,11 @@ class ExperimentDriver(object):
                                 self.server.reservations.assign_trial(
                                     msg['partition_id'], trial.trial_id)
                                 self.add_trial(trial)
-            except Exception as worker_exception:
+            except Exception as exc:
                 # Exception can't be propagated to parent thread
                 # therefore log the exception and fail experiment
-                self._log('Worker Exception')
-                self._log(worker_exception)
-                self.worker_exception = worker_exception
+                self._log(exc)
+                self.exception = exc
                 self.server.stop()
 
 
@@ -426,9 +425,6 @@ class ExperimentDriver(object):
         self.server.stop()
         self.fd.flush()
         self.fd.close()
-        if self.worker_exception:
-            raise Exception(
-                "Worker: {}".format(self.worker_exception))
 
     def json(self, sc):
         """Get all relevant experiment information in JSON format.

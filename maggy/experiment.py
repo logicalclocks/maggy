@@ -17,7 +17,7 @@ from hops import util as hopsutil
 from hops.experiment_impl.util import experiment_utils
 
 from maggy import util, tensorboard
-from maggy.core import trialexecutor, ExperimentDriver
+from maggy.core import trialexecutor, ExperimentDriver, exceptions
 
 app_id = None
 running = False
@@ -202,6 +202,9 @@ def lagom(
     except:
         _exception_handler(experiment_utils._seconds_to_milliseconds(
             time.time() - job_start))
+        if exp_driver.exception:
+            raise exceptions.ExperimentDriverException(
+                exp_driver.exception)
         raise
     finally:
         # grace period to send last logs to sparkmagic
@@ -227,7 +230,7 @@ def _exception_handler(duration):
         global running
         global experiment_json
         if running and experiment_json is not None:
-            experiment_json['status'] = "FAILED"
+            experiment_json['state'] = "FAILED"
             experiment_json['duration'] = duration
             experiment_utils._attach_experiment_xattr(
                 app_id, run_id, experiment_json, 'REPLACE')

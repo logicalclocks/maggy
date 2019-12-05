@@ -1,18 +1,17 @@
-import builtins as __builtin__
+"""
+Module to produce the wrapper function to be executed by the executors.
+"""
 
-import socket
-import time
+import builtins as __builtin__
 import inspect
 import json
-
-from maggy import util, tensorboard, constants, trial
-from maggy.core import rpc, exceptions, config
-from maggy.core.reporter import Reporter
-from pyspark import TaskContext
 
 from hops import hdfs as hopshdfs
 from hops.experiment_impl.util import experiment_utils
 
+from maggy import util, tensorboard
+from maggy.core import rpc, exceptions
+from maggy.core.reporter import Reporter
 
 def _prepare_func(
         app_id, run_id, experiment_type, map_fun, server_addr, hb_interval,
@@ -98,7 +97,6 @@ def _prepare_func(
 
                     sig = inspect.signature(map_fun)
                     if sig.parameters.get('reporter', None):
-                        #TODO if killed by user, it might be that retval is not assigned and experiments will show running
                         retval = map_fun(**parameters, reporter=reporter)
                     else:
                         retval = map_fun(**parameters)
@@ -123,10 +121,10 @@ def _prepare_func(
                 except exceptions.EarlyStopException as e:
                     retval = e.metric
                     reporter.log("Early Stopped Trial.", False)
-                finally:
-                    client.finalize_metric(retval, reporter)
-                    reporter.log("Finished Trial: {}".format(trial_id), False)
-                    reporter.log("Final Metric: {}".format(retval), False)
+
+                client.finalize_metric(retval, reporter)
+                reporter.log("Finished Trial: {}".format(trial_id), False)
+                reporter.log("Final Metric: {}".format(retval), False)
 
                 # blocking
                 trial_id, parameters = client.get_suggestion()
