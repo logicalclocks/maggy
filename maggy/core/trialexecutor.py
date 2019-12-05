@@ -13,12 +13,6 @@ from pyspark import TaskContext
 from hops import hdfs as hopshdfs
 from hops.experiment_impl.util import experiment_utils
 
-__import__("tensorflow").compat.v1.enable_eager_execution()
-import tensorflow.compat.v2 as tf
-from tensorboard.plugins.hparams import api_pb2
-from tensorboard.plugins.hparams import summary
-from tensorboard.plugins.hparams import summary_v2
-
 
 def _prepare_func(
         app_id, run_id, experiment_type, map_fun, server_addr, hb_interval,
@@ -55,10 +49,6 @@ def _prepare_func(
 
         # override the builtin print
         __builtin__.print = maggy_print
-
-        # override HParams id with our trial id
-        # 1.15.0 will have functionality to pass custom id
-        summary_v2._derive_session_group_name = trial.Trial._generate_id
 
         try:
             client_addr = client.client_addr
@@ -100,14 +90,11 @@ def _prepare_func(
                 tensorboard._register(tb_logdir)
                 hopshdfs.dump(json.dumps(parameters, default=util.json_default_numpy), tb_logdir + '/.hparams.json')
 
-                _writer = tf.summary.create_file_writer(tb_logdir)
-
                 try:
                     reporter.log("Starting Trial: {}".format(trial_id), False)
                     reporter.log("Trial Configuration: {}".format(parameters), False)
 
-                    with _writer.as_default():
-                        summary_v2.hparams(parameters)
+                    tensorboard._write_hparams(parameters)
 
                     sig = inspect.signature(map_fun)
                     if sig.parameters.get('reporter', None):
@@ -116,11 +103,7 @@ def _prepare_func(
                     else:
                         retval = map_fun(**parameters)
 
-                    with _writer.as_default():
-                        pb = summary.session_end_pb(api_pb2.STATUS_SUCCESS)
-                        raw_pb = pb.SerializeToString()
-                        tf.summary.experimental.write_raw_pb(raw_pb, step=0)
-                    _writer = None
+                    tensorboard._write_session_end()
 
                     experiment_utils._handle_return(retval, tb_logdir, optimization_key)
 

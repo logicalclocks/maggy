@@ -111,7 +111,7 @@ def lagom(
             app_id, run_id)
 
         tensorboard._register(experiment_utils._get_logdir(app_id, run_id))
-        tensorboard.write_hparams_config(
+        tensorboard._write_hparams_config(
             experiment_utils._get_logdir(app_id, run_id), searchspace)
 
         num_executors = util.num_executors(sc)
