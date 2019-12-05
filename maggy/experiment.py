@@ -17,7 +17,7 @@ from hops import util as hopsutil
 from hops.experiment_impl.util import experiment_utils
 
 from maggy import util, tensorboard
-from maggy.core import trialexecutor, ExperimentDriver, exceptions
+from maggy.core import trialexecutor, ExperimentDriver
 
 app_id = None
 running = False

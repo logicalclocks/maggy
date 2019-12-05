@@ -18,6 +18,3 @@ class NotSupportedError(Exception):
         self.message = "({0}: {1}) is not supported by Maggy.{2}".format(
             category, value, suggestion)
         super().__init__(self.message)
-
-class ExperimentDriverException(Exception):
-    """Raised when the experiment driver fails due to an internal error."""

@@ -17,7 +17,7 @@ from hops.experiment_impl.util import experiment_utils
 
 from maggy import util
 from maggy.optimizer import AbstractOptimizer, RandomSearch, Asha, SingleRun
-from maggy.core import rpc, exceptions
+from maggy.core import rpc
 from maggy.trial import Trial
 from maggy.earlystop import AbstractEarlyStop, MedianStoppingRule, \
     NoStoppingRule
