@@ -203,8 +203,7 @@ def lagom(
         _exception_handler(experiment_utils._seconds_to_milliseconds(
             time.time() - job_start))
         if exp_driver.exception:
-            raise exceptions.ExperimentDriverException(
-                exp_driver.exception)
+            raise exp_driver.exception
         raise
     finally:
         # grace period to send last logs to sparkmagic
