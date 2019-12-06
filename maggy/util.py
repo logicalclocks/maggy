@@ -7,6 +7,9 @@ from hops import util as hopsutil
 from hops import hdfs as hopshdfs
 from hops.experiment_impl.util import experiment_utils
 
+from maggy import constants
+from maggy.core import exceptions
+
 DEBUG = True
 
 
@@ -137,7 +140,8 @@ def _build_summary_json(logdir):
                 combinations.append(
                     {'parameters': hparams_dict, 'metrics': metric_arr})
 
-    return json.dumps({'combinations': combinations})
+    return json.dumps(
+        {'combinations': combinations}, default=json_default_numpy)
 
 def _load_hparams(hparams_file):
     """[summary]
@@ -151,3 +155,41 @@ def _load_hparams(hparams_file):
     hparams = json.loads(hparams_file_contents)
 
     return hparams
+
+def _handle_return_val(return_val, log_dir, optimization_key, log_file):
+    experiment_utils._upload_file_output(return_val, log_dir)
+
+    # Return type validation
+    if not optimization_key:
+        raise ValueError("Optimization key cannot be None.")
+    if not return_val:
+        raise exceptions.ReturnTypeError(optimization_key, return_val)
+    if not isinstance(return_val, constants.USER_FCT.RETURN_TYPES):
+        raise exceptions.ReturnTypeError(optimization_key, return_val)
+    if isinstance(return_val, dict) and optimization_key not in return_val:
+        raise KeyError(
+            "Returned dictionary does not contain optimization key with the "
+            "provided name: {}".format(optimization_key))
+
+    # validate that optimization metric is numeric
+    if isinstance(return_val, dict):
+        opt_val = return_val[optimization_key]
+    else:
+        opt_val = return_val
+        return_val = {optimization_key: opt_val}
+
+    if not isinstance(opt_val, constants.USER_FCT.NUMERIC_TYPES):
+        raise exceptions.MetricTypeError(optimization_key, opt_val)
+
+    #for key, value in return_val.items():
+    #    return_val[key] = value if isinstance(value, str) else str(value)
+
+    return_val['log'] = log_file
+
+    return_file = log_dir + '/.return.json'
+    hopshdfs.dump(json.dumps(return_val, default=json_default_numpy), return_file)
+
+    metric_file = log_dir + '/.metric'
+    hopshdfs.dump(json.dumps(opt_val, default=json_default_numpy), metric_file)
+
+    return opt_val

@@ -9,7 +9,6 @@ invoked it is also registered in the Experiments service along with the
 provided information.
 """
 import os
-import json
 import atexit
 import time
 
@@ -97,7 +96,7 @@ def lagom(
     try:
         global app_id
         global experiment_json
-        #TODO check if another experiment/run exists form same appid
+        #TODO check if another experiment exists from appid, eg hops-util-py
         global run_id
         app_id = str(sc.applicationId)
 
@@ -175,8 +174,6 @@ def lagom(
         server_addr = exp_driver.server_addr
 
         # Force execution on executor, since GPU is located on executor
-        # TODO: should return logdir, best_param, best_metric, return_dict
-        # logdir is bestLogdir
         nodeRDD.foreachPartition(
             trialexecutor._prepare_func(
                 app_id, run_id, experiment_type, map_fun, server_addr,
@@ -188,7 +185,8 @@ def lagom(
         best_logdir = experiment_utils._get_logdir(app_id, run_id) + \
             '/' + result['best_id']
 
-        # TODO: change the casting of best_val
+        # TODO: change the casting of best_val: robin fixed it in the json dump
+        # hence can be removed later
         util._finalize_experiment(
             experiment_json, float(result['best_val']), app_id, run_id,
             'FINISHED', exp_driver.duration,
@@ -197,6 +195,8 @@ def lagom(
 
         util._log("Finished Experiment")
 
+        # TODO: TBD return same way as hops-util-py or keep dict with more
+        # info? return object?
         return result
 
     except:

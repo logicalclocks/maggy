@@ -103,20 +103,8 @@ def _prepare_func(
 
                     tensorboard._write_session_end()
 
-                    experiment_utils._handle_return(retval, tb_logdir, optimization_key)
-
-                    # Make sure user function returns a numeric value
-                    #if retval is None:
-                    #    reporter.log(
-                    #        "ERROR: Training function can't return None", False)
-                    #    raise Exception("Training function can't return None")
-                    #elif not isinstance(retval, constants.USER_FCT.RETURN_TYPES):
-                    #    reporter.log(
-                    #        "ERROR: Training function returns non numeric value: {}"
-                    #        .format(type(retval)), False)
-                    #    raise Exception(
-                    #        "ERROR: Training function returns non numeric value: {}"
-                    #        .format(type(retval)))
+                    retval = util._handle_return_val(
+                        retval, tb_logdir, optimization_key, log_file)
 
                 except exceptions.EarlyStopException as e:
                     retval = e.metric
