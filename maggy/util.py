@@ -131,7 +131,7 @@ def _build_summary_json(logdir):
 
     for trial in hopshdfs.ls(logdir):
         if hopshdfs.isdir(trial):
-            return_file = trial + '/.return.json'
+            return_file = trial + '/.outputs.json'
             hparams_file = trial + '/.hparams.json'
             if hopshdfs.exists(return_file) and hopshdfs.exists(hparams_file):
                 metric_arr = experiment_utils._convert_return_file_to_arr(
@@ -186,7 +186,7 @@ def _handle_return_val(return_val, log_dir, optimization_key, log_file):
 
     return_val['log'] = log_file
 
-    return_file = log_dir + '/.return.json'
+    return_file = log_dir + '/.outputs.json'
     hopshdfs.dump(json.dumps(return_val, default=json_default_numpy), return_file)
 
     metric_file = log_dir + '/.metric'
