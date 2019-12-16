@@ -95,7 +95,6 @@ class Reporter(object):
             self.trial_id = None
             self.fd.flush()
             self.trial_fd.flush()
-            self.fd.close()
             self.trial_fd.close()
             self.trial_fd = None
             self.trial_log_file = None
