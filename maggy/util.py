@@ -193,3 +193,14 @@ def _handle_return_val(return_val, log_dir, optimization_key, log_file):
     hopshdfs.dump(json.dumps(opt_val, default=json_default_numpy), metric_file)
 
     return opt_val
+
+def _clean_dir(clean_dir, keep=[]):
+    """Deletes all files in a directory but keeps a few.
+    """
+    if not hopshdfs.isdir(clean_dir):
+        raise ValueError(
+            "{} is not a directory. Use `hops.hdfs.delete()` to delete single "
+            "files.".format(clean_dir))
+    for path in hopshdfs.ls(clean_dir):
+        if path not in keep:
+            hopshdfs.delete(path, recursive=True)

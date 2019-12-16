@@ -14,17 +14,19 @@ class Reporter(object):
     Thread-safe store for sending a metric and logs from executor to driver
     """
 
-    def __init__(self, log_file, partition_id, task_attempt, print_executor):
+    def __init__(self, partition_id, task_attempt, print_executor):
         self.metric = None
         self.lock = threading.RLock()
         self.stop = False
         self.trial_id = None
         self.logs = ''
-        self.log_file = log_file
+        self.log_file = None
         self.partition_id = partition_id
         self.task_attempt = task_attempt
         self.print_executor = print_executor
 
+    def init_logger(self, log_file):
+        self.log_file = log_file
         #Open File desc for HDFS to log
         if not hopshdfs.exists(log_file):
             hopshdfs.dump('', log_file)
@@ -82,6 +84,9 @@ class Reporter(object):
             self.stop = False
             self.trial_id = None
             self.fd.flush()
+            self.fd.close()
+            self.fd = None
+            self.log_file = None
 
     def early_stop(self):
         with self.lock:

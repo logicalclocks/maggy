@@ -34,12 +34,11 @@ def _prepare_func(
 
         client = rpc.Client(server_addr, partition_id,
                             task_attempt, hb_interval, secret)
-        log_file = log_dir + '/executor_' + str(partition_id) + '_' + str(task_attempt) + '.log'
 
         # save the builtin print
         original_print = __builtin__.print
 
-        reporter = Reporter(log_file, partition_id, task_attempt, original_print)
+        reporter = Reporter(partition_id, task_attempt, original_print)
 
         def maggy_print(*args, **kwargs):
             """Maggy custom print() function."""
@@ -63,13 +62,9 @@ def _prepare_func(
             reporter.log("Registering with experiment driver", False)
             client.register(exec_spec)
 
-            # blocking
-            # _ = client.await_reservations()
-
             client.start_heartbeat(reporter)
 
             # blocking
-            # XXX separate suggestion calls for different types?
             trial_id, parameters = client.get_suggestion()
 
             while not client.done:
@@ -77,15 +72,17 @@ def _prepare_func(
                     parameters.pop('ablated_feature')
                     parameters.pop('ablated_layer')
 
+                tb_logdir = log_dir + '/' + trial_id
+                log_file = tb_logdir + '/' + trial_id + '.log'
                 reporter.set_trial_id(trial_id)
 
-                tb_logdir = log_dir + '/' + trial_id
-
-                # If trial is repeated, delete trial directory
+                # If trial is repeated, delete trial directory, except log file
                 if hopshdfs.exists(tb_logdir):
-                    hopshdfs.delete(tb_logdir, recursive=True)
+                    util._clean_dir(tb_logdir, [log_file])
+                else:
+                    hopshdfs.mkdir(tb_logdir)
 
-                hopshdfs.mkdir(tb_logdir)
+                reporter.init_logger(log_file)
                 tensorboard._register(tb_logdir)
                 hopshdfs.dump(json.dumps(parameters, default=util.json_default_numpy), tb_logdir + '/.hparams.json')
 
