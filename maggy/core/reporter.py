@@ -71,7 +71,8 @@ class Reporter(object):
                 self.logs = self.logs + jupyter_log + '\n'
             else:
                 self.fd.write(msg.encode())
-                self.trial_fd.write(msg.encode())
+                if self.trial_fd:
+                    self.trial_fd.write(msg.encode())
                 self.print_executor(msg)
 
     def get_data(self):
