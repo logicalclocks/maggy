@@ -14,23 +14,30 @@ class Reporter(object):
     Thread-safe store for sending a metric and logs from executor to driver
     """
 
-    def __init__(self, partition_id, task_attempt, print_executor):
+    def __init__(self, log_file, partition_id, task_attempt, print_executor):
         self.metric = None
         self.lock = threading.RLock()
         self.stop = False
         self.trial_id = None
+        self.trial_log_file = None
         self.logs = ''
-        self.log_file = None
+        self.log_file = log_file
         self.partition_id = partition_id
         self.task_attempt = task_attempt
         self.print_executor = print_executor
 
-    def init_logger(self, log_file):
-        self.log_file = log_file
-        #Open File desc for HDFS to log
+        # Open executor log file descriptor
+        # This log is for all maggy system related log messages
         if not hopshdfs.exists(log_file):
             hopshdfs.dump('', log_file)
         self.fd = hopshdfs.open_file(log_file, flags='w')
+
+    def init_logger(self, trial_log_file):
+        self.trial_log_file = trial_log_file
+        # Open trial log file descriptor
+        if not hopshdfs.exists(self.trial_log_file):
+            hopshdfs.dump('', self.trial_log_file)
+        self.trial_fd = hopshdfs.open_file(self.trial_log_file, flags='w')
 
     # report
     def broadcast(self, metric):
@@ -46,7 +53,7 @@ class Reporter(object):
             if self.stop:
                 raise exceptions.EarlyStopException(metric)
 
-    def log(self, log_msg, verbose=True):
+    def log(self, log_msg, jupyter=False):
         """Logs a message to the executor logfile and executor stderr and
         optionally prints the message in jupyter.
 
@@ -56,14 +63,15 @@ class Reporter(object):
         :type verbose: bool, optional
         """
         with self.lock:
-            msg = datetime.now().isoformat() + \
-                ' (' + str(self.partition_id) + '/' + \
-                str(self.task_attempt) + '): ' + str(log_msg)
-            self.fd.write((msg + '\n').encode())
-            jupyter_log = str(self.partition_id) + ': ' + log_msg
-            if verbose:
+            msg = ((datetime.now().isoformat() + ' ({1}/{2}): {3} \n')
+                .format(self.partition_id, self.task_attempt, log_msg))
+            if jupyter:
+                jupyter_log = str(self.partition_id) + ': ' + log_msg
+                self.trial_fd.write(msg.encode())
                 self.logs = self.logs + jupyter_log + '\n'
             else:
+                self.fd.write(msg.encode())
+                self.trial_fd.write(msg.encode())
                 self.print_executor(msg)
 
     def get_data(self):
@@ -84,9 +92,11 @@ class Reporter(object):
             self.stop = False
             self.trial_id = None
             self.fd.flush()
+            self.trial_fd.flush()
             self.fd.close()
-            self.fd = None
-            self.log_file = None
+            self.trial_fd.close()
+            self.trial_fd = None
+            self.trial_log_file = None
 
     def early_stop(self):
         with self.lock:

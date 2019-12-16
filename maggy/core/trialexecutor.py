@@ -34,16 +34,17 @@ def _prepare_func(
 
         client = rpc.Client(server_addr, partition_id,
                             task_attempt, hb_interval, secret)
+        log_file = log_dir + '/executor_' + str(partition_id) + '_' + str(task_attempt) + '.log'
 
         # save the builtin print
         original_print = __builtin__.print
 
-        reporter = Reporter(partition_id, task_attempt, original_print)
+        reporter = Reporter(log_file, partition_id, task_attempt, original_print)
 
         def maggy_print(*args, **kwargs):
             """Maggy custom print() function."""
-            reporter.log(' '.join(str(x) for x in args))
             original_print(*args, **kwargs)
+            reporter.log(' '.join(str(x) for x in args), True)
 
         # override the builtin print
         __builtin__.print = maggy_print
@@ -73,16 +74,16 @@ def _prepare_func(
                     parameters.pop('ablated_layer')
 
                 tb_logdir = log_dir + '/' + trial_id
-                log_file = tb_logdir + '/' + trial_id + '.log'
+                trial_log_file = tb_logdir + '/output.log'
                 reporter.set_trial_id(trial_id)
 
                 # If trial is repeated, delete trial directory, except log file
                 if hopshdfs.exists(tb_logdir):
-                    util._clean_dir(tb_logdir, [log_file])
+                    util._clean_dir(tb_logdir, [trial_log_file])
                 else:
                     hopshdfs.mkdir(tb_logdir)
 
-                reporter.init_logger(log_file)
+                reporter.init_logger(trial_log_file)
                 tensorboard._register(tb_logdir)
                 hopshdfs.dump(json.dumps(parameters, default=util.json_default_numpy), tb_logdir + '/.hparams.json')
 
@@ -101,7 +102,7 @@ def _prepare_func(
                     tensorboard._write_session_end()
 
                     retval = util._handle_return_val(
-                        retval, tb_logdir, optimization_key, log_file)
+                        retval, tb_logdir, optimization_key, trial_log_file)
 
                 except exceptions.EarlyStopException as e:
                     retval = e.metric
