@@ -31,6 +31,7 @@ class Reporter(object):
         if not hopshdfs.exists(log_file):
             hopshdfs.dump('', log_file)
         self.fd = hopshdfs.open_file(log_file, flags='w')
+        self.trial_fd = None
 
     def init_logger(self, trial_log_file):
         self.trial_log_file = trial_log_file
