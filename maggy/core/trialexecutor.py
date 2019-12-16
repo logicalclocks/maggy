@@ -115,14 +115,11 @@ def _prepare_func(
                 # blocking
                 trial_id, parameters = client.get_suggestion(reporter)
 
-        except:
+        except Exception as e:
+            reporter.log(e, False)
             raise
         finally:
-            if reporter.trial_fd:
-                reporter.trial_fd.flush()
-                reporter.trial_fd.close()
-            reporter.fd.flush()
-            reporter.fd.close()
+            reporter.close_logger()
             client.stop()
             client.close()
 

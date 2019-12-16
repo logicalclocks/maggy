@@ -5,9 +5,9 @@ API Module for the user to include in his training code.
 import threading
 from datetime import datetime
 
-from maggy.core import exceptions, config
-
 from hops import hdfs as hopshdfs
+
+from maggy.core import exceptions
 
 class Reporter(object):
     """
@@ -34,11 +34,24 @@ class Reporter(object):
         self.trial_fd = None
 
     def init_logger(self, trial_log_file):
+        """Initializes the trial log file
+        """
         self.trial_log_file = trial_log_file
         # Open trial log file descriptor
         if not hopshdfs.exists(self.trial_log_file):
             hopshdfs.dump('', self.trial_log_file)
         self.trial_fd = hopshdfs.open_file(self.trial_log_file, flags='w')
+
+    def close_logger(self):
+        """Savely closes the file descriptors of the log files.
+
+        close() can be called multiple times and flushes the buffer contents
+        before closing
+        """
+        with self.lock:
+            if self.trial_fd:
+                self.trial_fd.close()
+            self.fd.close()
 
     # report
     def broadcast(self, metric):
@@ -64,17 +77,24 @@ class Reporter(object):
         :type verbose: bool, optional
         """
         with self.lock:
-            msg = ((datetime.now().isoformat() + ' ({0}/{1}): {2} \n')
-                .format(self.partition_id, self.task_attempt, log_msg))
-            if jupyter:
-                jupyter_log = str(self.partition_id) + ': ' + log_msg
-                self.trial_fd.write(msg.encode())
-                self.logs = self.logs + jupyter_log + '\n'
-            else:
-                self.fd.write(msg.encode())
-                if self.trial_fd:
+            try:
+                msg = ((datetime.now().isoformat() + ' ({0}/{1}): {2} \n')
+                       .format(self.partition_id, self.task_attempt, log_msg))
+                if jupyter:
+                    jupyter_log = str(self.partition_id) + ': ' + log_msg
                     self.trial_fd.write(msg.encode())
-                self.print_executor(msg)
+                    self.logs = self.logs + jupyter_log + '\n'
+                else:
+                    self.fd.write(msg.encode())
+                    if self.trial_fd:
+                        self.trial_fd.write(msg.encode())
+                    self.print_executor(msg)
+            # Throws ValueError when operating on closed HDFS file object
+            # Throws AttributeError when calling file ops on NoneType object
+            except (IOError, ValueError, AttributeError) as e:
+                self.fd.write(
+                    ("An error occurred while writing logs: {}".format(e))
+                    .encode())
 
     def get_data(self):
         """Returns the metric and logs to be sent to the experiment driver.
@@ -94,7 +114,6 @@ class Reporter(object):
             self.stop = False
             self.trial_id = None
             self.fd.flush()
-            self.trial_fd.flush()
             self.trial_fd.close()
             self.trial_fd = None
             self.trial_log_file = None
