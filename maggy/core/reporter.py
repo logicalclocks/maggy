@@ -63,7 +63,7 @@ class Reporter(object):
         :type verbose: bool, optional
         """
         with self.lock:
-            msg = ((datetime.now().isoformat() + ' ({1}/{2}): {3} \n')
+            msg = ((datetime.now().isoformat() + ' ({0}/{1}): {2} \n')
                 .format(self.partition_id, self.task_attempt, log_msg))
             if jupyter:
                 jupyter_log = str(self.partition_id) + ': ' + log_msg
