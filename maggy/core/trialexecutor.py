@@ -5,9 +5,9 @@ Module to produce the wrapper function to be executed by the executors.
 import builtins as __builtin__
 import inspect
 import json
+import traceback
 
 from hops import hdfs as hopshdfs
-from hops.experiment_impl.util import experiment_utils
 
 from maggy import util, tensorboard
 from maggy.core import rpc, exceptions
@@ -108,15 +108,15 @@ def _prepare_func(
                     retval = e.metric
                     reporter.log("Early Stopped Trial.", False)
 
-                client.finalize_metric(retval, reporter)
                 reporter.log("Finished Trial: {}".format(trial_id), False)
                 reporter.log("Final Metric: {}".format(retval), False)
+                client.finalize_metric(retval, reporter)
 
                 # blocking
                 trial_id, parameters = client.get_suggestion(reporter)
 
-        except Exception as e:
-            reporter.log(e, False)
+        except:
+            reporter.log(traceback.format_exc(), False)
             raise
         finally:
             reporter.close_logger()
