@@ -66,7 +66,7 @@ def _prepare_func(
             client.start_heartbeat(reporter)
 
             # blocking
-            trial_id, parameters = client.get_suggestion()
+            trial_id, parameters = client.get_suggestion(reporter)
 
             while not client.done:
                 if experiment_type == 'ablation':
@@ -113,7 +113,7 @@ def _prepare_func(
                 reporter.log("Final Metric: {}".format(retval), False)
 
                 # blocking
-                trial_id, parameters = client.get_suggestion()
+                trial_id, parameters = client.get_suggestion(reporter)
 
         except:
             reporter.fd.close()

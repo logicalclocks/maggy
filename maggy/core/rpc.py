@@ -507,11 +507,11 @@ class Client(MessageSocket):
 
         reporter.log("Started metric heartbeat", False)
 
-    def get_suggestion(self):
+    def get_suggestion(self, reporter):
         """Blocking call to get new parameter combination."""
         while not self.done:
             resp = self._request(self.sock, 'GET')
-            trial_id, parameters = self._handle_message(resp) or (None, None)
+            trial_id, parameters = self._handle_message(resp, reporter) or (None, None)
 
             if trial_id is not None:
                 break
@@ -539,12 +539,12 @@ class Client(MessageSocket):
         if msg_type == 'STOP':
             reporter.early_stop()
         elif msg_type == 'GSTOP':
-            print("Stopping experiment")
+            reporter.log("Stopping experiment", False)
             self.done = True
         elif msg_type == 'TRIAL':
             return msg['trial_id'], msg['data']
         elif msg_type == 'ERR':
-            print("Stopping experiment")
+            reporter.log("Stopping experiment", False)
             self.done = True
 
     def finalize_metric(self, metric, reporter):
