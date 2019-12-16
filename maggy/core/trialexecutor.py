@@ -116,9 +116,12 @@ def _prepare_func(
                 trial_id, parameters = client.get_suggestion(reporter)
 
         except:
-            reporter.fd.close()
             raise
         finally:
+            if reporter.trial_fd:
+                reporter.trial_fd.flush()
+                reporter.trial_fd.close()
+            reporter.fd.flush()
             reporter.fd.close()
             client.stop()
             client.close()
