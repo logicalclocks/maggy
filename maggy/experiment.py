@@ -92,6 +92,7 @@ def lagom(
 
     job_start = time.time()
     sc = hopsutil._find_spark().sparkContext
+    exp_driver = None
 
     try:
         global app_id
@@ -99,11 +100,10 @@ def lagom(
         global run_id
         app_id = str(sc.applicationId)
 
-        app_id, run_id = util.validate_ml_id(app_id, run_id)
+        app_id, run_id = util._validate_ml_id(app_id, run_id)
 
          # start run
         running = True
-        exp_driver = None
         experiment_utils._set_ml_id(app_id, run_id)
 
         versioned_path = experiment_utils._setup_experiment(
@@ -203,8 +203,9 @@ def lagom(
     except:
         _exception_handler(experiment_utils._seconds_to_milliseconds(
             time.time() - job_start))
-        if exp_driver.exception:
-            raise exp_driver.exception
+        if exp_driver:
+            if exp_driver.exception:
+                raise exp_driver.exception
         raise
     finally:
         # grace period to send last logs to sparkmagic
