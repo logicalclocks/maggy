@@ -154,7 +154,6 @@ def lagom(
 
         # Do provenance after initializing exp_driver, because exp_driver does
         # the type checks for optimizer and searchspace
-        # Make SparkUI intuitive by grouping jobs
         sc.setJobGroup(
             os.environ['ML_ID'], "{0} | {1}"
             .format(name, exp_driver.optimizer.name()))
@@ -186,8 +185,6 @@ def lagom(
         best_logdir = experiment_utils._get_logdir(app_id, run_id) + \
             '/' + result['best_id']
 
-        # TODO: change the casting of best_val: robin fixed it in the json dump
-        # hence can be removed later
         util._finalize_experiment(
             experiment_json, float(result['best_val']), app_id, run_id,
             'FINISHED', exp_driver.duration,
@@ -196,8 +193,6 @@ def lagom(
 
         util._log("Finished Experiment")
 
-        # TODO: TBD return same way as hops-util-py or keep dict with more
-        # info? return object?
         return result
 
     except:

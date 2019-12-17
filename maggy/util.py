@@ -1,3 +1,5 @@
+"""Utility helper module for maggy experiments.
+"""
 import math
 import os
 import json
@@ -87,30 +89,8 @@ def json_default_numpy(obj):
 def _finalize_experiment(
         experiment_json, metric, app_id, run_id, state, duration, logdir,
         best_logdir, optimization_key):
-    """[summary]
-
-    :param experiment_json: [description]
-    :type experiment_json: [type]
-    :param metric: [description]
-    :type metric: [type]
-    :param app_id: [description]
-    :type app_id: [type]
-    :param run_id: [description]
-    :type run_id: [type]
-    :param state: [description]
-    :type state: [type]
-    :param duration: [description]
-    :type duration: [type]
-    :param logdir: [description]
-    :type logdir: [type]
-    :param best_logdir: [description]
-    :type best_logdir: [type]
-    :param optimization_key: [description]
-    :type optimization_key: [type]
-    :return: [description]
-    :rtype: [type]
+    """Attaches the experiment outcome as xattr metadata to the app directory.
     """
-
     outputs = _build_summary_json(logdir)
 
     if outputs:
@@ -127,7 +107,8 @@ def _finalize_experiment(
         app_id, run_id, experiment_json, 'REPLACE')
 
 def _build_summary_json(logdir):
-
+    """Builds the summary json to be read by the experiments service.
+    """
     combinations = []
 
     for trial in hopshdfs.ls(logdir):
@@ -145,12 +126,7 @@ def _build_summary_json(logdir):
         {'combinations': combinations}, default=json_default_numpy)
 
 def _load_hparams(hparams_file):
-    """[summary]
-
-    :param hparams_file: [description]
-    :type hparams_file: [type]
-    :return: [description]
-    :rtype: [type]
+    """Loads the HParams configuration from a hparams file of a trial.
     """
     hparams_file_contents = hopshdfs.load(hparams_file)
     hparams = json.loads(hparams_file_contents)
@@ -158,6 +134,8 @@ def _load_hparams(hparams_file):
     return hparams
 
 def _handle_return_val(return_val, log_dir, optimization_key, log_file):
+    """Handles the return value of the user defined training function.
+    """
     experiment_utils._upload_file_output(return_val, log_dir)
 
     # Return type validation
