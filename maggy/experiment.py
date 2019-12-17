@@ -96,9 +96,10 @@ def lagom(
     try:
         global app_id
         global experiment_json
-        #TODO check if another experiment exists from appid, eg hops-util-py
         global run_id
         app_id = str(sc.applicationId)
+
+        app_id, run_id = util.validate_ml_id(app_id, run_id)
 
          # start run
         running = True

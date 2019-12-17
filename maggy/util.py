@@ -1,4 +1,5 @@
 import math
+import os
 import json
 import numpy as np
 from pyspark import TaskContext
@@ -187,7 +188,8 @@ def _handle_return_val(return_val, log_dir, optimization_key, log_file):
     return_val['log'] = log_file
 
     return_file = log_dir + '/.outputs.json'
-    hopshdfs.dump(json.dumps(return_val, default=json_default_numpy), return_file)
+    hopshdfs.dump(
+        json.dumps(return_val, default=json_default_numpy), return_file)
 
     metric_file = log_dir + '/.metric'
     hopshdfs.dump(json.dumps(opt_val, default=json_default_numpy), metric_file)
@@ -204,3 +206,20 @@ def _clean_dir(clean_dir, keep=[]):
     for path in hopshdfs.ls(clean_dir):
         if path not in keep:
             hopshdfs.delete(path, recursive=True)
+
+def _validate_ml_id(app_id, run_id):
+    """Validates if there was an experiment run previously from the same app id
+    but from a different experiment (e.g. hops-util-py vs. maggy) module.
+    """
+    try:
+        prev_ml_id = os.environ['ML_ID']
+    except KeyError:
+        return app_id, run_id
+    prev_app_id, _, prev_run_id = prev_ml_id.rpartition('_')
+    if prev_run_id == prev_ml_id:
+        # means there was no underscore found in string
+        raise ValueError(
+            "Found a previous ML_ID with wrong format: {}".format(prev_ml_id))
+    if prev_app_id == app_id and int(prev_run_id) >= run_id:
+        return app_id, (int(prev_run_id) + 1)
+    return app_id, run_id

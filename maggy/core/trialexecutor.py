@@ -34,12 +34,15 @@ def _prepare_func(
 
         client = rpc.Client(server_addr, partition_id,
                             task_attempt, hb_interval, secret)
-        log_file = log_dir + '/executor_' + str(partition_id) + '_' + str(task_attempt) + '.log'
+        log_file = (
+            log_dir + '/executor_' + str(partition_id) + '_' +
+            str(task_attempt) + '.log')
 
         # save the builtin print
         original_print = __builtin__.print
 
-        reporter = Reporter(log_file, partition_id, task_attempt, original_print)
+        reporter = Reporter(
+            log_file, partition_id, task_attempt, original_print)
 
         def maggy_print(*args, **kwargs):
             """Maggy custom print() function."""
@@ -85,11 +88,14 @@ def _prepare_func(
 
                 reporter.init_logger(trial_log_file)
                 tensorboard._register(tb_logdir)
-                hopshdfs.dump(json.dumps(parameters, default=util.json_default_numpy), tb_logdir + '/.hparams.json')
+                hopshdfs.dump(
+                    json.dumps(parameters, default=util.json_default_numpy),
+                    tb_logdir + '/.hparams.json')
 
                 try:
                     reporter.log("Starting Trial: {}".format(trial_id), False)
-                    reporter.log("Trial Configuration: {}".format(parameters), False)
+                    reporter.log(
+                        "Trial Configuration: {}".format(parameters), False)
 
                     tensorboard._write_hparams(parameters)
 
