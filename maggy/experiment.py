@@ -13,6 +13,7 @@ import atexit
 import time
 
 from hops import util as hopsutil
+from hops import hdfs as hopshdfs
 from hops.experiment_impl.util import experiment_utils
 
 from maggy import util, tensorboard
@@ -27,9 +28,9 @@ experiment_json = None
 def lagom(
         map_fun, name='no-name', experiment_type='optimization',
         searchspace=None, optimizer=None, direction='max', num_trials=1,
-        versioned_resources=None, ablation_study=None, ablator=None,
-        optimization_key='metric', hb_interval=1, es_policy='median',
-        es_interval=300, es_min=10, description=''):
+        ablation_study=None, ablator=None, optimization_key='metric',
+        hb_interval=1, es_policy='median', es_interval=300, es_min=10,
+        description=''):
     """Launches a maggy experiment, which depending on `experiment_type` can
     either be a hyperparameter optimization or an ablation study experiment.
     Given a search space, objective and a model training procedure `map_fun`
@@ -58,9 +59,6 @@ def lagom(
     :param num_trials: the number of trials to evaluate given the search space,
         each containing a different hyperparameter combination
     :type num_trials: int
-    :param versioned_resources: A list of HDFS paths of resources to version
-        with this experiment
-    :type versioned_resources: list, optional
     :param ablation_study: Ablation study object. Can be None for optimization
         experiment type.
     :type ablation_study: AblationStudy
@@ -106,9 +104,8 @@ def lagom(
         running = True
         experiment_utils._set_ml_id(app_id, run_id)
 
-        versioned_path = experiment_utils._setup_experiment(
-            versioned_resources, experiment_utils._get_logdir(app_id, run_id),
-            app_id, run_id)
+        # create experiment dir
+        hopshdfs.mkdir(experiment_utils._get_logdir(app_id, run_id))
 
         tensorboard._register(experiment_utils._get_logdir(app_id, run_id))
         tensorboard._write_hparams_config(
