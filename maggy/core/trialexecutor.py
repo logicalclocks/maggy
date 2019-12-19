@@ -99,7 +99,8 @@ def _prepare_func(
                     reporter.log(
                         "Trial Configuration: {}".format(parameters), False)
 
-                    tensorboard._write_hparams(parameters)
+                    if experiment_type == 'optimization':
+                        tensorboard._write_hparams(parameters)
 
                     sig = inspect.signature(map_fun)
                     if sig.parameters.get('reporter', None):
@@ -107,7 +108,8 @@ def _prepare_func(
                     else:
                         retval = map_fun(**parameters)
 
-                    tensorboard._write_session_end()
+                    if experiment_type == 'optimization':
+                        tensorboard._write_session_end()
 
                     retval = util._handle_return_val(
                         retval, tb_logdir, optimization_key, trial_log_file)

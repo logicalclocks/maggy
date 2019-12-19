@@ -108,8 +108,6 @@ def lagom(
         hopshdfs.mkdir(experiment_utils._get_logdir(app_id, run_id))
 
         tensorboard._register(experiment_utils._get_logdir(app_id, run_id))
-        tensorboard._write_hparams_config(
-            experiment_utils._get_logdir(app_id, run_id), searchspace)
 
         num_executors = util.num_executors(sc)
 
@@ -118,6 +116,9 @@ def lagom(
 
             assert num_trials > 0, "number of trials should be greater " + \
                 "than zero"
+            tensorboard._write_hparams_config(
+                experiment_utils._get_logdir(app_id, run_id), searchspace)
+
             if num_executors > num_trials:
                 num_executors = num_trials
 
