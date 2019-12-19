@@ -120,7 +120,7 @@ def _build_summary_json(logdir):
                     return_file)
                 hparams_dict = _load_hparams(hparams_file)
                 combinations.append(
-                    {'parameters': hparams_dict, 'metrics': metric_arr})
+                    {'parameters': hparams_dict, 'outputs': metric_arr})
 
     return json.dumps(
         {'combinations': combinations}, default=json_default_numpy)
