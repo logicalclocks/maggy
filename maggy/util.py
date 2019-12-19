@@ -163,7 +163,7 @@ def _handle_return_val(return_val, log_dir, optimization_key, log_file):
     #for key, value in return_val.items():
     #    return_val[key] = value if isinstance(value, str) else str(value)
 
-    return_val['log'] = log_file
+    return_val['log'] = log_file.replace(hopshdfs.project_path(), '')
 
     return_file = log_dir + '/.outputs.json'
     hopshdfs.dump(
