@@ -167,6 +167,15 @@ class ExperimentDriver(object):
                     "but it is {0} (of type '{1}')."
                     .format(str(ablation_study), type(ablation_study).__name__))
 
+            searchspace = kwargs.get('searchspace')
+            if not searchspace:
+                self.searchspace = Searchspace()
+            else:
+                raise Exception(
+                    "The experiment's search space should be None for ablation experiments, "
+                    "but it is {0} (of type '{1}')."
+                    .format(str(searchspace), type(searchspace).__name__))
+
             ablator = kwargs.get('ablator')
             if isinstance(ablator, str):
                 if ablator.lower() == 'loco':
