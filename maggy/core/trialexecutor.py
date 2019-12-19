@@ -75,6 +75,12 @@ def _prepare_func(
 
             while not client.done:
                 if experiment_type == 'ablation':
+                    ablation_params = {
+                        'ablated_feature':
+                            parameters.get('ablated_feature', 'None'),
+                        'ablated_layer':
+                            parameters.get('ablated_layer', 'None'),
+                        }
                     parameters.pop('ablated_feature')
                     parameters.pop('ablated_layer')
 
@@ -90,9 +96,17 @@ def _prepare_func(
 
                 reporter.init_logger(trial_log_file)
                 tensorboard._register(tb_logdir)
-                hopshdfs.dump(
-                    json.dumps(parameters, default=util.json_default_numpy),
-                    tb_logdir + '/.hparams.json')
+                if experiment_type == 'ablation':
+                    hopshdfs.dump(
+                        json.dumps(
+                            ablation_params, default=util.json_default_numpy),
+                        tb_logdir + '/.hparams.json')
+
+                else:
+                    hopshdfs.dump(
+                        json.dumps(
+                            parameters, default=util.json_default_numpy),
+                        tb_logdir + '/.hparams.json')
 
                 try:
                     reporter.log("Starting Trial: {}".format(trial_id), False)
