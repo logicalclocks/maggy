@@ -161,7 +161,7 @@ def lagom(
             .format(name, exp_function))
 
         experiment_json = experiment_utils._populate_experiment(
-            name, exp_function, 'MAGGY', searchspace.json(),
+            name, exp_function, 'MAGGY', exp_driver.searchspace.json(),
             description, app_id, direction, optimization_key)
 
         experiment_json = experiment_utils._attach_experiment_xattr(
