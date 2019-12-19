@@ -130,6 +130,8 @@ def lagom(
                 description=description,
                 log_dir=experiment_utils._get_logdir(app_id, run_id))
 
+            exp_function = exp_driver.optimizer.name()
+
         elif experiment_type == 'ablation':
             exp_driver = ExperimentDriver(
                 'ablation', ablation_study=ablation_study, ablator=ablator,
@@ -141,6 +143,8 @@ def lagom(
             # in experiment.py
             if num_executors > exp_driver.num_executors:
                 num_executors = exp_driver.num_executors
+
+            exp_function = exp_driver.ablator.name()
         else:
             running = False
             raise RuntimeError(
@@ -154,10 +158,10 @@ def lagom(
         # the type checks for optimizer and searchspace
         sc.setJobGroup(
             os.environ['ML_ID'], "{0} | {1}"
-            .format(name, exp_driver.optimizer.name()))
+            .format(name, exp_function))
 
         experiment_json = experiment_utils._populate_experiment(
-            name, exp_driver.optimizer.name(), 'MAGGY', searchspace.json(),
+            name, exp_function, 'MAGGY', searchspace.json(),
             description, app_id, direction, optimization_key)
 
         experiment_json = experiment_utils._attach_experiment_xattr(
