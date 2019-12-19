@@ -157,7 +157,7 @@ def lagom(
 
         experiment_json = experiment_utils._populate_experiment(
             name, exp_driver.optimizer.name(), 'MAGGY', searchspace.json(),
-            versioned_path, description, app_id, direction, optimization_key)
+            description, app_id, direction, optimization_key)
 
         experiment_json = experiment_utils._attach_experiment_xattr(
             app_id, run_id, experiment_json, 'CREATE')
