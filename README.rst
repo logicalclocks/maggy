@@ -1,8 +1,7 @@
 Maggy
 =====
 
-|Downloads| |PypiStatus| |PythonVersions| |Docs|
-
+|Downloads| |PypiStatus| |PythonVersions| |Docs| |CodeStyle|
 
 Maggy is a framework for efficient asynchronous optimization of expensive
 black-box functions on top of Apache Spark. Compared to existing frameworks,
@@ -103,8 +102,10 @@ API documentation is available `here <https://maggy.readthedocs.io/en/latest/>`_
 .. |Downloads| image:: https://pepy.tech/badge/maggy/month
    :target: https://pepy.tech/project/maggy
 .. |PypiStatus| image:: https://img.shields.io/pypi/v/maggy?color=blue
-    :target: https://pypi.org/project/hops
+    :target: https://pypi.org/project/maggy
 .. |PythonVersions| image:: https://img.shields.io/pypi/pyversions/maggy.svg
-    :target: https://pypi.org/project/hops
+    :target: https://pypi.org/project/maggy
 .. |Docs| image:: https://img.shields.io/readthedocs/maggy
     :target: https://maggy.readthedocs.io/en/latest/
+.. |CodeStyle| image:: https://img.shields.io/badge/code%20style-black-000000.svg
+    :target: https://github.com/psf/black
