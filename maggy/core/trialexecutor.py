@@ -14,10 +14,18 @@ from maggy import util, tensorboard
 from maggy.core import rpc, exceptions
 from maggy.core.reporter import Reporter
 
-def _prepare_func(
-        app_id, run_id, experiment_type, map_fun, server_addr, hb_interval,
-        secret, optimization_key, log_dir):
 
+def _prepare_func(
+    app_id,
+    run_id,
+    experiment_type,
+    map_fun,
+    server_addr,
+    hb_interval,
+    secret,
+    optimization_key,
+    log_dir,
+):
     def _wrapper_fun(iter):
         """
         Wraps the user supplied training function in order to be passed to the
@@ -34,22 +42,27 @@ def _prepare_func(
         # get task context information to determine executor identifier
         partition_id, task_attempt = util.get_partition_attempt_id()
 
-        client = rpc.Client(server_addr, partition_id,
-                            task_attempt, hb_interval, secret)
+        client = rpc.Client(
+            server_addr, partition_id, task_attempt, hb_interval, secret
+        )
         log_file = (
-            log_dir + '/executor_' + str(partition_id) + '_' +
-            str(task_attempt) + '.log')
+            log_dir
+            + "/executor_"
+            + str(partition_id)
+            + "_"
+            + str(task_attempt)
+            + ".log"
+        )
 
         # save the builtin print
         original_print = __builtin__.print
 
-        reporter = Reporter(
-            log_file, partition_id, task_attempt, original_print)
+        reporter = Reporter(log_file, partition_id, task_attempt, original_print)
 
         def maggy_print(*args, **kwargs):
             """Maggy custom print() function."""
             original_print(*args, **kwargs)
-            reporter.log(' '.join(str(x) for x in args), True)
+            reporter.log(" ".join(str(x) for x in args), True)
 
         # override the builtin print
         __builtin__.print = maggy_print
@@ -60,10 +73,10 @@ def _prepare_func(
             host_port = client_addr[0] + ":" + str(client_addr[1])
 
             exec_spec = {}
-            exec_spec['partition_id'] = partition_id
-            exec_spec['task_attempt'] = task_attempt
-            exec_spec['host_port'] = host_port
-            exec_spec['trial_id'] = None
+            exec_spec["partition_id"] = partition_id
+            exec_spec["task_attempt"] = task_attempt
+            exec_spec["host_port"] = host_port
+            exec_spec["trial_id"] = None
 
             reporter.log("Registering with experiment driver", False)
             client.register(exec_spec)
@@ -74,18 +87,16 @@ def _prepare_func(
             trial_id, parameters = client.get_suggestion(reporter)
 
             while not client.done:
-                if experiment_type == 'ablation':
+                if experiment_type == "ablation":
                     ablation_params = {
-                        'ablated_feature':
-                            parameters.get('ablated_feature', 'None'),
-                        'ablated_layer':
-                            parameters.get('ablated_layer', 'None'),
-                        }
-                    parameters.pop('ablated_feature')
-                    parameters.pop('ablated_layer')
+                        "ablated_feature": parameters.get("ablated_feature", "None"),
+                        "ablated_layer": parameters.get("ablated_layer", "None"),
+                    }
+                    parameters.pop("ablated_feature")
+                    parameters.pop("ablated_layer")
 
-                tb_logdir = log_dir + '/' + trial_id
-                trial_log_file = tb_logdir + '/output.log'
+                tb_logdir = log_dir + "/" + trial_id
+                trial_log_file = tb_logdir + "/output.log"
                 reporter.set_trial_id(trial_id)
 
                 # If trial is repeated, delete trial directory, except log file
@@ -96,37 +107,37 @@ def _prepare_func(
 
                 reporter.init_logger(trial_log_file)
                 tensorboard._register(tb_logdir)
-                if experiment_type == 'ablation':
+                if experiment_type == "ablation":
                     hopshdfs.dump(
-                        json.dumps(
-                            ablation_params, default=util.json_default_numpy),
-                        tb_logdir + '/.hparams.json')
+                        json.dumps(ablation_params, default=util.json_default_numpy),
+                        tb_logdir + "/.hparams.json",
+                    )
 
                 else:
                     hopshdfs.dump(
-                        json.dumps(
-                            parameters, default=util.json_default_numpy),
-                        tb_logdir + '/.hparams.json')
+                        json.dumps(parameters, default=util.json_default_numpy),
+                        tb_logdir + "/.hparams.json",
+                    )
 
                 try:
                     reporter.log("Starting Trial: {}".format(trial_id), False)
-                    reporter.log(
-                        "Trial Configuration: {}".format(parameters), False)
+                    reporter.log("Trial Configuration: {}".format(parameters), False)
 
-                    if experiment_type == 'optimization':
+                    if experiment_type == "optimization":
                         tensorboard._write_hparams(parameters)
 
                     sig = inspect.signature(map_fun)
-                    if sig.parameters.get('reporter', None):
+                    if sig.parameters.get("reporter", None):
                         retval = map_fun(**parameters, reporter=reporter)
                     else:
                         retval = map_fun(**parameters)
 
-                    if experiment_type == 'optimization':
+                    if experiment_type == "optimization":
                         tensorboard._write_session_end()
 
                     retval = util._handle_return_val(
-                        retval, tb_logdir, optimization_key, trial_log_file)
+                        retval, tb_logdir, optimization_key, trial_log_file
+                    )
 
                 except exceptions.EarlyStopException as e:
                     retval = e.metric
@@ -139,7 +150,7 @@ def _prepare_func(
                 # blocking
                 trial_id, parameters = client.get_suggestion(reporter)
 
-        except:
+        except:  # noqa: E722
             reporter.log(traceback.format_exc(), False)
             raise
         finally:

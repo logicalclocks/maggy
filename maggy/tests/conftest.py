@@ -3,6 +3,7 @@
 
 # make sure env variables are set correctly
 import findspark  # this needs to be the first import
+
 findspark.init()
 
 import logging
@@ -16,13 +17,16 @@ from pyspark.streaming import StreamingContext
 
 def quiet_py4j():
     """ turn down spark logging for the test context """
-    logger = logging.getLogger('py4j')
+    logger = logging.getLogger("py4j")
     logger.setLevel(logging.WARN)
 
 
 def pytest_addoption(parser):
     parser.addoption(
-        "--spark-master", action="store", default=None, help='spark-master: "spark://name.local:7077"'
+        "--spark-master",
+        action="store",
+        default=None,
+        help='spark-master: "spark://name.local:7077"',
     )
 
 
@@ -33,13 +37,17 @@ def sc(request):
         request: pytest.FixtureRequest object
     """
 
-    assert request.config.getoption("--spark-master") is not None, \
-        'No Spark Master Address provided, use --spark-master: "spark://host:port" '
+    assert (
+        request.config.getoption("--spark-master") is not None
+    ), 'No Spark Master Address provided, use --spark-master: "spark://host:port" '
 
-    conf = (SparkConf().setMaster(request.config.getoption("--spark-master"))
-            .setAppName("pytest-pyspark-local-testing")
-            .set("spark.dynamicAllocation.maxExecutors", 2)
-            .set("spark.executor.instances", 2))
+    conf = (
+        SparkConf()
+        .setMaster(request.config.getoption("--spark-master"))
+        .setAppName("pytest-pyspark-local-testing")
+        .set("spark.dynamicAllocation.maxExecutors", 2)
+        .set("spark.executor.instances", 2)
+    )
     scont = SparkContext(conf=conf)
     request.addfinalizer(lambda: scont.stop())
 

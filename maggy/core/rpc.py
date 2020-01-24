@@ -46,10 +46,11 @@ class Reservations(object):
             :meta: a dictonary of metadata about a node
         """
         with self.lock:
-            self.reservations[meta['partition_id']] = {
-                'host_port': meta["host_port"],
-                'task_attempt': meta['task_attempt'],
-                'trial_id': meta['trial_id']}
+            self.reservations[meta["partition_id"]] = {
+                "host_port": meta["host_port"],
+                "task_attempt": meta["task_attempt"],
+                "trial_id": meta["trial_id"],
+            }
 
             if self.remaining() == 0:
                 self.check_done = True
@@ -85,7 +86,7 @@ class Reservations(object):
         with self.lock:
             reservation = self.reservations.get(partition_id, None)
             if reservation is not None:
-                return reservation.get('trial_id', None)
+                return reservation.get("trial_id", None)
 
     def assign_trial(self, partition_id, trial_id):
         """Assigns trial with ``trial_id`` to the reservation with ``partition_id``.
@@ -95,7 +96,7 @@ class Reservations(object):
             trial {[type]} -- [description]
         """
         with self.lock:
-            self.reservations.get(partition_id, None)['trial_id'] = trial_id
+            self.reservations.get(partition_id, None)["trial_id"] = trial_id
 
 
 class MessageSocket(object):
@@ -112,7 +113,7 @@ class MessageSocket(object):
 
         """
         msg = None
-        data = b''
+        data = b""
         recv_done = False
         recv_len = -1
         while not recv_done:
@@ -120,13 +121,13 @@ class MessageSocket(object):
             if buf is None or len(buf) == 0:
                 raise Exception("socket closed")
             if recv_len == -1:
-                recv_len = struct.unpack('>I', buf[:4])[0]
+                recv_len = struct.unpack(">I", buf[:4])[0]
                 data += buf[4:]
                 recv_len -= len(data)
             else:
                 data += buf
                 recv_len -= len(buf)
-            recv_done = (recv_len == 0)
+            recv_done = recv_len == 0
 
         msg = cloudpickle.loads(data)
         return msg
@@ -143,12 +144,13 @@ class MessageSocket(object):
 
         """
         data = cloudpickle.dumps(msg)
-        buf = struct.pack('>I', len(data)) + data
+        buf = struct.pack(">I", len(data)) + data
         sock.sendall(buf)
 
 
 class Server(MessageSocket):
     """Simple socket server with length prefixed pickle messages"""
+
     reservations = None
     done = False
 
@@ -175,16 +177,14 @@ class Server(MessageSocket):
         """
         timespent = 0
         while not self.reservations.done():
-            print("waiting for {} reservations."
-                  .format(self.reservations.remaining()))
+            print("waiting for {} reservations.".format(self.reservations.remaining()))
             # check status flags for any errors
-            if 'error' in status:
+            if "error" in status:
                 sc.cancelAllJobs()
             time.sleep(1)
             timespent += 1
-            if (timespent > timeout):
-                raise Exception(
-                    "Timed out waiting for reservations to complete")
+            if timespent > timeout:
+                raise Exception("Timed out waiting for reservations to complete")
         print("All reservations completed")
         return self.reservations.get()
 
@@ -200,99 +200,101 @@ class Server(MessageSocket):
         Returns:
 
         """
-        msg_type = msg['type']
+        msg_type = msg["type"]
 
         # Prepare message
         send = {}
 
-        if msg_type == 'REG':
+        if msg_type == "REG":
             # check if executor was registered before and retrieve lost trial
-            lost_trial = self.reservations.get_assigned_trial(msg['partition_id'])
+            lost_trial = self.reservations.get_assigned_trial(msg["partition_id"])
             if lost_trial is not None:
                 # the trial or executor must have failed
                 exp_driver.get_trial(lost_trial).status = Trial.ERROR
                 # add a blacklist message to the worker queue
-                fail_msg = {'partition_id': msg['partition_id'],
-                    'type': 'BLACK',
-                    'trial_id': lost_trial}
-                self.reservations.add(msg['data'])
+                fail_msg = {
+                    "partition_id": msg["partition_id"],
+                    "type": "BLACK",
+                    "trial_id": lost_trial,
+                }
+                self.reservations.add(msg["data"])
                 exp_driver.add_message(fail_msg)
             else:
                 # else add regular registration msg to queue
-                self.reservations.add(msg['data'])
+                self.reservations.add(msg["data"])
                 exp_driver.add_message(msg)
 
-            send['type'] = 'OK'
-        elif msg_type == 'QUERY':
-            send['type'] = 'QUERY'
-            send['data'] = self.reservations.done()
-        elif msg_type == 'METRIC':
+            send["type"] = "OK"
+        elif msg_type == "QUERY":
+            send["type"] = "QUERY"
+            send["data"] = self.reservations.done()
+        elif msg_type == "METRIC":
             # add metric msg to the exp driver queue
             exp_driver.add_message(msg)
 
-            if msg['trial_id'] is None:
-                send['type'] = 'OK'
+            if msg["trial_id"] is None:
+                send["type"] = "OK"
                 MessageSocket.send(self, sock, send)
                 return
-            elif msg['trial_id'] is not None:
-                if msg.get('data', None) is None:
-                    send['type'] = 'OK'
+            elif msg["trial_id"] is not None:
+                if msg.get("data", None) is None:
+                    send["type"] = "OK"
                     MessageSocket.send(self, sock, send)
                     return
 
             # lookup executor reservation to find assigned trial
-            trialId = msg['trial_id']
+            trialId = msg["trial_id"]
             # get early stopping flag for hyperparameter optimization trials
             flag = False
-            if exp_driver.experiment_type == 'optimization':
+            if exp_driver.experiment_type == "optimization":
                 flag = exp_driver.get_trial(trialId).get_early_stop()
 
             if flag:
-                send['type'] = 'STOP'
+                send["type"] = "STOP"
             else:
-                send['type'] = 'OK'
-        elif msg_type == 'FINAL':
+                send["type"] = "OK"
+        elif msg_type == "FINAL":
             # reset the reservation to avoid sending the same trial again
-            self.reservations.assign_trial(msg['partition_id'], None)
+            self.reservations.assign_trial(msg["partition_id"], None)
 
-            send['type'] = 'OK'
+            send["type"] = "OK"
 
             # add metric msg to the exp driver queue
             exp_driver.add_message(msg)
-        elif msg_type == 'GET':
+        elif msg_type == "GET":
             # lookup reservation to find assigned trial
-            trial_id = self.reservations.get_assigned_trial(msg['partition_id'])
+            trial_id = self.reservations.get_assigned_trial(msg["partition_id"])
 
             # trial_id needs to be none because experiment_done can be true but
             # the assigned trial might not be finalized yet
             if exp_driver.experiment_done and trial_id is None:
-                send['type'] = "GSTOP"
+                send["type"] = "GSTOP"
             else:
-                send['type'] = "TRIAL"
+                send["type"] = "TRIAL"
 
-            send['trial_id'] = trial_id
+            send["trial_id"] = trial_id
 
             # retrieve trial information
             if trial_id is not None:
-                send['data'] = exp_driver.get_trial(trial_id).params
+                send["data"] = exp_driver.get_trial(trial_id).params
                 exp_driver.get_trial(trial_id).status = Trial.RUNNING
             else:
-                send['data'] = None
-        elif msg_type == 'LOG':
+                send["data"] = None
+        elif msg_type == "LOG":
             # get data from experiment driver
             result, log = exp_driver._get_logs()
 
-            send['type'] = "OK"
+            send["type"] = "OK"
             if log:
-                send['ex_logs'] = log
+                send["ex_logs"] = log
             else:
-                send['ex_logs'] = None
-            send['num_trials'] = exp_driver.num_trials
-            send['to_date'] = result['num_trials']
-            send['stopped'] = result['early_stopped']
-            send['metric'] = result['best_val']
+                send["ex_logs"] = None
+            send["num_trials"] = exp_driver.num_trials
+            send["to_date"] = result["num_trials"]
+            send["stopped"] = result["early_stopped"]
+            send["metric"] = result["best_val"]
         else:
-            send['type'] = "ERR"
+            send["type"] = "ERR"
 
         MessageSocket.send(self, sock, send)
 
@@ -319,7 +321,7 @@ class Server(MessageSocket):
         server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         if not server_host_port:
-            server_sock.bind(('', 0))
+            server_sock.bind(("", 0))
             # hostname may not be resolvable but IP address probably will be
             host = experiment_utils._get_ip_address()
             port = server_sock.getsockname()[1]
@@ -330,18 +332,29 @@ class Server(MessageSocket):
             app_id = str(sc.applicationId)
 
             method = hopsconstants.HTTP_CONFIG.HTTP_POST
-            resource_url = hopsconstants.DELIMITERS.SLASH_DELIMITER + \
-                        hopsconstants.REST_CONFIG.HOPSWORKS_REST_RESOURCE + hopsconstants.DELIMITERS.SLASH_DELIMITER + \
-                        "maggy" + hopsconstants.DELIMITERS.SLASH_DELIMITER + "drivers"
-            json_contents = {"hostIp": host,
-                            "port": port,
-                            "appId": app_id,
-                            "secret" : exp_driver._secret }
+            resource_url = (
+                hopsconstants.DELIMITERS.SLASH_DELIMITER
+                + hopsconstants.REST_CONFIG.HOPSWORKS_REST_RESOURCE
+                + hopsconstants.DELIMITERS.SLASH_DELIMITER
+                + "maggy"
+                + hopsconstants.DELIMITERS.SLASH_DELIMITER
+                + "drivers"
+            )
+            json_contents = {
+                "hostIp": host,
+                "port": port,
+                "appId": app_id,
+                "secret": exp_driver._secret,
+            }
             json_embeddable = json.dumps(json_contents)
-            headers = {hopsconstants.HTTP_CONFIG.HTTP_CONTENT_TYPE: hopsconstants.HTTP_CONFIG.HTTP_APPLICATION_JSON}
+            headers = {
+                hopsconstants.HTTP_CONFIG.HTTP_CONTENT_TYPE: hopsconstants.HTTP_CONFIG.HTTP_APPLICATION_JSON
+            }
 
             try:
-                response = hopsutil.send_request(method, resource_url, data=json_embeddable, headers=headers)
+                response = hopsutil.send_request(
+                    method, resource_url, data=json_embeddable, headers=headers
+                )
 
                 if (response.status_code // 100) != 2:
                     print("No connection to Hopsworks for logging.")
@@ -359,8 +372,7 @@ class Server(MessageSocket):
             CONNECTIONS.append(sock)
 
             while not self.done:
-                read_socks, _, _ = select.select(
-                    CONNECTIONS, [], [], 60)
+                read_socks, _, _ = select.select(CONNECTIONS, [], [], 60)
                 for sock in read_socks:
                     if sock == server_sock:
                         client_sock, client_addr = sock.accept()
@@ -372,10 +384,15 @@ class Server(MessageSocket):
 
                             # raise exception if secret does not match
                             # so client socket gets closed
-                            if not secrets.compare_digest(msg['secret'],
-                                                          exp_driver._secret):
-                                exp_driver._log("SERVER secret: {}".format(exp_driver._secret))
-                                exp_driver._log("ERROR: wrong secret {}".format(msg['secret']))
+                            if not secrets.compare_digest(
+                                msg["secret"], exp_driver._secret
+                            ):
+                                exp_driver._log(
+                                    "SERVER secret: {}".format(exp_driver._secret)
+                                )
+                                exp_driver._log(
+                                    "ERROR: wrong secret {}".format(msg["secret"])
+                                )
                                 raise Exception
 
                             self._handle_message(sock, msg, driver)
@@ -405,6 +422,7 @@ class Client(MessageSocket):
     Args:
         :server_addr: a tuple of (host, port) pointing to the Server.
     """
+
     def __init__(self, server_addr, partition_id, task_attempt, hb_interval, secret):
         # socket for main thread
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -414,7 +432,10 @@ class Client(MessageSocket):
         self.hb_sock.connect(server_addr)
         self.server_addr = server_addr
         self.done = False
-        self.client_addr = (experiment_utils._get_ip_address(), self.sock.getsockname()[1])
+        self.client_addr = (
+            experiment_utils._get_ip_address(),
+            self.sock.getsockname()[1],
+        )
         self.partition_id = partition_id
         self.task_attempt = task_attempt
         self.hb_interval = hb_interval
@@ -423,20 +444,20 @@ class Client(MessageSocket):
     def _request(self, req_sock, msg_type, msg_data=None, trial_id=None, logs=None):
         """Helper function to wrap msg w/ msg_type."""
         msg = {}
-        msg['partition_id'] = self.partition_id
-        msg['type'] = msg_type
-        msg['secret'] = self._secret
+        msg["partition_id"] = self.partition_id
+        msg["type"] = msg_type
+        msg["secret"] = self._secret
 
-        if msg_type == 'FINAL' or msg_type == 'METRIC':
-            msg['trial_id'] = trial_id
-            if logs == '':
-                msg['logs'] = None
+        if msg_type == "FINAL" or msg_type == "METRIC":
+            msg["trial_id"] = trial_id
+            if logs == "":
+                msg["logs"] = None
             else:
-                msg['logs'] = logs
+                msg["logs"] = logs
 
-        #if msg_data or ((msg_data == True) or (msg_data == False)):
+        # if msg_data or ((msg_data == True) or (msg_data == False)):
         #    msg['data'] = msg_data
-        msg['data'] = msg_data
+        msg["data"] = msg_data
 
         done = False
         tries = 0
@@ -472,30 +493,27 @@ class Client(MessageSocket):
         Returns:
 
         """
-        resp = self._request(self.sock, 'REG', registration)
+        resp = self._request(self.sock, "REG", registration)
         return resp
 
     def await_reservations(self):
         done = False
         while not done:
-            done = self._request(self.sock, 'QUERY').get('data', False)
+            done = self._request(self.sock, "QUERY").get("data", False)
             time.sleep(1)
         print("All executors registered: {}".format(done))
         return done
 
     def start_heartbeat(self, reporter):
-
         def _heartbeat(self, report):
 
             while not self.done:
 
                 metric, logs = report.get_data()
 
-                resp = self._request(self.hb_sock,
-                                    'METRIC',
-                                     metric,
-                                     report.get_trial_id(),
-                                     logs)
+                resp = self._request(
+                    self.hb_sock, "METRIC", metric, report.get_trial_id(), logs
+                )
                 _ = self._handle_message(resp, report)
 
                 # sleep one second
@@ -510,7 +528,7 @@ class Client(MessageSocket):
     def get_suggestion(self, reporter):
         """Blocking call to get new parameter combination."""
         while not self.done:
-            resp = self._request(self.sock, 'GET')
+            resp = self._request(self.sock, "GET")
             trial_id, parameters = self._handle_message(resp, reporter) or (None, None)
 
             if trial_id is not None:
@@ -534,16 +552,16 @@ class Client(MessageSocket):
         Returns:
 
         """
-        msg_type = msg['type']
+        msg_type = msg["type"]
         # if response is STOP command, early stop the training
-        if msg_type == 'STOP':
+        if msg_type == "STOP":
             reporter.early_stop()
-        elif msg_type == 'GSTOP':
+        elif msg_type == "GSTOP":
             reporter.log("Stopping experiment", False)
             self.done = True
-        elif msg_type == 'TRIAL':
-            return msg['trial_id'], msg['data']
-        elif msg_type == 'ERR':
+        elif msg_type == "TRIAL":
+            return msg["trial_id"], msg["data"]
+        elif msg_type == "ERR":
             reporter.log("Stopping experiment", False)
             self.done = True
 
@@ -552,6 +570,8 @@ class Client(MessageSocket):
         # and resetting the reporter
         with reporter.lock:
             _, logs = reporter.get_data()
-            resp = self._request(self.sock, 'FINAL', metric, reporter.get_trial_id(), logs)
+            resp = self._request(
+                self.sock, "FINAL", metric, reporter.get_trial_id(), logs
+            )
             reporter.reset()
         return resp

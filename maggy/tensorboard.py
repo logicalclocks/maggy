@@ -19,11 +19,13 @@ hp._derive_session_group_name = trial.Trial._generate_id
 _tensorboard_dir = None
 _writer = None
 
+
 def _register(trial_dir):
     global _tensorboard_dir
     global _writer
     _tensorboard_dir = trial_dir
     _writer = tf.summary.create_file_writer(_tensorboard_dir)
+
 
 def logdir():
     """Returns the path to the tensorboard log directory.
@@ -38,57 +40,53 @@ def logdir():
     global _tensorboard_dir
     return _tensorboard_dir
 
+
 def _create_hparams_config(searchspace):
     hparams = []
 
     for key, val in searchspace.names().items():
-        if val == 'DOUBLE':
-            hparams.append(hp.HParam(key, hp.RealInterval(
-                float(searchspace.get(key)[0]),
-                float(searchspace.get(key)[1]))))
-        elif val == 'INTEGER':
-            hparams.append(hp.HParam(key, hp.IntInterval(
-                searchspace.get(key)[0],
-                searchspace.get(key)[1])))
-        elif val == 'DISCRETE':
+        if val == "DOUBLE":
+            hparams.append(
+                hp.HParam(
+                    key,
+                    hp.RealInterval(
+                        float(searchspace.get(key)[0]), float(searchspace.get(key)[1])
+                    ),
+                )
+            )
+        elif val == "INTEGER":
+            hparams.append(
+                hp.HParam(
+                    key,
+                    hp.IntInterval(searchspace.get(key)[0], searchspace.get(key)[1]),
+                )
+            )
+        elif val == "DISCRETE":
             hparams.append(hp.HParam(key, hp.Discrete(searchspace.get(key))))
-        elif val == 'CATEGORICAL':
+        elif val == "CATEGORICAL":
             hparams.append(hp.HParam(key, hp.Discrete(searchspace.get(key))))
 
     return hparams
 
+
 def _write_hparams_config(log_dir, searchspace):
     HPARAMS = _create_hparams_config(searchspace)
     METRICS = [
-        hp.Metric(
-            "epoch_acc",
-            group="validation",
-            display_name="accuracy (val.)",
-        ),
-        hp.Metric(
-            "epoch_loss",
-            group="validation",
-            display_name="loss (val.)",
-        ),
-        hp.Metric(
-            "epoch_acc",
-            group="train",
-            display_name="accuracy (train)",
-        ),
-        hp.Metric(
-            "epoch_loss",
-            group="train",
-            display_name="loss (train)",
-        ),
+        hp.Metric("epoch_acc", group="validation", display_name="accuracy (val.)",),
+        hp.Metric("epoch_loss", group="validation", display_name="loss (val.)",),
+        hp.Metric("epoch_acc", group="train", display_name="accuracy (train)",),
+        hp.Metric("epoch_loss", group="train", display_name="loss (train)",),
     ]
 
     with tf.summary.create_file_writer(log_dir).as_default():
         hp.hparams_config(hparams=HPARAMS, metrics=METRICS)
 
+
 def _write_hparams(hparams):
     global _writer
     with _writer.as_default():
         hp.hparams(hparams)
+
 
 def _write_session_end():
     global _writer

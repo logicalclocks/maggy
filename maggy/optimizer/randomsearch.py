@@ -4,21 +4,25 @@ from maggy.trial import Trial
 
 
 class RandomSearch(AbstractOptimizer):
-
     def __init__(self):
         super().__init__()
         self.trial_buffer = []
 
     def initialize(self):
 
-        if (Searchspace.DOUBLE not in self.searchspace.names().values() and
-                Searchspace.INTEGER not in self.searchspace.names().values()):
+        if (
+            Searchspace.DOUBLE not in self.searchspace.names().values()
+            and Searchspace.INTEGER not in self.searchspace.names().values()
+        ):
             raise NotImplementedError(
-                "Searchspace needs at least one continuous parameter for random search.")
+                "Searchspace needs at least one continuous parameter for random search."
+            )
 
-        list_of_random_trials = self.searchspace.get_random_parameter_values(self.num_trials)
+        list_of_random_trials = self.searchspace.get_random_parameter_values(
+            self.num_trials
+        )
         for parameters_dict in list_of_random_trials:
-            self.trial_buffer.append(Trial(parameters_dict, trial_type='optimization'))
+            self.trial_buffer.append(Trial(parameters_dict, trial_type="optimization"))
 
     def get_suggestion(self, trial=None):
         if self.trial_buffer:

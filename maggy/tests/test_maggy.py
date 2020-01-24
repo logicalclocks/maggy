@@ -1,14 +1,10 @@
-
 import pytest
-import time
-import random
-from maggy import experiment
 from maggy.searchspace import Searchspace
 from maggy.optimizer import RandomSearch
-from operator import add
 
 # this allows using the fixture in all tests in this module
 pytestmark = pytest.mark.usefixtures("sc")
+
 
 def test_nr_executors(sc):
 
@@ -16,13 +12,14 @@ def test_nr_executors(sc):
     expected_number = 2
     assert executor_instances == expected_number
 
+
 def test_random_search(sc):
 
-    sp = Searchspace(argument_param=('DOUBLE', [1, 5]))
+    sp = Searchspace(argument_param=("DOUBLE", [1, 5]))
 
     rs = RandomSearch(5, sp, [])
 
-    exp_result = {'argument_param': 'DOUBLE'}
+    exp_result = {"argument_param": "DOUBLE"}
 
     assert sp.names() == exp_result
     assert rs.num_trials == 5

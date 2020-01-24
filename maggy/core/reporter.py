@@ -9,6 +9,7 @@ from hops import hdfs as hopshdfs
 
 from maggy.core import exceptions
 
+
 class Reporter(object):
     """
     Thread-safe store for sending a metric and logs from executor to driver
@@ -20,7 +21,7 @@ class Reporter(object):
         self.stop = False
         self.trial_id = None
         self.trial_log_file = None
-        self.logs = ''
+        self.logs = ""
         self.log_file = log_file
         self.partition_id = partition_id
         self.task_attempt = task_attempt
@@ -29,8 +30,8 @@ class Reporter(object):
         # Open executor log file descriptor
         # This log is for all maggy system related log messages
         if not hopshdfs.exists(log_file):
-            hopshdfs.dump('', log_file)
-        self.fd = hopshdfs.open_file(log_file, flags='w')
+            hopshdfs.dump("", log_file)
+        self.fd = hopshdfs.open_file(log_file, flags="w")
         self.trial_fd = None
 
     def init_logger(self, trial_log_file):
@@ -39,8 +40,8 @@ class Reporter(object):
         self.trial_log_file = trial_log_file
         # Open trial log file descriptor
         if not hopshdfs.exists(self.trial_log_file):
-            hopshdfs.dump('', self.trial_log_file)
-        self.trial_fd = hopshdfs.open_file(self.trial_log_file, flags='w')
+            hopshdfs.dump("", self.trial_log_file)
+        self.trial_fd = hopshdfs.open_file(self.trial_log_file, flags="w")
 
     def close_logger(self):
         """Savely closes the file descriptors of the log files.
@@ -78,12 +79,13 @@ class Reporter(object):
         """
         with self.lock:
             try:
-                msg = ((datetime.now().isoformat() + ' ({0}/{1}): {2} \n')
-                       .format(self.partition_id, self.task_attempt, log_msg))
+                msg = (datetime.now().isoformat() + " ({0}/{1}): {2} \n").format(
+                    self.partition_id, self.task_attempt, log_msg
+                )
                 if jupyter:
-                    jupyter_log = str(self.partition_id) + ': ' + log_msg
+                    jupyter_log = str(self.partition_id) + ": " + log_msg
                     self.trial_fd.write(msg.encode())
-                    self.logs = self.logs + jupyter_log + '\n'
+                    self.logs = self.logs + jupyter_log + "\n"
                 else:
                     self.fd.write(msg.encode())
                     if self.trial_fd:
@@ -93,15 +95,15 @@ class Reporter(object):
             # Throws AttributeError when calling file ops on NoneType object
             except (IOError, ValueError, AttributeError) as e:
                 self.fd.write(
-                    ("An error occurred while writing logs: {}".format(e))
-                    .encode())
+                    ("An error occurred while writing logs: {}".format(e)).encode()
+                )
 
     def get_data(self):
         """Returns the metric and logs to be sent to the experiment driver.
         """
         with self.lock:
             log_to_send = self.logs
-            self.logs = ''
+            self.logs = ""
             return self.metric, log_to_send
 
     def reset(self):

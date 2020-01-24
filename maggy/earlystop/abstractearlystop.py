@@ -1,5 +1,3 @@
-import statistics
-
 from abc import ABC, abstractmethod
 
 

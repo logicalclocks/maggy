@@ -3,7 +3,6 @@ from maggy.trial import Trial
 
 
 class SingleRun(AbstractOptimizer):
-
     def __init__(self):
         super().__init__()
         self.trial_buffer = []

@@ -1,3 +1,7 @@
-from maggy.earlystop.abstractearlystop import AbstractEarlyStop
-from maggy.earlystop.medianrule import MedianStoppingRule
-from maggy.earlystop.nostop import NoStoppingRule
+from maggy.earlystop import abstractearlystop, medianrule, nostop
+
+AbstractEarlyStop = abstractearlystop.AbstractEarlyStop
+MedianStoppingRule = medianrule.MedianStoppingRule
+NoStoppingRule = nostop.NoStoppingRule
+
+__all__ = ["AbstractEarlyStop", "MedianStoppingRule", "NoStoppingRule"]

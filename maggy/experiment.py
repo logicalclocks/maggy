@@ -26,11 +26,22 @@ experiment_json = None
 
 
 def lagom(
-        map_fun, name='no-name', experiment_type='optimization',
-        searchspace=None, optimizer=None, direction='max', num_trials=1,
-        ablation_study=None, ablator=None, optimization_key='metric',
-        hb_interval=1, es_policy='median', es_interval=300, es_min=10,
-        description=''):
+    map_fun,
+    name="no-name",
+    experiment_type="optimization",
+    searchspace=None,
+    optimizer=None,
+    direction="max",
+    num_trials=1,
+    ablation_study=None,
+    ablator=None,
+    optimization_key="metric",
+    hb_interval=1,
+    es_policy="median",
+    es_interval=300,
+    es_min=10,
+    description="",
+):
     """Launches a maggy experiment, which depending on `experiment_type` can
     either be a hyperparameter optimization or an ablation study experiment.
     Given a search space, objective and a model training procedure `map_fun`
@@ -100,7 +111,7 @@ def lagom(
 
         app_id, run_id = util._validate_ml_id(app_id, run_id)
 
-         # start run
+        # start run
         running = True
         experiment_utils._set_ml_id(app_id, run_id)
 
@@ -112,32 +123,45 @@ def lagom(
         num_executors = util.num_executors(sc)
 
         # start experiment driver
-        if experiment_type == 'optimization':
+        if experiment_type == "optimization":
 
-            assert num_trials > 0, "number of trials should be greater " + \
-                "than zero"
+            assert num_trials > 0, "number of trials should be greater " + "than zero"
             tensorboard._write_hparams_config(
-                experiment_utils._get_logdir(app_id, run_id), searchspace)
+                experiment_utils._get_logdir(app_id, run_id), searchspace
+            )
 
             if num_executors > num_trials:
                 num_executors = num_trials
 
             exp_driver = ExperimentDriver(
-                'optimization', searchspace=searchspace, optimizer=optimizer,
-                direction=direction, num_trials=num_trials, name=name,
-                num_executors=num_executors, hb_interval=hb_interval,
-                es_policy=es_policy, es_interval=es_interval, es_min=es_min,
+                "optimization",
+                searchspace=searchspace,
+                optimizer=optimizer,
+                direction=direction,
+                num_trials=num_trials,
+                name=name,
+                num_executors=num_executors,
+                hb_interval=hb_interval,
+                es_policy=es_policy,
+                es_interval=es_interval,
+                es_min=es_min,
                 description=description,
-                log_dir=experiment_utils._get_logdir(app_id, run_id))
+                log_dir=experiment_utils._get_logdir(app_id, run_id),
+            )
 
             exp_function = exp_driver.optimizer.name()
 
-        elif experiment_type == 'ablation':
+        elif experiment_type == "ablation":
             exp_driver = ExperimentDriver(
-                'ablation', ablation_study=ablation_study, ablator=ablator,
-                name=name, num_executors=num_executors,
-                hb_interval=hb_interval, description=description,
-                log_dir=experiment_utils._get_logdir(app_id, run_id))
+                "ablation",
+                ablation_study=ablation_study,
+                ablator=ablator,
+                name=name,
+                num_executors=num_executors,
+                hb_interval=hb_interval,
+                description=description,
+                log_dir=experiment_utils._get_logdir(app_id, run_id),
+            )
             # using exp_driver.num_executor since
             # it has been set using ablator.get_number_of_trials()
             # in experiment.py
@@ -150,26 +174,33 @@ def lagom(
             raise RuntimeError(
                 "Unknown experiment_type:"
                 "should be either 'optimization' or 'ablation', "
-                "But it is '{0}'".format(str(experiment_type)))
+                "But it is '{0}'".format(str(experiment_type))
+            )
 
         nodeRDD = sc.parallelize(range(num_executors), num_executors)
 
         # Do provenance after initializing exp_driver, because exp_driver does
         # the type checks for optimizer and searchspace
-        sc.setJobGroup(
-            os.environ['ML_ID'], "{0} | {1}"
-            .format(name, exp_function))
+        sc.setJobGroup(os.environ["ML_ID"], "{0} | {1}".format(name, exp_function))
 
         experiment_json = experiment_utils._populate_experiment(
-            name, exp_function, 'MAGGY', exp_driver.searchspace.json(),
-            description, app_id, direction, optimization_key)
+            name,
+            exp_function,
+            "MAGGY",
+            exp_driver.searchspace.json(),
+            description,
+            app_id,
+            direction,
+            optimization_key,
+        )
 
         experiment_json = experiment_utils._attach_experiment_xattr(
-            app_id, run_id, experiment_json, 'CREATE')
+            app_id, run_id, experiment_json, "CREATE"
+        )
 
         util._log(
-            "Started Maggy Experiment: {0}, {1}, run {2}"
-            .format(name, app_id, run_id))
+            "Started Maggy Experiment: {0}, {1}, run {2}".format(name, app_id, run_id)
+        )
 
         exp_driver.init(job_start)
 
@@ -178,28 +209,44 @@ def lagom(
         # Force execution on executor, since GPU is located on executor
         nodeRDD.foreachPartition(
             trialexecutor._prepare_func(
-                app_id, run_id, experiment_type, map_fun, server_addr,
-                hb_interval, exp_driver._secret, optimization_key,
-                experiment_utils._get_logdir(app_id, run_id)))
+                app_id,
+                run_id,
+                experiment_type,
+                map_fun,
+                server_addr,
+                hb_interval,
+                exp_driver._secret,
+                optimization_key,
+                experiment_utils._get_logdir(app_id, run_id),
+            )
+        )
         job_end = time.time()
 
         result = exp_driver.finalize(job_end)
-        best_logdir = experiment_utils._get_logdir(app_id, run_id) + \
-            '/' + result['best_id']
+        best_logdir = (
+            experiment_utils._get_logdir(app_id, run_id) + "/" + result["best_id"]
+        )
 
         util._finalize_experiment(
-            experiment_json, float(result['best_val']), app_id, run_id,
-            'FINISHED', exp_driver.duration,
-            experiment_utils._get_logdir(app_id, run_id), best_logdir,
-            optimization_key)
+            experiment_json,
+            float(result["best_val"]),
+            app_id,
+            run_id,
+            "FINISHED",
+            exp_driver.duration,
+            experiment_utils._get_logdir(app_id, run_id),
+            best_logdir,
+            optimization_key,
+        )
 
         util._log("Finished Experiment")
 
         return result
 
-    except:
-        _exception_handler(experiment_utils._seconds_to_milliseconds(
-            time.time() - job_start))
+    except:  # noqa: E722
+        _exception_handler(
+            experiment_utils._seconds_to_milliseconds(time.time() - job_start)
+        )
         if exp_driver:
             if exp_driver.exception:
                 raise exp_driver.exception
@@ -217,6 +264,7 @@ def lagom(
 
     return result
 
+
 def _exception_handler(duration):
     """
     Handles exceptions during execution of an experiment
@@ -228,10 +276,11 @@ def _exception_handler(duration):
         global running
         global experiment_json
         if running and experiment_json is not None:
-            experiment_json['state'] = "FAILED"
-            experiment_json['duration'] = duration
+            experiment_json["state"] = "FAILED"
+            experiment_json["duration"] = duration
             experiment_utils._attach_experiment_xattr(
-                app_id, run_id, experiment_json, 'REPLACE')
+                app_id, run_id, experiment_json, "REPLACE"
+            )
     except Exception as err:
         util._log(err)
 
@@ -244,10 +293,12 @@ def _exit_handler():
         global running
         global experiment_json
         if running and experiment_json is not None:
-            experiment_json['status'] = "KILLED"
+            experiment_json["status"] = "KILLED"
             experiment_utils._attach_experiment_xattr(
-                app_id, run_id, experiment_json, 'REPLACE')
+                app_id, run_id, experiment_json, "REPLACE"
+            )
     except Exception as err:
         util._log(err)
+
 
 atexit.register(_exit_handler)
