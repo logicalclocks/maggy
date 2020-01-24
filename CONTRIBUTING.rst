@@ -53,6 +53,7 @@ Python Setup
   or with conda::
 
         conda create --name maggy python=3.6.8
+        conda activate maggy
 
   verify your python version - we are using Python 3.6::
 
