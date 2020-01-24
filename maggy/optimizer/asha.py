@@ -1,6 +1,6 @@
 import math
 
-from maggy.optimizer import AbstractOptimizer
+from maggy.optimizer.abstractoptimizer import AbstractOptimizer
 from maggy.trial import Trial
 
 

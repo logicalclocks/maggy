@@ -1,4 +1,4 @@
-from maggy.optimizer import AbstractOptimizer
+from maggy.optimizer.abstractoptimizer import AbstractOptimizer
 from maggy.searchspace import Searchspace
 from maggy.trial import Trial
 
