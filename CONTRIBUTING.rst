@@ -50,11 +50,11 @@ Python Setup
         . env/bin/activate
         # or "env\Scripts\activate" on Windows
 
-  or with conda:
+  or with conda::
 
         conda create --name maggy python=3.6.8
 
-  verify your python version - we are using Python 3.6:
+  verify your python version - we are using Python 3.6::
 
         python --version
 
