@@ -1,5 +1,5 @@
 import statistics
-from maggy.earlystop import AbstractEarlyStop
+from maggy.earlystop.abstractearlystop import AbstractEarlyStop
 
 
 class MedianStoppingRule(AbstractEarlyStop):

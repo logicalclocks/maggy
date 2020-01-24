@@ -1,4 +1,4 @@
-from maggy.earlystop import AbstractEarlyStop
+from maggy.earlystop.abstractearlystop import AbstractEarlyStop
 
 
 class NoStoppingRule(AbstractEarlyStop):
