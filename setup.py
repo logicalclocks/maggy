@@ -27,6 +27,10 @@ setup(
             'pylint',
             'pytest',
         ],
+        'dev': [
+            'black',
+            'flake8',
+        ],
         'spark': ['pyspark==2.4.3']
     },
     author='Moritz Meister',
