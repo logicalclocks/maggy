@@ -88,8 +88,8 @@ class AblationStudy(object):
     """
 
     def __init__(
-        self, training_dataset_name, training_dataset_version, label_name,
-        **kwargs):
+        self, training_dataset_name, training_dataset_version, label_name, **kwargs
+    ):
         """Initializes the ablation study.
 
         :param training_dataset_name: Name of the training dataset in the
@@ -106,7 +106,7 @@ class AblationStudy(object):
         self.hops_training_dataset_name = training_dataset_name
         self.hops_training_dataset_version = training_dataset_version
         self.label_name = label_name
-        self.custom_dataset_generator = kwargs.get('dataset_generator', False)
+        self.custom_dataset_generator = kwargs.get("dataset_generator", False)
 
     def to_dict(self):
         """
@@ -117,12 +117,14 @@ class AblationStudy(object):
         :rtype: dict
         """
         ablation_dict = {
-            'training_dataset_name': self.hops_training_dataset_name,
-            'training_dataset_version': self.hops_training_dataset_version,
-            'label_name': self.label_name,
-            'included_features': list(self.features.included_features),
-            'included_layers': list(self.model.layers.included_layers),
-            'custom_dataset_generator': True if self.custom_dataset_generator else False,
+            "training_dataset_name": self.hops_training_dataset_name,
+            "training_dataset_version": self.hops_training_dataset_version,
+            "label_name": self.label_name,
+            "included_features": list(self.features.included_features),
+            "included_layers": list(self.model.layers.included_layers),
+            "custom_dataset_generator": True
+            if self.custom_dataset_generator
+            else False,
         }
 
         return ablation_dict
@@ -153,8 +155,10 @@ class Features(object):
         else:
             raise ValueError(
                 "features.include() only accepts strings or lists of strings, "
-                "but it received {0} which is of type '{1}'."
-                .format(str(feature), type(feature).__name__))
+                "but it received {0} which is of type '{1}'.".format(
+                    str(feature), type(feature).__name__
+                )
+            )
 
     def exclude(self, *args):
         """
@@ -176,11 +180,18 @@ class Features(object):
         if type(feature) is str:
             if feature in self.included_features:
                 self.included_features.remove(feature)
-                print("Feature '{0}' is excluded from the ablation study.".format(str(feature)))
+                print(
+                    "Feature '{0}' is excluded from the ablation study.".format(
+                        str(feature)
+                    )
+                )
         else:
-            raise ValueError("features.exclude() only accepts strings or lists of strings, "
-                             "but it received {0} (of type '{1}')."
-                             .format(str(feature), type(feature).__name__))
+            raise ValueError(
+                "features.exclude() only accepts strings or lists of strings, "
+                "but it received {0} (of type '{1}').".format(
+                    str(feature), type(feature).__name__
+                )
+            )
 
     def list_all(self):
         for feature in self.included_features:
@@ -221,9 +232,12 @@ class Layers(object):
             self.included_layers.add(layer)
             # print("included {}".format(layer))  # this still prints even if was duplicate
         else:
-            raise ValueError("layers.include() only accepts strings or lists of strings, "
-                             "but it received {0} which is of type '{1}'."
-                             .format(str(layer), type(layer).__name__))
+            raise ValueError(
+                "layers.include() only accepts strings or lists of strings, "
+                "but it received {0} which is of type '{1}'.".format(
+                    str(layer), type(layer).__name__
+                )
+            )
 
     def exclude(self, *args):
         for arg in args:
@@ -238,9 +252,12 @@ class Layers(object):
             if layer in self.included_layers:
                 self.included_layers.remove(layer)
         else:
-            raise ValueError("layers.exclude() only accepts strings or lists of strings, "
-                             "but it received {0} (of type '{1}')."
-                             .format(str(layer), type(layer).__name__))
+            raise ValueError(
+                "layers.exclude() only accepts strings or lists of strings, "
+                "but it received {0} (of type '{1}').".format(
+                    str(layer), type(layer).__name__
+                )
+            )
 
     def include_groups(self, *args, prefix=None):
         """
@@ -257,23 +274,32 @@ class Layers(object):
             if type(prefix) is str:
                 self.included_groups.add(frozenset([prefix]))
             else:
-                raise ValueError("`prefix` argument of layers.include_groups() should either be "
-                                 "a `NoneType` or a `str`, but it received {0} (of type '{1}'."
-                                 .format(str(prefix), type(prefix).__name__))
+                raise ValueError(
+                    "`prefix` argument of layers.include_groups() should either be "
+                    "a `NoneType` or a `str`, but it received {0} (of type '{1}'.".format(
+                        str(prefix), type(prefix).__name__
+                    )
+                )
 
         for arg in args:
             if type(arg) is list and len(arg) > 1:
                 self.included_groups.add(frozenset(arg))
             elif type(arg) is list and len(arg) == 1:
-                raise ValueError("layers.include_groups() received a list ( {0} ) "
-                                 "with only one element: Did you want to include a single layer in "
-                                 "your ablation study? then you should use layers.include()."
-                                 .format(str(arg)))
+                raise ValueError(
+                    "layers.include_groups() received a list ( {0} ) "
+                    "with only one element: Did you want to include a single layer in "
+                    "your ablation study? then you should use layers.include().".format(
+                        str(arg)
+                    )
+                )
             else:
-                raise ValueError("layers.include_groups() only accepts a prefix string, "
-                                 "or lists (with more than one element) "
-                                 "of strings, but it received {0} (of type '{1}')."
-                                 .format(str(arg), type(arg).__name__))
+                raise ValueError(
+                    "layers.include_groups() only accepts a prefix string, "
+                    "or lists (with more than one element) "
+                    "of strings, but it received {0} (of type '{1}').".format(
+                        str(arg), type(arg).__name__
+                    )
+                )
 
     def exclude_groups(self, *args, prefix=None):
         """
@@ -292,19 +318,25 @@ class Layers(object):
                 if frozenset([prefix]) in self.included_groups:
                     self.included_groups.remove(frozenset([prefix]))
             else:
-                raise ValueError("`prefix` argument of layers.exclude_groups() should either be "
-                                 "a `NoneType` or a `str`, but it received {0} (of type '{1}'."
-                                 .format(str(prefix), type(prefix).__name__))
+                raise ValueError(
+                    "`prefix` argument of layers.exclude_groups() should either be "
+                    "a `NoneType` or a `str`, but it received {0} (of type '{1}'.".format(
+                        str(prefix), type(prefix).__name__
+                    )
+                )
 
         for arg in args:
             if type(arg) is list and len(arg) > 1:
                 if frozenset(arg) in self.included_groups:
                     self.included_groups.remove(frozenset(arg))
             else:
-                raise ValueError("layers.exclude_groups() only accepts a prefix string, or "
-                                 "lists (with more than one element) "
-                                 "of strings, but it received {0} (of type '{1}')."
-                                 .format(str(arg), type(arg).__name__))
+                raise ValueError(
+                    "layers.exclude_groups() only accepts a prefix string, or "
+                    "lists (with more than one element) "
+                    "of strings, but it received {0} (of type '{1}').".format(
+                        str(arg), type(arg).__name__
+                    )
+                )
 
     def print_all(self):
         """
@@ -327,6 +359,8 @@ class Layers(object):
                 if len(layer_group) > 1:
                     print("--- Layer group " + str(list(layer_group)))
                 elif len(layer_group) == 1:
-                    print('---- All layers prefixed "' + str(list(layer_group)[0]) + '"')
+                    print(
+                        '---- All layers prefixed "' + str(list(layer_group)[0]) + '"'
+                    )
         else:
             print("There are no layer groups in this ablation study configuration.")

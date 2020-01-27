@@ -1,4 +1,3 @@
-
 import os
 import tensorflow as tf
 
@@ -14,7 +13,7 @@ else:
     tf_version = int(tf_full)
 
 try:
-    mode = os.environ['HOPSWORKS_VERSION']
+    mode = os.environ["HOPSWORKS_VERSION"]
     mode = HOPSWORKS
     print("You are running maggy on Hopsworks.")
 except KeyError:

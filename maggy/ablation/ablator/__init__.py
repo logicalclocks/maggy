@@ -1,2 +1,5 @@
-from maggy.ablation.ablator.abstractablator import AbstractAblator
-# from maggy.ablation.ablator.loco import LOCO
+from maggy.ablation.ablator import abstractablator
+
+AbstractAblator = abstractablator.AbstractAblator
+
+__all__ = ["AbstractAblator"]

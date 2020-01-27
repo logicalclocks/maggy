@@ -58,60 +58,72 @@ class Searchspace(object):
         :raises ValueError: Hyperparameter feasible region in wrong format
         """
         if getattr(self, name, None) is not None:
-            raise ValueError(
-                "Hyperparameter name is reserved: {}".format(name))
+            raise ValueError("Hyperparameter name is reserved: {}".format(name))
 
         if isinstance(value, tuple) or isinstance(value, list):
 
             if len(value) != 2:
-                raise ValueError("Hyperparameter tuple has to be of length "
-                                 "two and format (type, list): {0}, {1}".format(name, value))
+                raise ValueError(
+                    "Hyperparameter tuple has to be of length "
+                    "two and format (type, list): {0}, {1}".format(name, value)
+                )
 
             param_type = value[0].upper()
             param_values = value[1]
 
-            if param_type in [Searchspace.DOUBLE,
-                              Searchspace.INTEGER,
-                              Searchspace.DISCRETE,
-                              Searchspace.CATEGORICAL]:
+            if param_type in [
+                Searchspace.DOUBLE,
+                Searchspace.INTEGER,
+                Searchspace.DISCRETE,
+                Searchspace.CATEGORICAL,
+            ]:
 
                 if len(param_values) == 0:
-                    raise ValueError("Hyperparameter feasible region list "
-                                     "cannot be empty: {0}, {1}".format(name, param_values))
+                    raise ValueError(
+                        "Hyperparameter feasible region list "
+                        "cannot be empty: {0}, {1}".format(name, param_values)
+                    )
 
-                if param_type in [Searchspace.DOUBLE,
-                                  Searchspace.INTEGER]:
-                    assert len(param_values) == 2, ("For DOUBLE or INTEGER type parameters, list "
-                                                    "can only contain upper and lower bounds: {0}, {1}".format(
-                                                        name, param_values
-                                                    ))
+                if param_type in [Searchspace.DOUBLE, Searchspace.INTEGER]:
+                    assert len(param_values) == 2, (
+                        "For DOUBLE or INTEGER type parameters, list "
+                        "can only contain upper and lower bounds: {0}, {1}".format(
+                            name, param_values
+                        )
+                    )
 
                     if param_type == Searchspace.DOUBLE:
-                        if (type(param_values[0]) not in [int, float] or
-                                type(param_values[1]) not in [int, float]):
-                            raise ValueError("Hyperparameter boundaries for type DOUBLE need to be integer "
-                                             "or float: {}".format(name))
+                        if type(param_values[0]) not in [int, float] or type(
+                            param_values[1]
+                        ) not in [int, float]:
+                            raise ValueError(
+                                "Hyperparameter boundaries for type DOUBLE need to be integer "
+                                "or float: {}".format(name)
+                            )
                     elif param_type == Searchspace.INTEGER:
-                        if (type(param_values[0]) != int or
-                                type(param_values[1]) != int):
-                            raise ValueError("Hyperparameter boundaries for type INTEGER need to be integer: "
-                                             "{}".format(name))
+                        if type(param_values[0]) != int or type(param_values[1]) != int:
+                            raise ValueError(
+                                "Hyperparameter boundaries for type INTEGER need to be integer: "
+                                "{}".format(name)
+                            )
 
-                    assert param_values[0] < param_values[1], ("Lower bound {0} must be "
-                                                               "less than upper bound {1}: {2}".format(
-                                                                   param_values[0], param_values[1], name
-                                                               ))
+                    assert param_values[0] < param_values[1], (
+                        "Lower bound {0} must be "
+                        "less than upper bound {1}: {2}".format(
+                            param_values[0], param_values[1], name
+                        )
+                    )
 
                 self._hparam_types[name] = param_type
                 setattr(self, name, value[1])
             else:
-                raise ValueError("Hyperparameter type is not of type DOUBLE, "
-                                 "INTEGER, DISCRETE or CATEGORICAL: {}".format(name))
+                raise ValueError(
+                    "Hyperparameter type is not of type DOUBLE, "
+                    "INTEGER, DISCRETE or CATEGORICAL: {}".format(name)
+                )
 
         else:
-            raise ValueError("Value is not an appropriate tuple: {}"
-                             .format(name)
-                             )
+            raise ValueError("Value is not an appropriate tuple: {}".format(name))
 
         print("Hyperparameter added: {}".format(name))
 
@@ -122,7 +134,10 @@ class Searchspace(object):
             the hyperparameter values.
         :rtype: dict
         """
-        return {n: (self._hparam_types[n], getattr(self, n)) for n in self._hparam_types.keys()}
+        return {
+            n: (self._hparam_types[n], getattr(self, n))
+            for n in self._hparam_types.keys()
+        }
 
     def names(self):
         """Returns the dictionary with the names and types of all
@@ -155,11 +170,13 @@ class Searchspace(object):
             for name, value in self.names().items():
                 feasible_region = self.get(name)
                 if value == Searchspace.DOUBLE:
-                    params[name] = random.uniform(feasible_region[0],
-                                                  feasible_region[1])
+                    params[name] = random.uniform(
+                        feasible_region[0], feasible_region[1]
+                    )
                 elif value == Searchspace.INTEGER:
-                    params[name] = random.randint(feasible_region[0],
-                                                  feasible_region[1])
+                    params[name] = random.randint(
+                        feasible_region[0], feasible_region[1]
+                    )
                 elif value == Searchspace.DISCRETE:
                     params[name] = random.choice(feasible_region)
                 elif value == Searchspace.CATEGORICAL:

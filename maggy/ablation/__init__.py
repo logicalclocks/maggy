@@ -1,1 +1,5 @@
-from maggy.ablation.ablationstudy import AblationStudy
+from maggy.ablation import ablationstudy
+
+AblationStudy = ablationstudy.AblationStudy
+
+__all__ = ["AblationStudy"]

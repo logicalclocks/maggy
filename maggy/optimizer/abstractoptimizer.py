@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 
 
 class AbstractOptimizer(ABC):
-
     def __init__(self):
         self.searchspace = None
         self.num_trials = None

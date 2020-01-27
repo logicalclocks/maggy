@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 
 
 class AbstractAblator(ABC):
-
     def __init__(self, ablation_study, final_store):
         self.ablation_study = ablation_study
         self.final_store = final_store
@@ -20,7 +19,7 @@ class AbstractAblator(ABC):
         pass
 
     @abstractmethod
-    def get_dataset_generator(self, ablated_feature, dataset_type='tfrecord'):
+    def get_dataset_generator(self, ablated_feature, dataset_type="tfrecord"):
         """
         Create and return a dataset generator function based on the ablation policy to be used in a trial.
         The returned function will be executed on the executor per each trial.
@@ -69,4 +68,3 @@ class AbstractAblator(ABC):
 
     def name(self):
         return str(self.__class__.__name__)
-

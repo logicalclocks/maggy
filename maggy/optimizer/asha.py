@@ -1,7 +1,6 @@
 import math
 
-from maggy.optimizer import AbstractOptimizer
-from maggy.searchspace import Searchspace
+from maggy.optimizer.abstractoptimizer import AbstractOptimizer
 from maggy.trial import Trial
 
 
@@ -26,24 +25,29 @@ class Asha(AbstractOptimizer):
 
         if reduction_factor < 2 or not isinstance(reduction_factor, int):
             raise Exception(
-                "Can't initialize ASHA optimizer. 'reduction_factor'" + \
-                "has to be an integer equal to or larger than 2: {}"
-                .format(reduction_factor))
+                "Can't initialize ASHA optimizer. 'reduction_factor'"
+                + "has to be an integer equal to or larger than 2: {}".format(
+                    reduction_factor
+                )
+            )
         else:
-                self.reduction_factor = reduction_factor
+            self.reduction_factor = reduction_factor
 
         if not isinstance(resource_min, int):
             raise Exception(
-                "Can't initialize ASHA optimizer. 'resource_min'" + \
-                "not of type INTEGER.")
+                "Can't initialize ASHA optimizer. 'resource_min'"
+                + "not of type INTEGER."
+            )
         if not isinstance(resource_max, int):
             raise Exception(
-                "Can't initialize ASHA optimizer. 'resource_max'" + \
-                "not of type INTEGER.")
+                "Can't initialize ASHA optimizer. 'resource_max'"
+                + "not of type INTEGER."
+            )
         if resource_min >= resource_max:
             raise Exception(
-                "Can't initialize ASHA optimizer. 'resource_min' is larger" + \
-                "than 'resource_max'.")
+                "Can't initialize ASHA optimizer. 'resource_min' is larger"
+                + "than 'resource_max'."
+            )
 
         self.resource_min = resource_min
         self.resource_max = resource_max
@@ -55,10 +59,13 @@ class Asha(AbstractOptimizer):
         # maps rung index k to trial ids of trials that were promoted
         self.promoted = {0: []}
 
-        self.max_rung = int(math.floor(math.log(
-            self.resource_max/self.resource_min, self.reduction_factor)))
+        self.max_rung = int(
+            math.floor(
+                math.log(self.resource_max / self.resource_min, self.reduction_factor)
+            )
+        )
 
-        assert self.num_trials >= self.reduction_factor**(self.max_rung + 1)
+        assert self.num_trials >= self.reduction_factor ** (self.max_rung + 1)
 
     def get_suggestion(self, trial=None):
 
@@ -69,16 +76,22 @@ class Asha(AbstractOptimizer):
                 return None
 
             # for each rung
-            for k in range(self.max_rung-1, -1, -1):
+            for k in range(self.max_rung - 1, -1, -1):
                 # if rung doesn't exist yet go one lower
                 if k not in self.rungs:
                     continue
 
                 # get top_k
-                rung_finished = len([x for x in self.rungs[k] if x.status == Trial.FINALIZED])
+                rung_finished = len(
+                    [x for x in self.rungs[k] if x.status == Trial.FINALIZED]
+                )
 
-                if (rung_finished//self.reduction_factor) - len(self.promoted.get(k,[])) > 0:
-                    candidates = self._top_k(k, (rung_finished//self.reduction_factor))
+                if (rung_finished // self.reduction_factor) - len(
+                    self.promoted.get(k, [])
+                ) > 0:
+                    candidates = self._top_k(
+                        k, (rung_finished // self.reduction_factor)
+                    )
                 else:
                     candidates = []
 
@@ -87,7 +100,9 @@ class Asha(AbstractOptimizer):
                     continue
 
                 # select all that haven't been promoted yet
-                promotable = [t for t in candidates if t.trial_id not in self.promoted.get(k,[])]
+                promotable = [
+                    t for t in candidates if t.trial_id not in self.promoted.get(k, [])
+                ]
 
                 nr_promotable = len(promotable)
                 if nr_promotable >= 1:
@@ -96,7 +111,9 @@ class Asha(AbstractOptimizer):
                     old_trial = promotable[0]
                     # make copy of params to be able to change resource
                     params = old_trial.params.copy()
-                    params['resource'] = self.resource_min * (self.reduction_factor**new_rung)
+                    params["resource"] = self.resource_min * (
+                        self.reduction_factor ** new_rung
+                    )
                     promote_trial = Trial(params)
 
                     # open new rung if not exists
@@ -116,7 +133,7 @@ class Asha(AbstractOptimizer):
         # else return random configuration in base rung
         params = self.searchspace.get_random_parameter_values(1)[0]
         # set resource to minimum
-        params['resource'] = self.resource_min
+        params["resource"] = self.resource_min
         to_return = Trial(params)
         # add to bottom rung
         self.rungs[0].append(to_return)
