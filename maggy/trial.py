@@ -20,7 +20,7 @@ class Trial(object):
     ERROR = "ERROR"
     FINALIZED = "FINALIZED"
 
-    def __init__(self, params, trial_type='optimization'):
+    def __init__(self, params, trial_type="optimization"):
         """Create a new trial object from a hyperparameter combination
         ``params``.
 
@@ -34,12 +34,13 @@ class Trial(object):
 
         self.trial_type = trial_type
         # XXX temp fix, have to come up with abstractions
-        if self.trial_type == 'optimization':
+        if self.trial_type == "optimization":
             self.trial_id = Trial._generate_id(params)
-        elif self.trial_type == 'ablation':
-            serializable_params = {'ablated_feature': params.get('ablated_feature', None),
-                                   'ablated_layer': params.get('ablated_layer', None),
-                                   }
+        elif self.trial_type == "ablation":
+            serializable_params = {
+                "ablated_feature": params.get("ablated_feature", None),
+                "ablated_layer": params.get("ablated_layer", None),
+            }
             self.trial_id = Trial._generate_id(serializable_params)
         self.params = params
         self.status = Trial.PENDING
@@ -85,12 +86,11 @@ class Trial(object):
         if isinstance(params, dict):
             # check that all keys are strings
             if False in set(isinstance(k, str) for k in params.keys()):
-                raise ValueError(
-                    'All hyperparameter names have to be strings.')
+                raise ValueError("All hyperparameter names have to be strings.")
 
             return hashlib.md5(
-                json.dumps(params, sort_keys=True).encode('utf-8')
-                ).hexdigest()[:16]
+                json.dumps(params, sort_keys=True).encode("utf-8")
+            ).hexdigest()[:16]
 
         raise ValueError("Hyperparameters need to be a dictionary.")
 
@@ -98,13 +98,11 @@ class Trial(object):
         return json.dumps(self.to_dict(), default=util.json_default_numpy)
 
     def to_dict(self):
-        obj_dict = {
-            "__class__": self.__class__.__name__
-        }
+        obj_dict = {"__class__": self.__class__.__name__}
 
         temp_dict = self.__dict__.copy()
-        temp_dict.pop('lock')
-        temp_dict.pop('start')
+        temp_dict.pop("lock")
+        temp_dict.pop("start")
 
         obj_dict.update(temp_dict)
 
@@ -123,15 +121,15 @@ class Trial(object):
         """
 
         temp_dict = json.loads(json_str)
-        if temp_dict.get('__class__', None) != 'Trial':
+        if temp_dict.get("__class__", None) != "Trial":
             raise ValueError("json_str is not a Trial object.")
-        if temp_dict.get('params', None) is not None:
-            instance = cls(temp_dict.get('params'))
-            instance.trial_id = temp_dict['trial_id']
-            instance.status = temp_dict['status']
-            instance.early_stop = temp_dict.get('early_stop', False)
-            instance.final_metric = temp_dict['final_metric']
-            instance.metric_history = temp_dict['metric_history']
-            instance.duration = temp_dict['duration']
+        if temp_dict.get("params", None) is not None:
+            instance = cls(temp_dict.get("params"))
+            instance.trial_id = temp_dict["trial_id"]
+            instance.status = temp_dict["status"]
+            instance.early_stop = temp_dict.get("early_stop", False)
+            instance.final_metric = temp_dict["final_metric"]
+            instance.metric_history = temp_dict["metric_history"]
+            instance.duration = temp_dict["duration"]
 
         return instance

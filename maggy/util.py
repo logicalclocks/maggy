@@ -26,6 +26,7 @@ def _log(msg):
     if DEBUG:
         print(msg)
 
+
 def num_executors(sc):
     """
     Get the number of executors configured for Jupyter
@@ -38,11 +39,13 @@ def num_executors(sc):
     sc = hopsutil._find_spark().sparkContext
     try:
         return int(sc._conf.get("spark.dynamicAllocation.maxExecutors"))
-    except:
+    except:  # noqa: E722
         raise RuntimeError(
-            'Failed to find spark.dynamicAllocation.maxExecutors property, \
+            "Failed to find spark.dynamicAllocation.maxExecutors property, \
             please select your mode as either Experiment, Parallel \
-            Experiments or Distributed Training.')
+            Experiments or Distributed Training."
+        )
+
 
 def get_partition_attempt_id():
     """Returns partitionId and attemptNumber of the task context, when invoked
@@ -56,23 +59,25 @@ def get_partition_attempt_id():
     task_context = TaskContext.get()
     return task_context.partitionId(), task_context.attemptNumber()
 
+
 def _progress_bar(done, total):
 
-    done_ratio = done/total
+    done_ratio = done / total
     progress = math.floor(done_ratio * 30)
 
-    bar = '['
+    bar = "["
 
     for i in range(30):
         if i < progress:
-            bar += '='
+            bar += "="
         elif i == progress:
-            bar += '>'
+            bar += ">"
         else:
-            bar += '.'
+            bar += "."
 
-    bar += ']'
+    bar += "]"
     return bar
+
 
 def json_default_numpy(obj):
     if isinstance(obj, np.integer):
@@ -83,28 +88,39 @@ def json_default_numpy(obj):
         return obj.tolist()
     else:
         raise TypeError(
-            "Object of type {0}: {1} is not JSON serializable"
-            .format(type(obj), obj))
+            "Object of type {0}: {1} is not JSON serializable".format(type(obj), obj)
+        )
+
 
 def _finalize_experiment(
-        experiment_json, metric, app_id, run_id, state, duration, logdir,
-        best_logdir, optimization_key):
+    experiment_json,
+    metric,
+    app_id,
+    run_id,
+    state,
+    duration,
+    logdir,
+    best_logdir,
+    optimization_key,
+):
     """Attaches the experiment outcome as xattr metadata to the app directory.
     """
     outputs = _build_summary_json(logdir)
 
     if outputs:
-        hopshdfs.dump(outputs, logdir + '/.summary.json')
+        hopshdfs.dump(outputs, logdir + "/.summary.json")
 
     if best_logdir:
-        experiment_json['bestDir'] = best_logdir[len(hopshdfs.project_path()):]
-    experiment_json['optimizationKey'] = optimization_key
-    experiment_json['metric'] = metric
-    experiment_json['state'] = state
-    experiment_json['duration'] = duration
+        experiment_json["bestDir"] = best_logdir[len(hopshdfs.project_path()) :]
+    experiment_json["optimizationKey"] = optimization_key
+    experiment_json["metric"] = metric
+    experiment_json["state"] = state
+    experiment_json["duration"] = duration
 
     experiment_utils._attach_experiment_xattr(
-        app_id, run_id, experiment_json, 'REPLACE')
+        app_id, run_id, experiment_json, "REPLACE"
+    )
+
 
 def _build_summary_json(logdir):
     """Builds the summary json to be read by the experiments service.
@@ -113,17 +129,15 @@ def _build_summary_json(logdir):
 
     for trial in hopshdfs.ls(logdir):
         if hopshdfs.isdir(trial):
-            return_file = trial + '/.outputs.json'
-            hparams_file = trial + '/.hparams.json'
+            return_file = trial + "/.outputs.json"
+            hparams_file = trial + "/.hparams.json"
             if hopshdfs.exists(return_file) and hopshdfs.exists(hparams_file):
-                metric_arr = experiment_utils._convert_return_file_to_arr(
-                    return_file)
+                metric_arr = experiment_utils._convert_return_file_to_arr(return_file)
                 hparams_dict = _load_hparams(hparams_file)
-                combinations.append(
-                    {'parameters': hparams_dict, 'outputs': metric_arr})
+                combinations.append({"parameters": hparams_dict, "outputs": metric_arr})
 
-    return json.dumps(
-        {'combinations': combinations}, default=json_default_numpy)
+    return json.dumps({"combinations": combinations}, default=json_default_numpy)
+
 
 def _load_hparams(hparams_file):
     """Loads the HParams configuration from a hparams file of a trial.
@@ -132,6 +146,7 @@ def _load_hparams(hparams_file):
     hparams = json.loads(hparams_file_contents)
 
     return hparams
+
 
 def _handle_return_val(return_val, log_dir, optimization_key, log_file):
     """Handles the return value of the user defined training function.
@@ -148,7 +163,8 @@ def _handle_return_val(return_val, log_dir, optimization_key, log_file):
     if isinstance(return_val, dict) and optimization_key not in return_val:
         raise KeyError(
             "Returned dictionary does not contain optimization key with the "
-            "provided name: {}".format(optimization_key))
+            "provided name: {}".format(optimization_key)
+        )
 
     # validate that optimization metric is numeric
     if isinstance(return_val, dict):
@@ -160,19 +176,19 @@ def _handle_return_val(return_val, log_dir, optimization_key, log_file):
     if not isinstance(opt_val, constants.USER_FCT.NUMERIC_TYPES):
         raise exceptions.MetricTypeError(optimization_key, opt_val)
 
-    #for key, value in return_val.items():
+    # for key, value in return_val.items():
     #    return_val[key] = value if isinstance(value, str) else str(value)
 
-    return_val['log'] = log_file.replace(hopshdfs.project_path(), '')
+    return_val["log"] = log_file.replace(hopshdfs.project_path(), "")
 
-    return_file = log_dir + '/.outputs.json'
-    hopshdfs.dump(
-        json.dumps(return_val, default=json_default_numpy), return_file)
+    return_file = log_dir + "/.outputs.json"
+    hopshdfs.dump(json.dumps(return_val, default=json_default_numpy), return_file)
 
-    metric_file = log_dir + '/.metric'
+    metric_file = log_dir + "/.metric"
     hopshdfs.dump(json.dumps(opt_val, default=json_default_numpy), metric_file)
 
     return opt_val
+
 
 def _clean_dir(clean_dir, keep=[]):
     """Deletes all files in a directory but keeps a few.
@@ -180,24 +196,27 @@ def _clean_dir(clean_dir, keep=[]):
     if not hopshdfs.isdir(clean_dir):
         raise ValueError(
             "{} is not a directory. Use `hops.hdfs.delete()` to delete single "
-            "files.".format(clean_dir))
+            "files.".format(clean_dir)
+        )
     for path in hopshdfs.ls(clean_dir):
         if path not in keep:
             hopshdfs.delete(path, recursive=True)
+
 
 def _validate_ml_id(app_id, run_id):
     """Validates if there was an experiment run previously from the same app id
     but from a different experiment (e.g. hops-util-py vs. maggy) module.
     """
     try:
-        prev_ml_id = os.environ['ML_ID']
+        prev_ml_id = os.environ["ML_ID"]
     except KeyError:
         return app_id, run_id
-    prev_app_id, _, prev_run_id = prev_ml_id.rpartition('_')
+    prev_app_id, _, prev_run_id = prev_ml_id.rpartition("_")
     if prev_run_id == prev_ml_id:
         # means there was no underscore found in string
         raise ValueError(
-            "Found a previous ML_ID with wrong format: {}".format(prev_ml_id))
+            "Found a previous ML_ID with wrong format: {}".format(prev_ml_id)
+        )
     if prev_app_id == app_id and int(prev_run_id) >= run_id:
         return app_id, (int(prev_run_id) + 1)
     return app_id, run_id
