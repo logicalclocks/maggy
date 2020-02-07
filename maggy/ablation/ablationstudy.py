@@ -203,9 +203,26 @@ class Model(object):
         self.layers = Layers()
         self.base_model_generator = None
 
+        # the list holding custom model generators. 
+        # One (extra) trial will be generated per each item in the list.
+        self.custom_model_generators = [] 
+
     def set_base_model_generator(self, base_model_generator):
         self.base_model_generator = base_model_generator
-
+    
+    def add_custom_model_generator(self, custom_model_generator):
+        """
+        Add a custom model architecture generator, which will result in a single ablation trial. 
+        The `custom_model_generator` should be a Python callable, that once called should return a 
+        `keras.Model` object. This provides support for ablation study of 
+        arbitrarily complex models developed by extending `tf.Model` (for an example see 
+        [Writing custom layers and models with Keras](https://www.tensorflow.org/guide/keras/custom_layers_and_models#building_models)).
+        *Side effect*: This callable will be appended to `ablationstudy.Model.custom_model_generators`.
+        
+        :param custom_model_generator: A Python callable that returns a `keras.Model`. This model generator will be
+        used as the model generation logic in the inner (training) loop of a single model ablation trial.
+        """
+        self.custom_model_generators.append(custom_model_generator)
 
 class Layers(object):
     def __init__(self):
