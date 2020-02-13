@@ -218,6 +218,8 @@ class LOCO(AbstractAblator):
         :rtype: dict
         """
 
+        #TODO modify trial dict structure: rename 'ablated_layer' to 'model configuration'
+        # and change other places accordingly
         trial_dict = {}
 
         # 1 - determine the dataset generation logic
@@ -232,6 +234,7 @@ class LOCO(AbstractAblator):
 
         # 2 - determine the model generation logic
         # 2.1 - no model ablation
+
         if layer_identifier is None and custom_model_generator is None :
             trial_dict[
                 "model_function"
@@ -253,8 +256,10 @@ class LOCO(AbstractAblator):
                     )
         # 2.3 - model ablation based on a custom model generator
         elif layer_identifier is None and custom_model_generator is not None:
-            #TODO resume here
-            pass
+            trial_dict[
+                "model_function"
+            ] = custom_model_generator[0]
+            trial_dict["ablated_layer"] = "Custom model: " + custom_model_generator[1]
 
 
         return trial_dict

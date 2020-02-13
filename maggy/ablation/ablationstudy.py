@@ -210,7 +210,7 @@ class Model(object):
     def set_base_model_generator(self, base_model_generator):
         self.base_model_generator = base_model_generator
     
-    def add_custom_model_generator(self, custom_model_generator):
+    def add_custom_model_generator(self, custom_model_generator, model_identifier):
         """
         Add a custom model architecture generator, which will result in a single ablation trial. 
         The `custom_model_generator` should be a Python callable, that once called should return a 
@@ -221,8 +221,10 @@ class Model(object):
         
         :param custom_model_generator: A Python callable that returns a `keras.Model`. This model generator will be
         used as the model generation logic in the inner (training) loop of a single model ablation trial.
+        :param model_identifier: a string that will be used to track and identify the performance of the custom model
+        :type model_identifier: str
         """
-        self.custom_model_generators.append(custom_model_generator)
+        self.custom_model_generators.append((custom_model_generator, model_identifier))
 
 class Layers(object):
     def __init__(self):
