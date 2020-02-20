@@ -16,7 +16,7 @@ from hops import util as hopsutil
 from hops.experiment_impl.util import experiment_utils
 
 from maggy import util
-from maggy.optimizer import AbstractOptimizer, RandomSearch, Asha, SingleRun
+from maggy.optimizer import AbstractOptimizer, RandomSearch, Asha, TPE, SingleRun
 from maggy.core import rpc
 from maggy.trial import Trial
 from maggy.earlystop import AbstractEarlyStop, MedianStoppingRule, NoStoppingRule
@@ -93,6 +93,8 @@ class ExperimentDriver(object):
                     self.optimizer = RandomSearch()
                 elif optimizer.lower() == "asha":
                     self.optimizer = Asha()
+                elif optimizer.lower() == "tpe":
+                    self.optimizer = TPE()
                 elif optimizer.lower() == "none":
                     if len(self.searchspace.names()) == 0:
                         self.optimizer = SingleRun()
