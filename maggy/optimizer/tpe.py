@@ -56,6 +56,8 @@ class TPE(AbstractOptimizer):
 
         self._update_model()
 
+        print(self.model)
+
         if not self.model or np.random.rand() < self.random_fraction:
             return Trial(self.searchspace.get_random_parameter_values(1)[0])
 
@@ -101,6 +103,8 @@ class TPE(AbstractOptimizer):
             hparam_name: hparam
             for hparam_name, hparam in zip(hparam_names, best_sample)
         }
+
+        print(best_sample_dict)
 
         return Trial(best_sample_dict)
 
