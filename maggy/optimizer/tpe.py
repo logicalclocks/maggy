@@ -32,6 +32,11 @@ class TPE(AbstractOptimizer):
         self.bw_factor = 3  # higher values favor exploration
         self.random_fraction = 1 / 5  # todo findout good default
 
+    # Abstract class methods
+
+    # couldn't this be done in __init__
+    def initialize(self):
+
         # initialize random trials
         random_samples = self.searchspace.get_random_parameter_values(
             self.num_warmup_trails
@@ -40,12 +45,6 @@ class TPE(AbstractOptimizer):
             self.random_warmup_trials.append(
                 Trial(parameters_dict, trial_type="optimization")
             )
-
-    # Abstract class methods
-
-    # couldn't this be done in __init__
-    def initialize(self):
-        print("I am redundant")
 
     def get_suggestion(self, trial=None):
         """Returns Trial instantiated with hparams that maximize the Expected Improvement"""
