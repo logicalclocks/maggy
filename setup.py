@@ -11,7 +11,7 @@ setup(
     name='maggy',
     version=__version__,
     install_requires=[
-        'numpy==1.16.5'
+        'numpy==1.16.5', 'statsmodels=0.11.0'
     ],
     extras_require={
         'pydoop': ['pydoop'],
