@@ -65,6 +65,8 @@ class TPE(AbstractOptimizer):
         if self.random_warmup_trials:
             return self.random_warmup_trials.pop()
 
+        self._log("Start updateing model")
+
         self._update_model()
 
         self._log("Model {}".format(str(self.model)))
@@ -132,9 +134,14 @@ class TPE(AbstractOptimizer):
 
         # split trials in good and bad
         good_trials, bad_trials = self._split_trials()
+
+        self._log("Split Good and Bad")
+
         # get list of hparams, each item of the list is one observation (list of all hparams)
         good_hparams = [list(trial.params.values()) for trial in good_trials]
         bad_hparams = [list(trial.params.values()) for trial in bad_trials]
+
+        self.log("good: {}, bad: {}".format(good_hparams, bad_hparams))
 
         # todo consider case where we do not have enough observations ( return None )
         # → also see BOHB paper
@@ -158,7 +165,7 @@ class TPE(AbstractOptimizer):
         """
 
         # I need optimization direction here, for now assume minimize
-        metric_history = np.array([trial.metric for trial in self.final_store])
+        metric_history = np.array([trial.final_metric for trial in self.final_store])
         loss_idx_ascending = np.argsort(metric_history)
         n_good = int(np.ceil(self.gamma * len(metric_history)))
 
@@ -209,6 +216,7 @@ class TPE(AbstractOptimizer):
         return max(1e-32, kde_good.pdf(x)) / max(kde_bad.pdf(x), 1e-32)
 
     def _log(self, msg):
+        self.fd = hdfs.open_file(self.log_file, flags="w")
         self.fd.write((msg + "\n").encode())
         self.fd.flush()
         self.fd.close()
