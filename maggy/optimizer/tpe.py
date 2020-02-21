@@ -58,8 +58,14 @@ class TPE(AbstractOptimizer):
 
     def get_suggestion(self, trial=None):
         """Returns Trial instantiated with hparams that maximize the Expected Improvement"""
-
         try:
+            if len(self.final_store) >= self.num_trials:
+                self._log(
+                    "Finished experiment, ran {}/{} trials".format(
+                        len(self.final_store), self.num_trials
+                    )
+                )
+
             self._log("Get Suggestion")
 
             # first sample randomly to warmup
