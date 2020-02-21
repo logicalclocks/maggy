@@ -169,6 +169,13 @@ class TPE(AbstractOptimizer):
         loss_idx_ascending = np.argsort(metric_history)
         n_good = int(np.ceil(self.gamma * len(metric_history)))
 
+        self._log(
+            "loss_idx_ascending: {}, shape: {}".format(
+                loss_idx_ascending, loss_idx_ascending.shape
+            )
+        )
+        self._log("n_good: {}".format(n_good))
+
         good_trails = self.final_store[np.sort(loss_idx_ascending[:n_good])]
         bad_trials = self.final_store[np.sort(loss_idx_ascending[n_good:])]
 
@@ -216,7 +223,7 @@ class TPE(AbstractOptimizer):
         return max(1e-32, kde_good.pdf(x)) / max(kde_bad.pdf(x), 1e-32)
 
     def _log(self, msg):
-        self.fd = hdfs.open_file(self.log_file, flags="w")
+        self.fd = hdfs.open_file(self.log_file, flags="a")
         self.fd.write((msg + "\n").encode())
         self.fd.flush()
         self.fd.close()
