@@ -5,6 +5,8 @@ import scipy.stats as sps
 from maggy.optimizer.abstractoptimizer import AbstractOptimizer
 from maggy.trial import Trial
 
+from hops import hdfs
+
 
 class TPE(AbstractOptimizer):
     """
@@ -19,11 +21,17 @@ class TPE(AbstractOptimizer):
     def __init__(self):
         super().__init__()
 
+        # initialize logger
+        self.log_file = "hdfs:///Projects/playground/Logs/tpe.log"
+        if not hdfs.exists(self.log_file):
+            hdfs.dump("", self.log_file)
+
         # keep track of the model (i.e the kernel density estimators l & g)
         self.model = None
         self.random_warmup_trials = []
 
-        # meta hyper parameters --> initialize them in constructor
+        # meta hyper parameters
+        # todo initialize them in constructor
         self.num_warmup_trails = 15
         self.gamma = 0.1
         self.num_samples = 24
@@ -56,7 +64,7 @@ class TPE(AbstractOptimizer):
 
         self._update_model()
 
-        print(self.model)
+        self._log("Model {}".format(str(self.model)))
 
         if not self.model or np.random.rand() < self.random_fraction:
             return Trial(self.searchspace.get_random_parameter_values(1)[0])
@@ -104,7 +112,7 @@ class TPE(AbstractOptimizer):
             for hparam_name, hparam in zip(hparam_names, best_sample)
         }
 
-        print(best_sample_dict)
+        self._log("Best Sample {}".format(best_sample_dict))
 
         return Trial(best_sample_dict)
 
@@ -196,3 +204,8 @@ class TPE(AbstractOptimizer):
         :rtype: float
         """
         return max(1e-32, kde_good.pdf(x)) / max(kde_bad.pdf(x), 1e-32)
+
+    def _log(self, msg):
+        self.fd.write((msg + "\n").encode())
+        self.fd.flush()
+        self.fd.close()
