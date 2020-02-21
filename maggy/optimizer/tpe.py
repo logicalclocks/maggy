@@ -25,6 +25,7 @@ class TPE(AbstractOptimizer):
         self.log_file = "hdfs:///Projects/playground/Logs/tpe.log"
         if not hdfs.exists(self.log_file):
             hdfs.dump("", self.log_file)
+        self._log("Initialized Logger")
 
         # keep track of the model (i.e the kernel density estimators l & g)
         self.model = None
@@ -56,6 +57,8 @@ class TPE(AbstractOptimizer):
 
     def get_suggestion(self, trial=None):
         """Returns Trial instantiated with hparams that maximize the Expected Improvement"""
+
+        self._log("Get Suggestion")
 
         # first sample randomly to warmup
         # maybe it would be better to check the if clause with existance of model or trial
