@@ -223,7 +223,7 @@ class TPE(AbstractOptimizer):
         return max(1e-32, kde_good.pdf(x)) / max(kde_bad.pdf(x), 1e-32)
 
     def _log(self, msg):
-        self.fd = hdfs.open_file(self.log_file, flags="a")
+        self.fd = hdfs.open_file(self.log_file, flags="w")
         self.fd.write((msg + "\n").encode())
         self.fd.flush()
         self.fd.close()
