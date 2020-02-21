@@ -123,7 +123,7 @@ class TPE(AbstractOptimizer):
 
             return Trial(best_sample_dict)
         except BaseException as exc:
-            self._log(exc)
+            self._log(str(exc))
             self.fd.flush()
             self.fd.close()
 
