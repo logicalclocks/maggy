@@ -65,6 +65,7 @@ class TPE(AbstractOptimizer):
                         len(self.final_store), self.num_trials
                     )
                 )
+                return None
 
             self._log("Get Suggestion")
 
