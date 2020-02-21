@@ -175,12 +175,18 @@ class TPE(AbstractOptimizer):
         loss_idx_ascending = np.argsort(metric_history)
         n_good = int(np.ceil(self.gamma * len(metric_history)))
 
+        self.log("Metric History: {}".format(metric_history))
+
         self._log(
             "loss_idx_ascending: {}, shape: {}".format(
                 loss_idx_ascending, loss_idx_ascending.shape
             )
         )
         self._log("n_good: {}".format(n_good))
+
+        self._log(
+            "final store: {}, type: {}".format(self.final_store, type(self.final_store))
+        )
 
         good_trails = self.final_store[np.sort(loss_idx_ascending[:n_good])]
         bad_trials = self.final_store[np.sort(loss_idx_ascending[n_good:])]
