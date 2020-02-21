@@ -147,7 +147,7 @@ class TPE(AbstractOptimizer):
         good_hparams = [list(trial.params.values()) for trial in good_trials]
         bad_hparams = [list(trial.params.values()) for trial in bad_trials]
 
-        self.log("good: {}, bad: {}".format(good_hparams, bad_hparams))
+        self._log("good: {}, bad: {}".format(good_hparams, bad_hparams))
 
         # todo consider case where we do not have enough observations ( return None )
         # → also see BOHB paper
@@ -175,7 +175,7 @@ class TPE(AbstractOptimizer):
         loss_idx_ascending = np.argsort(metric_history)
         n_good = int(np.ceil(self.gamma * len(metric_history)))
 
-        self.log("Metric History: {}".format(metric_history))
+        self._log("Metric History: {}".format(metric_history))
 
         self._log(
             "loss_idx_ascending: {}, shape: {}".format(
