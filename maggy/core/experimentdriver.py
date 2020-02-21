@@ -439,6 +439,7 @@ class ExperimentDriver(object):
                         # keep for later in case tqdm doesn't work
                         self.maggy_log = self._update_maggy_log()
                         self._log(self.maggy_log)
+                        self._log(trial.to_json())
 
                         hopshdfs.dump(
                             trial.to_json(),
