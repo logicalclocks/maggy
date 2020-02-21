@@ -35,7 +35,7 @@ class TPE(AbstractOptimizer):
         # meta hyper parameters
         # todo initialize them in constructor
         self.num_warmup_trails = 15
-        self.gamma = 0.1
+        self.gamma = 0.15
         self.num_samples = 24
         self.bw_estimation = "normal_reference"  # other options 'silvermann', 'scott'
         self.min_bw = 1e-3  # from HpBandSter
@@ -140,6 +140,10 @@ class TPE(AbstractOptimizer):
 
         # split trials in good and bad
         good_trials, bad_trials = self._split_trials()
+
+        # The number of observations must be larger than the number of variables to build the model
+        if len(self.searchspace.names().keys()) <= len(good_trials):
+            return None
 
         self._log("Split Good and Bad")
 
