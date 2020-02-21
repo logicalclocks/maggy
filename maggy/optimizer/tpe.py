@@ -202,7 +202,7 @@ class TPE(AbstractOptimizer):
         """
 
         var_type_string = ""
-        for hparam, vartype in self.searchspace.names.items():
+        for hparam, vartype in self.searchspace.names().items():
             var_type_string += TPE._get_vartype(vartype)
 
         return var_type_string
