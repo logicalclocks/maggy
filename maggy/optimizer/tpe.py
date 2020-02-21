@@ -22,7 +22,7 @@ class TPE(AbstractOptimizer):
         super().__init__()
 
         # initialize logger
-        self.log_file = "hdfs:///Projects/playground/Logs/tpe.log"
+        self.log_file = "hdfs:///Projects/Kai/Logs/tpe.log"
         if not hdfs.exists(self.log_file):
             hdfs.dump("", self.log_file)
         self.fd = hdfs.open_file(self.log_file, flags="w")
