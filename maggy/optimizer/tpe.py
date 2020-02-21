@@ -189,6 +189,7 @@ class TPE(AbstractOptimizer):
         )
 
         # need to convert list to np.array to work
+
         good_trails = np.asarray(self.final_store)[np.sort(loss_idx_ascending[:n_good])]
         bad_trials = np.asarray(self.final_store)[np.sort(loss_idx_ascending[n_good:])]
 
@@ -201,7 +202,7 @@ class TPE(AbstractOptimizer):
         """
 
         var_type_string = ""
-        for hparam, vartype in self.sp.names.items():
+        for hparam, vartype in self.searchspace.names.items():
             var_type_string += TPE._get_vartype(vartype)
 
         return var_type_string
