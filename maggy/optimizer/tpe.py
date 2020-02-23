@@ -55,7 +55,7 @@ class TPE(AbstractOptimizer):
             self.num_warmup_trails
         )
         for counter, parameters_dict in enumerate(random_samples):
-            parameters_dict["trial_counter"] = counter
+            # parameters_dict["trial_counter"] = counter
             self.random_warmup_trials.append(
                 Trial(parameters_dict, trial_type="optimization")
             )
@@ -89,7 +89,7 @@ class TPE(AbstractOptimizer):
 
             if not self.model or np.random.rand() < self.random_fraction:
                 hparams = self.searchspace.get_random_parameter_values(1)[0]
-                hparams["trial_counter"] = self.trial_counter
+                # hparams["trial_counter"] = self.trial_counter
                 return Trial(hparams)
 
             best = -np.inf
@@ -143,7 +143,7 @@ class TPE(AbstractOptimizer):
                 for hparam_name, hparam in zip(hparam_names, best_sample)
             }
 
-            best_sample_dict["trial_counter"] = self.trial_counter
+            # best_sample_dict["trial_counter"] = self.trial_counter
 
             self._log("Best Sample {}".format(best_sample_dict))
 
