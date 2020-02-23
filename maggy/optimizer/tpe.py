@@ -109,7 +109,7 @@ class TPE(AbstractOptimizer):
                 ).T  # ndarray with shape (2, n_hparams)
                 sample_vector = []
 
-                self.log("Bounds: {}".format(bounds))
+                self._log("Bounds: {}".format(bounds))
 
                 # loop through hparams
                 for mean, bw, low, high in zip(obs, kde_good.bw, bounds[0], bounds[1]):
@@ -130,12 +130,12 @@ class TPE(AbstractOptimizer):
                     rv = sps.truncnorm.rvs(a, b, loc=mean, scale=bw)
                     sample_vector.append(rv)
 
-                self.log("Sample Vector: {}".format(sample_vector))
+                self._log("Sample Vector: {}".format(sample_vector))
 
                 # calculate EI for current sample
                 ei_val = TPE._calculate_ei(sample_vector, kde_good, kde_bad)
 
-                self.log("EI: {}, type: {}".format(ei_val, type(ei_val)))
+                self._log("EI: {}, type: {}".format(ei_val, type(ei_val)))
 
                 if ei_val > best:
                     best = ei_val
