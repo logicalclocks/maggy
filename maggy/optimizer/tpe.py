@@ -88,9 +88,9 @@ class TPE(AbstractOptimizer):
             self._log("Model {}".format(str(self.model)))
 
             if not self.model or np.random.rand() < self.random_fraction:
-                params = self.searchspace.get_random_parameter_values(1)[0]
-                params["trial_counter"] = self.trial_counter
-                return Trial(self.searchspace.get_random_parameter_values(1)[0])
+                hparams = self.searchspace.get_random_parameter_values(1)[0]
+                hparams["trial_counter"] = self.trial_counter
+                return Trial(hparams)
 
             best = -np.inf
             best_sample = None
