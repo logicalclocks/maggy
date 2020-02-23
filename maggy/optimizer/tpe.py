@@ -168,7 +168,7 @@ class TPE(AbstractOptimizer):
         good_trials, bad_trials = self._split_trials()
 
         # The number of observations must be larger than the number of variables to build the model
-        if len(self.searchspace.names().keys()) <= len(good_trials):
+        if len(self.searchspace.names().keys()) >= len(good_trials):
             return None
 
         self._log("Split Good and Bad")
@@ -219,7 +219,6 @@ class TPE(AbstractOptimizer):
         )
 
         # need to convert list to np.array to work
-
         good_trails = np.asarray(self.final_store)[np.sort(loss_idx_ascending[:n_good])]
         bad_trials = np.asarray(self.final_store)[np.sort(loss_idx_ascending[n_good:])]
 
