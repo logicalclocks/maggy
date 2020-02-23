@@ -154,6 +154,10 @@ class TPE(AbstractOptimizer):
             self.fd.close()
 
     def finalize_experiment(self, trials):
+        # close logfile
+        self.fd.flush()
+        self.fd.close()
+
         return
 
     # optimizer specific methods
