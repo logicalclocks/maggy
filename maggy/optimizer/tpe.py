@@ -169,13 +169,12 @@ class TPE(AbstractOptimizer):
         """
 
         # split trials in good and bad
+        self._log("Split Good and Bad")
         good_trials, bad_trials = self._split_trials()
 
         # The number of observations must be larger than the number of variables to build the model
         if len(self.searchspace.names().keys()) >= len(good_trials):
             return None
-
-        self._log("Split Good and Bad")
 
         # get list of hparams, each item of the list is one observation (list of all hparams)
         good_hparams = [list(trial.params.values()) for trial in good_trials]
@@ -195,7 +194,7 @@ class TPE(AbstractOptimizer):
             data=bad_hparams, var_type=var_type, bw=self.bw_estimation
         )
 
-        self.models = {"good": good_kde, "bad": bad_kde}
+        self.model = {"good": good_kde, "bad": bad_kde}
 
     def _split_trials(self):
         """splits trials in good and bad according to tpe algo
