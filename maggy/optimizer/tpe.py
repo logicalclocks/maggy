@@ -21,6 +21,9 @@ class TPE(AbstractOptimizer):
     def __init__(self):
         super().__init__()
 
+        # trial counter → I use it for logging purposes to TensorBoard only
+        self.trial_counter = 0
+
         # initialize logger
         self.log_file = "hdfs:///Projects/Kai/Logs/tpe.log"
         if not hdfs.exists(self.log_file):
@@ -58,6 +61,9 @@ class TPE(AbstractOptimizer):
 
     def get_suggestion(self, trial=None):
         """Returns Trial instantiated with hparams that maximize the Expected Improvement"""
+
+        self.trial_counter += 1
+
         try:
             if len(self.final_store) >= self.num_trials:
                 self._log(
@@ -94,6 +100,7 @@ class TPE(AbstractOptimizer):
                 idx = np.random.randint(0, len(kde_good.data))
                 obs = kde_good.data[idx]
                 # todo make definition of bounds in search space more explicit, below is interim solution
+                # todo do it with lookups
                 bounds = np.array(
                     [spec[1] for hp, spec in self.searchspace.to_dict().items()]
                 ).T  # ndarray with shape (2, n_hparams)
@@ -102,6 +109,13 @@ class TPE(AbstractOptimizer):
                 # loop through hparams
                 for mean, bw, low, high in zip(obs, kde_good.bw, bounds[0], bounds[1]):
                     # clip by min bw and multiply by factor to favor more exploration
+
+                    self._log(
+                        "Mean: {}, BW: {}, Low: {}, High: {}".format(
+                            mean, bw, low, high
+                        )
+                    )
+
                     bw = max(bw, self.min_bw) * self.bw_factor
 
                     a, b = (
@@ -125,6 +139,8 @@ class TPE(AbstractOptimizer):
                 hparam_name: hparam
                 for hparam_name, hparam in zip(hparam_names, best_sample)
             }
+
+            best_sample_dict["trial_counter"] = self.trial_counter
 
             self._log("Best Sample {}".format(best_sample_dict))
 
