@@ -44,8 +44,10 @@ class Searchspace(object):
 
     def __init__(self, **kwargs):
         self._hparam_types = {}
+        self._names = []
         for name, value in kwargs.items():
             self.add(name, value)
+            self._names.append(name)
 
     def add(self, name, value):
         """Adds {name, value} pair to hyperparameters.
@@ -184,6 +186,33 @@ class Searchspace(object):
             return_list.append(params)
 
         return return_list
+
+    def __iter__(self):
+        self._returned = self._names.copy()
+        return self
+
+    def __next__(self):
+        # if list not empty
+        if self._returned:
+            # pop from left and get parameter tuple
+            name = self._returned.pop(0)
+            return {
+                "name": name,
+                "type": self._hparam_types[name],
+                "values": self.get(name),
+            }
+        else:
+            raise StopIteration
+
+    def items(self):
+        # syntactic sugar
+        return self
+
+    def keys(self):
+        return self._names
+
+    def values(self):
+        return [(self._hparam_types[name], self.get(name)) for name in self._names]
 
     def __contains__(self, name):
         return name in self._hparam_types
