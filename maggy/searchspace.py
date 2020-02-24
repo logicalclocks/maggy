@@ -5,7 +5,9 @@ import random
 class Searchspace(object):
     """Create an instance of `Searchspace` from keyword arguments.
 
-    The keyword arguments specify name-values pairs for the hyperparameters,
+    A searchspace is essentially a set of key value pairs, defining the
+    hyperparameters with a name, type and a feasible interval. The keyword
+    arguments specify name-values pairs for the hyperparameters,
     where values are tuples of the form (type, list). Type is a string with
     one of the following values:
 
@@ -205,13 +207,33 @@ class Searchspace(object):
             raise StopIteration
 
     def items(self):
-        # syntactic sugar
+        """Returns a sorted iterable over all hyperparameters in the searchspace.
+
+        Allows to iterate over the hyperparameters in a searchspace. The parameters
+        are sorted in the order of which they were added to the searchspace by the user.
+
+        :return: an iterable of the searchspace
+        :type: Searchspace
+        """
+        # for consistency and serves mainly as syntactic sugar
         return self
 
     def keys(self):
+        """Returns a sorted iterable list over the names of hyperparameters in
+        the searchspace.
+
+        :return: names of hyperparameters as a list of strings
+        :type: list
+        """
         return self._names
 
     def values(self):
+        """Returns a sorted iterable list over the types and feasible intervals of
+        hyperparameters in the searchspace.
+
+        :return: types and feasible interval of hyperparameters as tuple
+        :type: tuple
+        """
         return [(self._hparam_types[name], self.get(name)) for name in self._names]
 
     def __contains__(self, name):
