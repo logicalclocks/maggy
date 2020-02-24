@@ -49,7 +49,6 @@ class Searchspace(object):
         self._names = []
         for name, value in kwargs.items():
             self.add(name, value)
-            self._names.append(name)
 
     def add(self, name, value):
         """Adds {name, value} pair to hyperparameters.
@@ -120,6 +119,7 @@ class Searchspace(object):
 
                 self._hparam_types[name] = param_type
                 setattr(self, name, value[1])
+                self._names.append(name)
             else:
                 raise ValueError(
                     "Hyperparameter type is not of type DOUBLE, "
