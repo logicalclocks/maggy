@@ -50,9 +50,9 @@ class TPE(AbstractOptimizer):
         self.num_warmup_trails = num_warmup_trials
         self.gamma = gamma
         self.num_samples = num_samples
-        self.bw_estimation = bw_estimation  # other options 'silvermann', 'scott'
+        self.bw_estimation = bw_estimation
         self.min_bw = 1e-3  # from HpBandSter
-        self.bw_factor = bw_factor  # higher values favor exploration
+        self.bw_factor = bw_factor
         self.random_fraction = random_fraction  # todo findout good default
 
         # initialize logger
@@ -65,8 +65,6 @@ class TPE(AbstractOptimizer):
         # keep track of the model (i.e the kernel density estimators l & g)
         self.model = None
         self.random_warmup_trials = []
-
-    # Abstract class methods
 
     # couldn't this be done in __init__
     def initialize(self):
@@ -95,7 +93,6 @@ class TPE(AbstractOptimizer):
             self._log("Get Suggestion")
 
             # first sample randomly to warmup
-            # maybe it would be better to check the if clause with existance of model or trial
             if self.random_warmup_trials:
                 return self.random_warmup_trials.pop()
 
@@ -117,20 +114,20 @@ class TPE(AbstractOptimizer):
 
             # loop through potential samples
             for sample in range(self.num_samples):
+                # randomly choose one of the `good` samples as mean
                 idx = np.random.randint(0, len(kde_good.data))
                 obs = kde_good.data[idx]
-                # todo make definition of bounds in search space more explicit, below is interim solution
-                # todo do it with lookups
-                bounds = np.array(
-                    [spec[1] for hp, spec in self.searchspace.to_dict().items()]
-                ).T  # ndarray with shape (2, n_hparams)
                 sample_vector = []
 
                 # self._log("Bounds: {}".format(bounds))
 
                 # loop through hparams
-                for mean, bw, low, high in zip(obs, kde_good.bw, bounds[0], bounds[1]):
-                    # clip by min bw and multiply by factor to favor more exploration
+                for mean, bw, hparam_spec in zip(
+                    obs, kde_good.bw, self.searchspace.items()
+                ):
+
+                    low = hparam_spec["values"][0]
+                    high = hparam_spec["values"][1]
 
                     self._log(
                         "Mean: {}, BW: {}, Low: {}, High: {}".format(
@@ -138,6 +135,7 @@ class TPE(AbstractOptimizer):
                         )
                     )
 
+                    # clip by min bw and multiply by factor to favor more exploration
                     bw = max(bw, self.min_bw) * self.bw_factor
 
                     a, b = (
@@ -158,9 +156,8 @@ class TPE(AbstractOptimizer):
                     best = ei_val
                     best_sample = sample_vector
 
-            # transform sample representation to dict
-            # todo have general helper functions to change between representations
-            hparam_names = list(self.searchspace.names().keys())
+            # transform sample array to dict
+            hparam_names = self.searchspace.keys()
             best_sample_dict = {
                 hparam_name: hparam
                 for hparam_name, hparam in zip(hparam_names, best_sample)
@@ -194,17 +191,14 @@ class TPE(AbstractOptimizer):
         good_trials, bad_trials = self._split_trials()
 
         # The number of observations must be larger than the number of variables to build the model
-        if len(self.searchspace.names().keys()) >= len(good_trials):
+        if len(self.searchspace.keys()) >= len(good_trials):
             return None
 
-        # get list of hparams, each item of the list is one observation (list of all hparams)
+        # get list of hparams, each item of the list is one observation
         good_hparams = [list(trial.params.values()) for trial in good_trials]
         bad_hparams = [list(trial.params.values()) for trial in bad_trials]
 
         self._log("good: {}".format(good_hparams))
-
-        # todo consider case where we do not have enough observations ( return None )
-        # → also see BOHB paper
 
         var_type = self._get_statsmodel_vartype()
 
@@ -255,8 +249,8 @@ class TPE(AbstractOptimizer):
         """
 
         var_type_string = ""
-        for hparam, vartype in self.searchspace.names().items():
-            var_type_string += TPE._get_vartype(vartype)
+        for hparam_spec in self.searchspace.items():
+            var_type_string += TPE._get_vartype(hparam_spec["type"])
 
         return var_type_string
 
@@ -290,7 +284,4 @@ class TPE(AbstractOptimizer):
         return max(1e-32, kde_good.pdf(x)) / max(kde_bad.pdf(x), 1e-32)
 
     def _log(self, msg):
-        # self.fd = hdfs.open_file(self.log_file, flags="w")
         self.fd.write((msg + "\n").encode())
-        # self.fd.flush()
-        # self.fd.close()
