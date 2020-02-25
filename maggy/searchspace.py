@@ -5,7 +5,9 @@ import random
 class Searchspace(object):
     """Create an instance of `Searchspace` from keyword arguments.
 
-    The keyword arguments specify name-values pairs for the hyperparameters,
+    A searchspace is essentially a set of key value pairs, defining the
+    hyperparameters with a name, type and a feasible interval. The keyword
+    arguments specify name-values pairs for the hyperparameters,
     where values are tuples of the form (type, list). Type is a string with
     one of the following values:
 
@@ -44,6 +46,7 @@ class Searchspace(object):
 
     def __init__(self, **kwargs):
         self._hparam_types = {}
+        self._names = []
         for name, value in kwargs.items():
             self.add(name, value)
 
@@ -116,6 +119,7 @@ class Searchspace(object):
 
                 self._hparam_types[name] = param_type
                 setattr(self, name, value[1])
+                self._names.append(name)
             else:
                 raise ValueError(
                     "Hyperparameter type is not of type DOUBLE, "
@@ -184,6 +188,53 @@ class Searchspace(object):
             return_list.append(params)
 
         return return_list
+
+    def __iter__(self):
+        self._returned = self._names.copy()
+        return self
+
+    def __next__(self):
+        # if list not empty
+        if self._returned:
+            # pop from left and get parameter tuple
+            name = self._returned.pop(0)
+            return {
+                "name": name,
+                "type": self._hparam_types[name],
+                "values": self.get(name),
+            }
+        else:
+            raise StopIteration
+
+    def items(self):
+        """Returns a sorted iterable over all hyperparameters in the searchspace.
+
+        Allows to iterate over the hyperparameters in a searchspace. The parameters
+        are sorted in the order of which they were added to the searchspace by the user.
+
+        :return: an iterable of the searchspace
+        :type: Searchspace
+        """
+        # for consistency and serves mainly as syntactic sugar
+        return self
+
+    def keys(self):
+        """Returns a sorted iterable list over the names of hyperparameters in
+        the searchspace.
+
+        :return: names of hyperparameters as a list of strings
+        :type: list
+        """
+        return self._names
+
+    def values(self):
+        """Returns a sorted iterable list over the types and feasible intervals of
+        hyperparameters in the searchspace.
+
+        :return: types and feasible interval of hyperparameters as tuple
+        :type: tuple
+        """
+        return [(self._hparam_types[name], self.get(name)) for name in self._names]
 
     def __contains__(self, name):
         return name in self._hparam_types
