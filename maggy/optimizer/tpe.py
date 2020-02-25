@@ -76,15 +76,12 @@ class TPE(AbstractOptimizer):
             self.num_warmup_trails
         )
         for counter, parameters_dict in enumerate(random_samples):
-            # parameters_dict["trial_counter"] = counter
             self.random_warmup_trials.append(
                 Trial(parameters_dict, trial_type="optimization")
             )
 
     def get_suggestion(self, trial=None):
         """Returns Trial instantiated with hparams that maximize the Expected Improvement"""
-
-        self.trial_counter += 1
 
         try:
             if len(self.final_store) >= self.num_trials:
@@ -110,7 +107,6 @@ class TPE(AbstractOptimizer):
 
             if not self.model or np.random.rand() < self.random_fraction:
                 hparams = self.searchspace.get_random_parameter_values(1)[0]
-                # hparams["trial_counter"] = self.trial_counter
                 return Trial(hparams)
 
             best = -np.inf
@@ -169,8 +165,6 @@ class TPE(AbstractOptimizer):
                 hparam_name: hparam
                 for hparam_name, hparam in zip(hparam_names, best_sample)
             }
-
-            # best_sample_dict["trial_counter"] = self.trial_counter
 
             self._log("Best Sample {}".format(best_sample_dict))
 
