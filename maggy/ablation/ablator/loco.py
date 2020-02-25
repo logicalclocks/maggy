@@ -97,7 +97,7 @@ class LOCO(AbstractAblator):
 
     def get_model_generator(self, layer_identifier=None, custom_model_generator=None):
 
-        if layer_identifier and custom_model_generator:
+        if layer_identifier is not None and custom_model_generator is not None:
             raise BadArgumentsError(
                 "get_model_generator",
                 "At least one of 'layer_identifier' or 'custom_model_generator' should be 'None'.",
