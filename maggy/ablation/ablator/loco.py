@@ -1,5 +1,6 @@
 from maggy.ablation.ablator import AbstractAblator
 from maggy.core.exceptions import NotSupportedError
+from maggy.core.exceptions import BadArgumentsError
 from hops import featurestore
 import tensorflow as tf
 from maggy.trial import Trial
@@ -94,11 +95,19 @@ class LOCO(AbstractAblator):
                     "Use 'tfrecord' or write your own custom dataset generator.",
                 )
 
-    def get_model_generator(self, layer_identifier=None, is_custom_model=False):
+    def get_model_generator(self, layer_identifier=None, custom_model_generator=None):
 
-        if is_custom_model:
-            pass
+        if layer_identifier and custom_model_generator:
+            raise BadArgumentsError(
+                "get_model_generator",
+                "At least one of 'layer_identifier' or 'custom_model_generator' should be 'None'.",
+            )
 
+        # if this trial relates to a custom model, then return the provided custom model generator
+        if custom_model_generator:
+            return custom_model_generator[0]
+        # if this is a model ablation of a base model, construct a new model generator
+        # using the layer_identifier
         base_model_generator = self.ablation_study.model.base_model_generator
         if layer_identifier is None:
             return base_model_generator
@@ -258,7 +267,7 @@ class LOCO(AbstractAblator):
         elif layer_identifier is None and custom_model_generator is not None:
             trial_dict[
                 "model_function"
-            ] = custom_model_generator[0]
+            ] = self.get_model_generator(custom_model_generator)
             trial_dict["ablated_layer"] = "Custom model: " + custom_model_generator[1]
 
 
