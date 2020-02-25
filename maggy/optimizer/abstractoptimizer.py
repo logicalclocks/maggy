@@ -6,6 +6,7 @@ class AbstractOptimizer(ABC):
         self.searchspace = None
         self.num_trials = None
         self.final_store = None
+        self.direction = None
 
     @abstractmethod
     def initialize(self):
