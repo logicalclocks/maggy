@@ -18,11 +18,42 @@ class TPE(AbstractOptimizer):
 
     """
 
-    def __init__(self):
+    def __init__(
+        self,
+        num_warmup_trials=15,
+        gamma=0.15,
+        num_samples=24,
+        bw_estimation="normal_reference",
+        bw_factor=3,
+        random_fraction=0.1,
+    ):
+        """
+
+        :param num_warmup_trials: number of random trials at the beginning of experiment
+        :type num_warmup_trials: int
+        :param gamma: Determines the percentile of configurations that will be used as training data
+                for the kernel density estimator, e.g if set to 10 the 10% best configurations will be considered
+                for training.
+        :type gamma: float
+        :param num_samples: number of samples drawn to optimize EI via sampling
+        :type num_samples: int
+        :param bw_estimation: method used by statsmodel for the bandwidth estimation of the kde. Options are 'normal_reference', 'silvermann', 'scott'
+        :type bw_estimation: str
+        :param bw_factor: widens the bandwidth for contiuous parameters for proposed points to optimize EI. Higher values favor more exploration
+        :type bw_factor: float
+        :param random_fraction: fraction of random samples
+        :type random_fraction: float
+        """
         super().__init__()
 
-        # trial counter → I use it for logging purposes to TensorBoard only
-        self.trial_counter = 0
+        # meta hyper parameters
+        self.num_warmup_trails = num_warmup_trials
+        self.gamma = gamma
+        self.num_samples = num_samples
+        self.bw_estimation = bw_estimation  # other options 'silvermann', 'scott'
+        self.min_bw = 1e-3  # from HpBandSter
+        self.bw_factor = bw_factor  # higher values favor exploration
+        self.random_fraction = random_fraction  # todo findout good default
 
         # initialize logger
         self.log_file = "hdfs:///Projects/Kai/Logs/tpe.log"
@@ -34,16 +65,6 @@ class TPE(AbstractOptimizer):
         # keep track of the model (i.e the kernel density estimators l & g)
         self.model = None
         self.random_warmup_trials = []
-
-        # meta hyper parameters
-        # todo initialize them in constructor
-        self.num_warmup_trails = 15
-        self.gamma = 0.15
-        self.num_samples = 24
-        self.bw_estimation = "normal_reference"  # other options 'silvermann', 'scott'
-        self.min_bw = 1e-3  # from HpBandSter
-        self.bw_factor = 3  # higher values favor exploration
-        self.random_fraction = 1 / 5  # todo findout good default
 
     # Abstract class methods
 
