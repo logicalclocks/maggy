@@ -102,11 +102,11 @@ class TPE(AbstractOptimizer):
             if self.random_warmup_trials:
                 return self.random_warmup_trials.pop()
 
-            self._log("Start updateing model")
+            # self._log("Start updateing model")
 
             self._update_model()
 
-            self._log("Model {}".format(str(self.model)))
+            # self._log("Model {}".format(str(self.model)))
 
             if not self.model or np.random.rand() < self.random_fraction:
                 hparams = self.searchspace.get_random_parameter_values(1)[0]
@@ -130,7 +130,7 @@ class TPE(AbstractOptimizer):
                 ).T  # ndarray with shape (2, n_hparams)
                 sample_vector = []
 
-                self._log("Bounds: {}".format(bounds))
+                # self._log("Bounds: {}".format(bounds))
 
                 # loop through hparams
                 for mean, bw, low, high in zip(obs, kde_good.bw, bounds[0], bounds[1]):
@@ -196,7 +196,7 @@ class TPE(AbstractOptimizer):
         """
 
         # split trials in good and bad
-        self._log("Split Good and Bad")
+        # self._log("Split Good and Bad")
         good_trials, bad_trials = self._split_trials()
 
         # The number of observations must be larger than the number of variables to build the model
@@ -207,7 +207,7 @@ class TPE(AbstractOptimizer):
         good_hparams = [list(trial.params.values()) for trial in good_trials]
         bad_hparams = [list(trial.params.values()) for trial in bad_trials]
 
-        self._log("good: {}, bad: {}".format(good_hparams, bad_hparams))
+        self._log("good: {}".format(good_hparams))
 
         # todo consider case where we do not have enough observations ( return None )
         # → also see BOHB paper
@@ -235,18 +235,18 @@ class TPE(AbstractOptimizer):
         loss_idx_ascending = np.argsort(metric_history)
         n_good = int(np.ceil(self.gamma * len(metric_history)))
 
-        self._log("Metric History: {}".format(metric_history))
+        # self._log("Metric History: {}".format(metric_history))
 
-        self._log(
-            "loss_idx_ascending: {}, shape: {}".format(
-                loss_idx_ascending, loss_idx_ascending.shape
-            )
-        )
-        self._log("n_good: {}".format(n_good))
-
-        self._log(
-            "final store: {}, type: {}".format(self.final_store, type(self.final_store))
-        )
+        # self._log(
+        #     "loss_idx_ascending: {}, shape: {}".format(
+        #         loss_idx_ascending, loss_idx_ascending.shape
+        #     )
+        # )
+        # self._log("n_good: {}".format(n_good))
+        #
+        # self._log(
+        #     "final store: {}, type: {}".format(self.final_store, type(self.final_store))
+        # )
 
         # need to convert list to np.array to work
         good_trails = np.asarray(self.final_store)[np.sort(loss_idx_ascending[:n_good])]
