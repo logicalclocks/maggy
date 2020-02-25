@@ -124,7 +124,7 @@ class LOCO(AbstractAblator):
                     # the first (input) and last (output) layers should not be considered, hence list_of_layers[1:-1]
                     if base_layer["config"]["name"] == layer_identifier:
                         list_of_layers.remove(base_layer)
-                        #TODO break here?
+                        break
             elif type(layer_identifier) is set:
                 # ablation of a layer group - all the layers in the group should be removed together
                 if len(layer_identifier) > 1:
