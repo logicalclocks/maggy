@@ -125,7 +125,6 @@ class TPE(AbstractOptimizer):
                 for mean, bw, hparam_spec in zip(
                     obs, kde_good.bw, self.searchspace.items()
                 ):
-
                     low = hparam_spec["values"][0]
                     high = hparam_spec["values"][1]
 
@@ -138,11 +137,9 @@ class TPE(AbstractOptimizer):
                     # clip by min bw and multiply by factor to favor more exploration
                     bw = max(bw, self.min_bw) * self.bw_factor
 
-                    a, b = (
-                        (low - mean) / bw,
-                        (high - mean) / bw,
-                    )  # see scipy documentation for more info
-                    rv = sps.truncnorm.rvs(a, b, loc=mean, scale=bw)
+                    low = -mean / bw
+                    high = (1 - mean) / bw
+                    rv = sps.truncnorm.rvs(low, high, loc=mean, scale=bw)
                     sample_vector.append(rv)
 
                 self._log("Sample Vector: {}".format(sample_vector))
@@ -155,6 +152,11 @@ class TPE(AbstractOptimizer):
                 if ei_val > best:
                     best = ei_val
                     best_sample = sample_vector
+
+            self._log("Transformed Best Sample {}".format(best_sample))
+
+            # get original representation of hparams
+            best_sample = self._inverse_transform(best_sample)
 
             # transform sample array to dict
             hparam_names = self.searchspace.keys()
@@ -195,18 +197,26 @@ class TPE(AbstractOptimizer):
             return None
 
         # get list of hparams, each item of the list is one observation
-        good_hparams = [list(trial.params.values()) for trial in good_trials]
-        bad_hparams = [list(trial.params.values()) for trial in bad_trials]
+        good_hparams = np.asarray(
+            [list(trial.params.values()) for trial in good_trials]
+        )
+        bad_hparams = np.asarray([list(trial.params.values()) for trial in bad_trials])
+
+        # todo it would be better if transform would be integrated in trial.py
+
+        normalized_good_hparams = np.apply_along_axis(self._transform, 1, good_hparams)
+        normalized_bad_hparams = np.apply_along_axis(self._transform, 1, bad_hparams)
 
         self._log("good: {}".format(good_hparams))
+        self._log("normalized good: {}".format(normalized_good_hparams))
 
         var_type = self._get_statsmodel_vartype()
 
         good_kde = sm.nonparametric.KDEMultivariate(
-            data=good_hparams, var_type=var_type, bw=self.bw_estimation
+            data=normalized_good_hparams, var_type=var_type, bw=self.bw_estimation
         )
         bad_kde = sm.nonparametric.KDEMultivariate(
-            data=bad_hparams, var_type=var_type, bw=self.bw_estimation
+            data=normalized_bad_hparams, var_type=var_type, bw=self.bw_estimation
         )
 
         self.model = {"good": good_kde, "bad": bad_kde}
@@ -222,19 +232,6 @@ class TPE(AbstractOptimizer):
         metric_history = np.array([trial.final_metric for trial in self.final_store])
         loss_idx_ascending = np.argsort(metric_history)
         n_good = int(np.ceil(self.gamma * len(metric_history)))
-
-        # self._log("Metric History: {}".format(metric_history))
-
-        # self._log(
-        #     "loss_idx_ascending: {}, shape: {}".format(
-        #         loss_idx_ascending, loss_idx_ascending.shape
-        #     )
-        # )
-        # self._log("n_good: {}".format(n_good))
-        #
-        # self._log(
-        #     "final store: {}, type: {}".format(self.final_store, type(self.final_store))
-        # )
 
         # need to convert list to np.array to work
         good_trails = np.asarray(self.final_store)[np.sort(loss_idx_ascending[:n_good])]
@@ -253,6 +250,85 @@ class TPE(AbstractOptimizer):
             var_type_string += TPE._get_vartype(hparam_spec["type"])
 
         return var_type_string
+
+    def _transform(self, hparams):
+        """Transforms array of hypeparameters for one trial.
+
+        +--------------+------------------------+
+        | Type         | Transformation         |
+        +==============+========================+
+        | DOUBLE       | Max-Min Normalization  |
+        +--------------+------------------------+
+
+        :param hparams: hparams in original representation for one trial
+        :type hparams: 1D np.ndarray
+        :return: transformed hparams
+        :rtype: 1D np.ndarray
+        """
+        transformed_hparams = []
+        # loop through hparams
+        for hparam, hparam_spec in zip(hparams, self.searchspace.items()):
+            # todo implement transformation for other types
+            if hparam_spec["type"] == "DOUBLE":
+                normalized_hparam = TPE._normalize(hparam_spec["values"], hparam)
+                transformed_hparams.append(normalized_hparam)
+            else:
+                raise NotImplementedError("Not Implemented other types yet")
+
+        return transformed_hparams
+
+    def _inverse_transform(self, transformed_hparams):
+        """Returns array of hparams in same representation as specified when instantiated
+
+        :param transformed_hparams: hparams in transformed representation for one trial
+        :type transformed_hparams: 1D np.ndarray
+        :return: transformed hparams
+        :rtype: 1D np.ndarray
+        """
+        hparams = []
+        for hparam, hparam_spec in zip(transformed_hparams, self.searchspace.items()):
+            if hparam_spec["type"] == "DOUBLE":
+                value = TPE._inverse_normalize(hparam_spec["values"], hparam)
+                hparams.append(value)
+            else:
+                raise NotImplementedError("Not Implemented other types yet")
+
+        return hparams
+
+    @staticmethod
+    def _normalize(bounds, scalar):
+        """Returns max-min normalized scalar
+
+        :param bounds: list containing lower and upper bound, e.g.: [-3,3]
+        :type bounds: list
+        :param scalar: scalar value to be normalized
+        :type scalar: float
+        :return: normalized scalar
+        :rtype: float
+        """
+        # todo check if bounds is valid and scalar is inside bounds
+
+        scalar = (scalar - bounds[0]) / (bounds[1] - bounds[0])
+        scalar = np.minimum(1.0, scalar)
+        scalar = np.maximum(0.0, scalar)
+        return scalar
+
+    @staticmethod
+    def _inverse_normalize(bounds, normalized_scalar):
+        """Returns inverse normalized scalar
+
+        :param bounds: list containing lower and upper bound, e.g.: [-3,3]
+        :type bounds: list
+        :param normalized_scalar: normalized scalar value
+        :type normalized_scalar: float
+        :return: original scalar
+        :rtype: float
+        """
+
+        # todo check if bounds is valid and scalar is inside bounds
+
+        normalized_scalar = normalized_scalar * (bounds[1] - bounds[0]) + bounds[0]
+        return normalized_scalar
 
     @staticmethod
     def _get_vartype(maggy_vartype):
