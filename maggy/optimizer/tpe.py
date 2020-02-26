@@ -238,14 +238,20 @@ class TPE(AbstractOptimizer):
         :rtype: (list[maggy.Trial], list[maggy.Trial])
         """
 
-        # I need optimization direction here, for now assume minimize
+        # ToDo I need optimization direction here, for now assume minimize
         metric_history = np.array([trial.final_metric for trial in self.final_store])
         loss_idx_ascending = np.argsort(metric_history)
         n_good = int(np.ceil(self.gamma * len(metric_history)))
 
         # need to convert list to np.array to work
-        good_trails = np.asarray(self.final_store)[np.sort(loss_idx_ascending[:n_good])]
-        bad_trials = np.asarray(self.final_store)[np.sort(loss_idx_ascending[n_good:])]
+
+        # For Minimizing
+        # good_trails = np.asarray(self.final_store)[np.sort(loss_idx_ascending[:n_good])]
+        # bad_trials = np.asarray(self.final_store)[np.sort(loss_idx_ascending[n_good:])]
+
+        # For Maximizing
+        good_trails = np.asarray(self.final_store)[np.sort(loss_idx_ascending[n_good:])]
+        bad_trials = np.asarray(self.final_store)[np.sort(loss_idx_ascending[:n_good])]
 
         return good_trails, bad_trials
 
