@@ -1,3 +1,5 @@
+import traceback
+
 import numpy as np
 import statsmodels.api as sm
 import scipy.stats as sps
@@ -178,8 +180,8 @@ class TPE(AbstractOptimizer):
             self._log("Best Sample {}".format(best_sample_dict))
 
             return Trial(best_sample_dict)
-        except BaseException as exc:
-            self._log(str(exc))
+        except BaseException:
+            self._log(traceback.format_exc())
             self.fd.flush()
             self.fd.close()
 
