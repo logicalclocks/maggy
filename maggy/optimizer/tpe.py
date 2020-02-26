@@ -125,22 +125,32 @@ class TPE(AbstractOptimizer):
                 for mean, bw, hparam_spec in zip(
                     obs, kde_good.bw, self.searchspace.items()
                 ):
-                    low = hparam_spec["values"][0]
-                    high = hparam_spec["values"][1]
 
-                    self._log(
-                        "Mean: {}, BW: {}, Low: {}, High: {}".format(
-                            mean, bw, low, high
+                    if hparam_spec["type"] in ["DOUBLE", "INTEGER"]:
+                        # sample for cont. hparams
+                        low = hparam_spec["values"][0]
+                        high = hparam_spec["values"][1]
+
+                        self._log(
+                            "Mean: {}, BW: {}, Low: {}, High: {}".format(
+                                mean, bw, low, high
+                            )
                         )
-                    )
 
-                    # clip by min bw and multiply by factor to favor more exploration
-                    bw = max(bw, self.min_bw) * self.bw_factor
+                        # clip by min bw and multiply by factor to favor more exploration
+                        bw = max(bw, self.min_bw) * self.bw_factor
 
-                    low = -mean / bw
-                    high = (1 - mean) / bw
-                    rv = sps.truncnorm.rvs(low, high, loc=mean, scale=bw)
-                    sample_vector.append(rv)
+                        low = -mean / bw
+                        high = (1 - mean) / bw
+                        rv = sps.truncnorm.rvs(low, high, loc=mean, scale=bw)
+                        sample_vector.append(rv)
+                    else:
+                        # sample for categorical hparams (sampling logic taken from HpBandSter)
+                        if np.random.rand() < (1 - bw):
+                            sample_vector.append(mean)
+                        else:
+                            n_choices = len(hparam_spec["values"])
+                            sample_vector.append(np.random.randint(n_choices))
 
                 self._log("Sample Vector: {}".format(sample_vector))
 
@@ -204,19 +214,19 @@ class TPE(AbstractOptimizer):
 
         # todo it would be better if transform would be integrated in trial.py
 
-        normalized_good_hparams = np.apply_along_axis(self._transform, 1, good_hparams)
-        normalized_bad_hparams = np.apply_along_axis(self._transform, 1, bad_hparams)
+        transformed_good_hparams = np.apply_along_axis(self._transform, 1, good_hparams)
+        transformed_bad_hparams = np.apply_along_axis(self._transform, 1, bad_hparams)
 
         self._log("good: {}".format(good_hparams))
-        self._log("normalized good: {}".format(normalized_good_hparams))
+        self._log("normalized good: {}".format(transformed_good_hparams))
 
         var_type = self._get_statsmodel_vartype()
 
         good_kde = sm.nonparametric.KDEMultivariate(
-            data=normalized_good_hparams, var_type=var_type, bw=self.bw_estimation
+            data=transformed_good_hparams, var_type=var_type, bw=self.bw_estimation
         )
         bad_kde = sm.nonparametric.KDEMultivariate(
-            data=normalized_bad_hparams, var_type=var_type, bw=self.bw_estimation
+            data=transformed_bad_hparams, var_type=var_type, bw=self.bw_estimation
         )
 
         self.model = {"good": good_kde, "bad": bad_kde}
@@ -255,11 +265,13 @@ class TPE(AbstractOptimizer):
         """Transforms array of hypeparameters for one trial.
 
         +--------------+------------------------+
-        | Type         | Transformation         |
+        | Hparam Type  | Transformation         |
         +==============+========================+
         | DOUBLE       | Max-Min Normalization  |
         +--------------+------------------------+
         | INTEGER      | Max-Min Normalization  |
+        +--------------+------------------------+
+        | CATEGORICAL  | Encoding: index in list|
         +--------------+------------------------+
 
         :param hparams: hparams in original representation for one trial
@@ -270,7 +282,7 @@ class TPE(AbstractOptimizer):
         transformed_hparams = []
         # loop through hparams
         for hparam, hparam_spec in zip(hparams, self.searchspace.items()):
-            # todo implement transformation for other types
+            # todo implement transformation for DISCRETE type
             if hparam_spec["type"] == "DOUBLE":
                 normalized_hparam = TPE._normalize_scalar(hparam_spec["values"], hparam)
                 transformed_hparams.append(normalized_hparam)
@@ -279,6 +291,9 @@ class TPE(AbstractOptimizer):
                     hparam_spec["values"], hparam
                 )
                 transformed_hparams.append(normalized_hparam)
+            elif hparam_spec["type"] == "CATEGORICAL":
+                encoded_hparam = TPE._encode_categorical(hparam_spec["values"], hparam)
+                transformed_hparams.append(encoded_hparam)
             else:
                 raise NotImplementedError("Not Implemented other types yet")
 
@@ -300,10 +315,39 @@ class TPE(AbstractOptimizer):
             elif hparam_spec["type"] == "INTEGER":
                 value = TPE._inverse_normalize_integer(hparam_spec["values"], hparam)
                 hparams.append(value)
+            elif hparam_spec["type"] == "CATEGORICAL":
+                encoded_hparam = TPE._encode_categorical(hparam_spec["values"], hparam)
+                transformed_hparams.append(encoded_hparam)
             else:
                 raise NotImplementedError("Not Implemented other types yet")
 
         return hparams
+
+    @staticmethod
+    def _encode_categorical(choices, value):
+        """Encodes category to integer. The encoding is the list index of the category
+
+        :param choices: possible values of the categorical hparam
+        :type choices: list
+        :param value: category to encode
+        :type value: str
+        :return: encoded category
+        :rtype: int
+        """
+        return choices.index(value)
+
+    @staticmethod
+    def _decode_categorical(choices, encoded_value):
+        """Decodes integer to corresponding category value
+
+        :param choices: possible values of the categorical hparam
+        :type choices: list
+        :param encoded_value: encoding of category
+        :type encoded_value: int
+        :return: category value
+        :rtype: str
+        """
+        return choices[encoded_value]
 
     @staticmethod
     def _normalize_scalar(bounds, scalar):
@@ -380,6 +424,8 @@ class TPE(AbstractOptimizer):
             return "c"
         elif maggy_vartype == "INTEGER":
             return "c"
+        elif maggy_vartype == "CATEGORICAL":
+            return "u"
         else:
             raise NotImplementedError("Only cont vartypes are implemented yer")
 
