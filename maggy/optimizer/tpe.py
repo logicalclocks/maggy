@@ -96,6 +96,7 @@ class TPE(AbstractOptimizer):
 
             # first sample randomly to warmup
             if self.random_warmup_trials:
+                self._log("Sample Randomly")
                 return self.random_warmup_trials.pop()
 
             # self._log("Start updateing model")
@@ -105,6 +106,7 @@ class TPE(AbstractOptimizer):
             # self._log("Model {}".format(str(self.model)))
 
             if not self.model or np.random.rand() < self.random_fraction:
+                self._log("Sample Randomly")
                 hparams = self.searchspace.get_random_parameter_values(1)[0]
                 return Trial(hparams)
 
@@ -285,7 +287,7 @@ class TPE(AbstractOptimizer):
         :param hparams: hparams in original representation for one trial
         :type hparams: 1D np.ndarray
         :return: transformed hparams
-        :rtype: 1D np.ndarray
+        :rtype: np.ndarray[np.float]
         """
         transformed_hparams = []
         # loop through hparams
@@ -313,7 +315,7 @@ class TPE(AbstractOptimizer):
         :param transformed_hparams: hparams in transformed representation for one trial
         :type transformed_hparams: 1D np.ndarray
         :return: transformed hparams
-        :rtype: 1D np.ndarray
+        :rtype: np.ndarray
         """
         hparams = []
         for hparam, hparam_spec in zip(transformed_hparams, self.searchspace.items()):
@@ -324,8 +326,8 @@ class TPE(AbstractOptimizer):
                 value = TPE._inverse_normalize_integer(hparam_spec["values"], hparam)
                 hparams.append(value)
             elif hparam_spec["type"] == "CATEGORICAL":
-                encoded_hparam = TPE._encode_categorical(hparam_spec["values"], hparam)
-                transformed_hparams.append(encoded_hparam)
+                decoded_hparam = TPE._decode_categorical(hparam_spec["values"], hparam)
+                hparams.append(decoded_hparam)
             else:
                 raise NotImplementedError("Not Implemented other types yet")
 
@@ -355,6 +357,9 @@ class TPE(AbstractOptimizer):
         :return: category value
         :rtype: str
         """
+        encoded_value = int(
+            encoded_value
+        )  # it is possible that value gets casted to np.float by numpy
         return choices[encoded_value]
 
     @staticmethod
@@ -369,7 +374,7 @@ class TPE(AbstractOptimizer):
         :rtype: float
         """
         # todo check if bounds is valid and scalar is inside bounds
-
+        scalar = float(scalar)
         scalar = (scalar - bounds[0]) / (bounds[1] - bounds[0])
         scalar = np.minimum(1.0, scalar)
         scalar = np.maximum(0.0, scalar)
@@ -388,7 +393,7 @@ class TPE(AbstractOptimizer):
         """
 
         # todo check if bounds is valid and scalar is inside bounds
-
+        normalized_scalar = float(normalized_scalar)
         normalized_scalar = normalized_scalar * (bounds[1] - bounds[0]) + bounds[0]
         return normalized_scalar
 
@@ -402,6 +407,8 @@ class TPE(AbstractOptimizer):
         :return: normalized value between 0 and 1
         :rtype: float
         """
+
+        integer = int(integer)
         return TPE._normalize_scalar(bounds, integer)
 
     @staticmethod
