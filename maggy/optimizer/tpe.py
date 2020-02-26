@@ -153,7 +153,7 @@ class TPE(AbstractOptimizer):
                     best = ei_val
                     best_sample = sample_vector
 
-            self._log("Transformed Best Sample {}".format(best_sample))
+            self._log("Transformed Best Sample: {}".format(best_sample))
 
             # get original representation of hparams
             best_sample = self._inverse_transform(best_sample)
@@ -259,6 +259,8 @@ class TPE(AbstractOptimizer):
         +==============+========================+
         | DOUBLE       | Max-Min Normalization  |
         +--------------+------------------------+
+        | INTEGER      | Max-Min Normalization  |
+        +--------------+------------------------+
 
         :param hparams: hparams in original representation for one trial
         :type hparams: 1D np.ndarray
@@ -270,7 +272,12 @@ class TPE(AbstractOptimizer):
         for hparam, hparam_spec in zip(hparams, self.searchspace.items()):
             # todo implement transformation for other types
             if hparam_spec["type"] == "DOUBLE":
-                normalized_hparam = TPE._normalize(hparam_spec["values"], hparam)
+                normalized_hparam = TPE._normalize_scalar(hparam_spec["values"], hparam)
+                transformed_hparams.append(normalized_hparam)
+            elif hparam_spec["type"] == "INTEGER":
+                normalized_hparam = TPE._normalize_integer(
+                    hparam_spec["values"], hparam
+                )
                 transformed_hparams.append(normalized_hparam)
             else:
                 raise NotImplementedError("Not Implemented other types yet")
@@ -288,7 +295,10 @@ class TPE(AbstractOptimizer):
         hparams = []
         for hparam, hparam_spec in zip(transformed_hparams, self.searchspace.items()):
             if hparam_spec["type"] == "DOUBLE":
-                value = TPE._inverse_normalize(hparam_spec["values"], hparam)
+                value = TPE._inverse_normalize_scalar(hparam_spec["values"], hparam)
+                hparams.append(value)
+            elif hparam_spec["type"] == "INTEGER":
+                value = TPE._inverse_normalize_integer(hparam_spec["values"], hparam)
                 hparams.append(value)
             else:
                 raise NotImplementedError("Not Implemented other types yet")
@@ -296,7 +306,7 @@ class TPE(AbstractOptimizer):
         return hparams
 
     @staticmethod
-    def _normalize(bounds, scalar):
+    def _normalize_scalar(bounds, scalar):
         """Returns max-min normalized scalar
 
         :param bounds: list containing lower and upper bound, e.g.: [-3,3]
@@ -314,7 +324,7 @@ class TPE(AbstractOptimizer):
         return scalar
 
     @staticmethod
-    def _inverse_normalize(bounds, normalized_scalar):
+    def _inverse_normalize_scalar(bounds, normalized_scalar):
         """Returns inverse normalized scalar
 
         :param bounds: list containing lower and upper bound, e.g.: [-3,3]
@@ -331,6 +341,33 @@ class TPE(AbstractOptimizer):
         return normalized_scalar
 
     @staticmethod
+    def _normalize_integer(bounds, integer):
+        """
+        :param bounds: list containing lower and upper bound, e.g.: [-3,3]
+        :type bounds: list
+        :param integer: value to be normalized
+        :type normalized_scalar: int
+        :return: normalized value between 0 and 1
+        :rtype: float
+        """
+        return TPE._normalize_scalar(bounds, integer)
+
+    @staticmethod
+    def _inverse_normalize_integer(bounds, scalar):
+        """Returns inverse normalized scalar
+
+        :param bounds: list containing lower and upper bound, e.g.: [-3,3]
+        :type bounds: list
+        :param normalized_scalar: normalized scalar value
+        :type normalized_scalar: float
+        :return: original integer
+        :rtype: int
+        """
+
+        x = TPE._inverse_normalize_scalar(bounds, scalar)
+        return int(np.round(x))
+
+    @staticmethod
     def _get_vartype(maggy_vartype):
         """Transforms Maggy vartype to statsmodel vartype, e.g. 'DOUBLE' → 'c'
 
@@ -340,6 +377,8 @@ class TPE(AbstractOptimizer):
         :rtype: str
         """
         if maggy_vartype == "DOUBLE":
+            return "c"
+        elif maggy_vartype == "INTEGER":
             return "c"
         else:
             raise NotImplementedError("Only cont vartypes are implemented yer")
