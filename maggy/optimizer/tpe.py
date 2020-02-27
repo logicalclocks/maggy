@@ -254,8 +254,10 @@ class TPE(AbstractOptimizer):
         # bad_trials = np.asarray(self.final_store)[np.sort(loss_idx_ascending[n_good:])]
 
         # For Maximizing
-        good_trails = np.asarray(self.final_store)[np.sort(loss_idx_ascending[n_good:])]
-        bad_trials = np.asarray(self.final_store)[np.sort(loss_idx_ascending[:n_good])]
+        good_trails = np.asarray(self.final_store)[
+            np.sort(loss_idx_ascending[-n_good:])
+        ]
+        bad_trials = np.asarray(self.final_store)[np.sort(loss_idx_ascending[:-n_good])]
 
         return good_trails, bad_trials
 
