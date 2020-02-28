@@ -248,7 +248,7 @@ class TPE(AbstractOptimizer):
         n_good = int(np.ceil(self.gamma * len(metric_history)))
 
         # need to convert list to np.array to work
-
+        # ToDo double check calculation of n_good with HpBandSter
         # For Minimizing
         # good_trails = np.asarray(self.final_store)[np.sort(loss_idx_ascending[:n_good])]
         # bad_trials = np.asarray(self.final_store)[np.sort(loss_idx_ascending[n_good:])]
