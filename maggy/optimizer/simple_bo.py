@@ -1,0 +1,49 @@
+from maggy.optimizer.abstractoptimizer import AbstractOptimizer
+from maggy.searchspace import Searchspace
+from maggy.trial import Trial
+
+
+class SimpleBO(AbstractOptimizer):
+    def __init__(self):
+        super().__init__()
+        self.trial_buffer = []
+
+    def initialize(self):
+
+        if (
+            Searchspace.DOUBLE not in self.searchspace.names().values()
+            and Searchspace.INTEGER not in self.searchspace.names().values()
+        ):
+            raise NotImplementedError(
+                "Searchspace needs at least one continuous parameter for random search."
+            )
+
+        list_of_random_trials = self.searchspace.get_random_parameter_values(
+            self.num_trials
+        )
+        for parameters_dict in list_of_random_trials:
+            self.trial_buffer.append(Trial(parameters_dict, trial_type="optimization"))
+
+    def get_suggestion(self, trial=None):
+        if self.trial_buffer:
+            return self.trial_buffer.pop()
+        else:
+            return None
+
+    def finalize_experiment(self, trials):
+        return
+
+    def _generate_model(self):
+        """initializes the surrogate model of the gaussian process"""
+
+    def _update_model(self):
+        """updates the surrogate model with a new observation
+
+        Question: can it update iteratively or do we need to generate a new model every time
+        """
+
+    def _acquisition_function(self):
+        """calculates the utility for given point and surrogate"""
+
+    def _maximize_acq_function(self):
+        """maximizes acquisition function"""
