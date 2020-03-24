@@ -48,3 +48,16 @@ class MetricTypeError(TypeError):
             )
         )
         super().__init__(self.message)
+
+
+class BadArgumentsError(Exception):
+    """Raised when a function or method has been called with incompatible arguments.
+    This can be used by developers to prevent bad usage of their functions 
+    or classes by other developers.
+    """
+
+    def __init__(self, callable, suggestion=""):
+        self.message = "{0} was called using incompatible arguments. {1}".format(
+            callable, suggestion
+        )
+        super().__init__(self.message)
