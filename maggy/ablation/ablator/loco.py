@@ -218,8 +218,6 @@ class LOCO(AbstractAblator):
         :rtype: dict
         """
 
-        #TODO modify trial dict structure: rename 'ablated_layer' to 'model configuration'
-        # and change other places accordingly
         trial_dict = {}
 
         # 1 - determine the dataset generation logic
