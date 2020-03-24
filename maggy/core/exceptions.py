@@ -52,7 +52,7 @@ class MetricTypeError(TypeError):
 
 class BadArgumentsError(Exception):
     """Raised when a function or method has been called with incompatible arguments.
-    This can be used by developers to prevent bad usage of their functions 
+    This can be used by developers to prevent bad usage of their functions
     or classes by other developers.
     """
 

@@ -18,7 +18,9 @@ class LOCO(AbstractAblator):
             len(self.ablation_study.features.included_features)
             + len(self.ablation_study.model.layers.included_layers)
             + len(self.ablation_study.model.layers.included_groups)
-            + len(self.ablation_study.model.custom_model_generators) # one trial per each custom model
+            + len(
+                self.ablation_study.model.custom_model_generators
+            )  # one trial per each custom model
             + 1
         )
 
@@ -194,13 +196,15 @@ class LOCO(AbstractAblator):
                     trial_type="ablation",
                 )
             )
-        
+
         # 4 - generate ablation trials based on custom model generators
 
         for custom_model_generator in self.ablation_study.model.custom_model_generators:
             self.trial_buffer.append(
                 Trial(
-                    self.create_trial_dict(custom_model_generator=custom_model_generator),
+                    self.create_trial_dict(
+                        custom_model_generator=custom_model_generator
+                    ),
                     trial_type="ablation",
                 )
             )
@@ -214,7 +218,9 @@ class LOCO(AbstractAblator):
     def finalize_experiment(self, trials):
         return
 
-    def create_trial_dict(self, ablated_feature=None, layer_identifier=None, custom_model_generator=None):
+    def create_trial_dict(
+        self, ablated_feature=None, layer_identifier=None, custom_model_generator=None
+    ):
         """
         Creates a trial dictionary that can be used for creating a Trial instance.
 
@@ -242,7 +248,7 @@ class LOCO(AbstractAblator):
         # 2 - determine the model generation logic
         # 2.1 - no model ablation
 
-        if layer_identifier is None and custom_model_generator is None :
+        if layer_identifier is None and custom_model_generator is None:
             trial_dict[
                 "model_function"
             ] = self.ablation_study.model.base_model_generator
@@ -263,10 +269,9 @@ class LOCO(AbstractAblator):
                     )
         # 2.3 - model ablation based on a custom model generator
         elif layer_identifier is None and custom_model_generator is not None:
-            trial_dict[
-                "model_function"
-            ] = self.get_model_generator(custom_model_generator)
+            trial_dict["model_function"] = self.get_model_generator(
+                custom_model_generator
+            )
             trial_dict["ablated_layer"] = "Custom model: " + custom_model_generator[1]
-
 
         return trial_dict
