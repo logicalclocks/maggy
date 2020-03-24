@@ -18,9 +18,7 @@ class LOCO(AbstractAblator):
             len(self.ablation_study.features.included_features)
             + len(self.ablation_study.model.layers.included_layers)
             + len(self.ablation_study.model.layers.included_groups)
-            + len(
-                self.ablation_study.model.custom_model_generators
-            )  # one trial per each custom model
+            + len(self.ablation_study.model.custom_model_generators)
             + 1
         )
 
