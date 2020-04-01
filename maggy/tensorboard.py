@@ -8,13 +8,7 @@ from tensorboard.plugins.hparams import summary_v2 as hp
 from tensorboard.plugins.hparams import api_pb2
 from tensorboard.plugins.hparams import summary
 
-from maggy import trial
-
 __import__("tensorflow").compat.v1.enable_eager_execution()
-
-# override HParams id with our trial id
-# 1.15.0 will have functionality to pass custom id
-hp._derive_session_group_name = trial.Trial._generate_id
 
 _tensorboard_dir = None
 _writer = None
@@ -82,10 +76,10 @@ def _write_hparams_config(log_dir, searchspace):
         hp.hparams_config(hparams=HPARAMS, metrics=METRICS)
 
 
-def _write_hparams(hparams):
+def _write_hparams(hparams, trial_id):
     global _writer
     with _writer.as_default():
-        hp.hparams(hparams)
+        hp.hparams(hparams, trial_id)
 
 
 def _write_session_end():
