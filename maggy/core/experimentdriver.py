@@ -116,10 +116,6 @@ class ExperimentDriver(object):
                         str(optimizer), type(optimizer).__name__
                     )
                 )
-            # Set references to data in optimizer
-            self.optimizer.num_trials = self.num_trials
-            self.optimizer.searchspace = self.searchspace
-            self.optimizer.final_store = self._final_store
 
             direction = kwargs.get("direction", "max")
             if isinstance(direction, str) and direction.lower() in ["min", "max"]:
@@ -249,6 +245,12 @@ class ExperimentDriver(object):
         self.job_start = job_start
 
         if self.experiment_type == "optimization":
+            # Set references to data in optimizer
+            self.optimizer.num_trials = self.num_trials
+            self.optimizer.searchspace = self.searchspace
+            self.optimizer.trial_store = self._trial_store
+            self.optimizer.final_store = self._final_store
+            self.optimizer.direction = self.direction
             self.optimizer.initialize()
         elif self.experiment_type == "ablation":
             self.ablator.initialize()
