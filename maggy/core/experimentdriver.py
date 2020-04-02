@@ -239,17 +239,18 @@ class ExperimentDriver(object):
         self.fd = hopshdfs.open_file(self.log_file, flags="w")
 
     def init(self, job_start):
-        # Set references to data in optimizer
-        self.optimizer.num_trials = self.num_trials
-        self.optimizer.searchspace = self.searchspace
-        self.optimizer.final_store = self._final_store
-        self.optimizer.direction = self.direction
 
         self.server_addr = self.server.start(self)
 
         self.job_start = job_start
 
         if self.experiment_type == "optimization":
+            # Set references to data in optimizer
+            self.optimizer.num_trials = self.num_trials
+            self.optimizer.searchspace = self.searchspace
+            self.optimizer.trial_store = self._trial_store
+            self.optimizer.final_store = self._final_store
+            self.optimizer.direction = self.direction
             self.optimizer.initialize()
         elif self.experiment_type == "ablation":
             self.ablator.initialize()
