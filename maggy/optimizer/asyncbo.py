@@ -156,7 +156,8 @@ class AsyncBayesianOptimization(AbstractOptimizer):
                 self._log("no previous finished trial")
 
             # remove hparams of last finished trial from `busy_locations`
-            self._cleanup_busy_locations(trial)
+            if trial:
+                self._cleanup_busy_locations(trial)
 
             # check if experiment has finished
             if self._experiment_finished():
