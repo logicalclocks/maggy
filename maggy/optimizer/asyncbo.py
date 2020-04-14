@@ -138,7 +138,7 @@ class AsyncBayesianOptimization(AbstractOptimizer):
 
         # configure logger
 
-        self.log_file = "hdfs:///Projects/Kai/Logs/tpe.log"  # todo
+        self.log_file = "hdfs:///Projects/Kai/Logs/asyncbo.log"  # todo
         if not hdfs.exists(self.log_file):
             hdfs.dump("", self.log_file)
         self.fd = hdfs.open_file(self.log_file, flags="w")
@@ -150,7 +150,10 @@ class AsyncBayesianOptimization(AbstractOptimizer):
 
     def get_suggestion(self, trial=None):
         try:
-            self._log("Last finished Trial: {}".format(trial.trial_id))
+            if trial:
+                self._log("Last finished Trial: {}".format(trial.trial_id))
+            else:
+                self._log("no previous finished trial")
 
             # remove hparams of last finished trial from `busy_locations`
             self._cleanup_busy_locations(trial)
@@ -183,6 +186,10 @@ class AsyncBayesianOptimization(AbstractOptimizer):
             self.fd.close()
 
     def finalize_experiment(self, trials):
+        # close logfile
+        self.fd.flush()
+        self.fd.close()
+
         return
 
     def sampling_routine(self, impute_busy=True):
