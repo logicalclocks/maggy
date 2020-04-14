@@ -20,7 +20,10 @@ from hops import hdfs
 
 
 class AsyncBayesianOptimization(AbstractOptimizer):
-    """Base class for asynchronous bayesian optimization"""
+    """Base class for asynchronous bayesian optimization
+
+    todo add default init values
+    """
 
     def __init__(
         self,
@@ -100,7 +103,7 @@ class AsyncBayesianOptimization(AbstractOptimizer):
         # configure optimizer
 
         allowed_acq_opt = ["sampling", "lbfgs"]
-        if acq_optimizer not in allowed_acq_funcs:
+        if acq_optimizer not in allowed_acq_opt:
             raise ValueError(
                 "expected `acq_optimizer` to be in {}, got {}".format(
                     allowed_acq_opt, acq_optimizer

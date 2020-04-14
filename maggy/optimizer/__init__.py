@@ -12,13 +12,13 @@ RandomSearch = randomsearch.RandomSearch
 Asha = asha.Asha
 TPE = tpe.TPE
 SingleRun = singlerun.SingleRun
-AsyncBayesianOptimizer = asyncbo.AsyncBayesianOptimization
+AsyncBO = asyncbo.AsyncBayesianOptimization
 
 __all__ = [
     "AbstractOptimizer",
     "RandomSearch",
     "Asha",
     "TPE",
-    "AsyncBayesianOptimizer",
+    "AsyncBO",
     "SingleRun",
 ]
