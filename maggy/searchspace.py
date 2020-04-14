@@ -429,3 +429,41 @@ class Searchspace(object):
 
         x = Searchspace._inverse_normalize_scalar(bounds, scalar)
         return int(np.round(x))
+
+    @staticmethod
+    def dict_to_list(hparams):
+        """Transforms dict of hparams to list representation ( for one hparam config )
+
+        example:
+            {'x': -3.0, 'y': 3.0, 'z': 'green'} to [-3.0, 3.0, 'green']
+
+        :param hparams: hparams in dict representation
+        :type hparams: dict
+        :return: hparams in list representation
+        :rtype: list
+        """
+        return list(hparams.values())
+
+    @staticmethod
+    def list_to_dict(hparams, hparam_names):
+        """Transforms list of hparams to dict representation ( for one hparam config )
+
+        example:
+            [-3.0, 3.0, 'green'] to {'x': -3.0, 'y': 3.0, 'z': 'green'}
+
+        :param hparams: hparams in list representation
+        :type hparams: list
+        :param hparam_names: list of hparam names, has to have same order as `hparams`
+        :type hparam_names: list
+        :return: hparams in dict representation
+        :rtype: dict
+        """
+        if len(hparam_names) != len(hparams):
+            raise ValueError(
+                "hparam_names and hparams have to have same length (and order!)"
+            )
+
+        hparam_dict = {
+            hparam_name: hparam for hparam_name, hparam in zip(hparam_names, hparams)
+        }
+        return hparam_dict
