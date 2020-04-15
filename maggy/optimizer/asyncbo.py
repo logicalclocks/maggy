@@ -138,7 +138,9 @@ class AsyncBayesianOptimization(AbstractOptimizer):
 
         # configure logger
 
-        self.log_file = "hdfs:///Projects/kai/Logs/asyncbo.log"  # todo
+        self.log_file = (
+            "hdfs:///Projects/demo_deep_learning_admin000/Logs/asyncbo.log"  # todo
+        )
         if not hdfs.exists(self.log_file):
             hdfs.dump("", self.log_file)
         self.fd = hdfs.open_file(self.log_file, flags="w")
