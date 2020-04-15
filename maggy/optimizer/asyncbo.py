@@ -438,7 +438,7 @@ class AsyncBayesianOptimization(AbstractOptimizer):
             del self.busy_locations[index]
             self._log("{} was deleted from busy_locations".format(hparams))
         except TypeError:
-            self._log("{} was not in busy_locations", format(hparams))
+            self._log("{} was not in busy_locations".format(hparams))
 
     def ymin(self):
         """
