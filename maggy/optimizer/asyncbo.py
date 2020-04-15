@@ -363,26 +363,30 @@ class AsyncBayesianOptimization(AbstractOptimizer):
         )
         yi = np.array([trial.final_metric for trial in self.final_store])
 
-        # get locations of busy trials and imputed liars
-        Xi_busy = np.array([location["params"] for location in self.busy_locations])
-        yi_busy = np.array([location["metric"] for location in self.busy_locations])
+        self._log("Xi: {}".format(Xi))
 
-        # join observations with busy locations
-        Xi_combined = np.vstack((Xi, Xi_busy))
-        yi_combined = np.vstack((yi, yi_busy))
+        # get locations of busy trials and imputed liars
+        if len(self.busy_locations):
+
+            Xi_busy = np.array([location["params"] for location in self.busy_locations])
+            yi_busy = np.array([location["metric"] for location in self.busy_locations])
+
+            # join observations with busy locations
+            Xi = np.vstack((Xi, Xi_busy))
+            yi = np.vstack((yi, yi_busy))
+
+            self._log("Xi_busy: {}".format(Xi_busy))
+            self._log("Xi_combined: {}".format(Xi))
 
         # transform hparam values
         Xi_transform = np.apply_along_axis(
-            self.searchspace.transform, 1, Xi_combined, normalize_categorical=True
+            self.searchspace.transform, 1, Xi, normalize_categorical=True
         )
 
-        self._log("Xi: {}".format(Xi))
-        self._log("Xi_busy: {}".format(Xi_busy))
-        self._log("Xi_combined: {}".format(Xi_combined))
         self._log("Xi_transform: {}".format(Xi_transform))
 
         # fit model with data
-        model.fit(Xi_transform, yi_combined)
+        model.fit(Xi_transform, yi)
 
         # set current model to the fitted estimator
         self.model = model
