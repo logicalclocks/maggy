@@ -205,6 +205,8 @@ class AsyncBayesianOptimization(AbstractOptimizer):
         :rtype: dict
 
         """
+        self._log("Start sampling routine")
+
         # even with BFGS as optimizer we want to sample a large number
         # of points and then pick the best ones as starting points
         random_hparams = self.searchspace.get_random_parameter_values(self.n_points)
@@ -289,7 +291,7 @@ class AsyncBayesianOptimization(AbstractOptimizer):
         self._log("busy_locations: {}".format(self.busy_locations))
 
         # convert list to dict representation
-        hparam_dict = self.searchspace.list_to_dict(next_x)
+        hparam_dict = self.searchspace.list_to_dict(next_x, self.searchspace.names())
 
         return hparam_dict
 
@@ -349,6 +351,8 @@ class AsyncBayesianOptimization(AbstractOptimizer):
         Use observations of finished trials + liars from busy trials to build model.
         Only build model when there are at least as many observations as hyperparameters
         """
+        self._log("Start updateing model")
+
         # check if enough observations available for model building
         if len(self.searchspace.keys()) > len(self.final_store):
             self._log("Not enough observations available to build yet")
@@ -387,6 +391,8 @@ class AsyncBayesianOptimization(AbstractOptimizer):
 
         # fit model with data
         model.fit(Xi_transform, yi)
+
+        self._log("Fitted Model with data")
 
         # set current model to the fitted estimator
         self.model = model
