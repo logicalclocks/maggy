@@ -83,7 +83,7 @@ class AsyncBayesianOptimization(AbstractOptimizer):
         allowed_sampling_methods = ["random"]
         if self.warmup_sampling not in allowed_sampling_methods:
             raise ValueError(
-                "expected `warmup_sampling` to be in {}, got {}".format(
+                "expected warmup_sampling to be in {}, got {}".format(
                     allowed_sampling_methods, self.warmup_sampling
                 )
             )
@@ -93,7 +93,7 @@ class AsyncBayesianOptimization(AbstractOptimizer):
         allowed_acq_funcs = ["EI"]
         if acq_fun not in allowed_acq_funcs:
             raise ValueError(
-                "expected `acq_fun` to be in {}, got {}".format(
+                "expected acq_fun to be in {}, got {}".format(
                     allowed_acq_funcs, acq_fun
                 )
             )
@@ -105,7 +105,7 @@ class AsyncBayesianOptimization(AbstractOptimizer):
         allowed_acq_opt = ["sampling", "lbfgs"]
         if acq_optimizer not in allowed_acq_opt:
             raise ValueError(
-                "expected `acq_optimizer` to be in {}, got {}".format(
+                "expected acq_optimizer to be in {}, got {}".format(
                     allowed_acq_opt, acq_optimizer
                 )
             )
@@ -305,7 +305,7 @@ class AsyncBayesianOptimization(AbstractOptimizer):
             )
         else:
             raise NotImplementedError(
-                "warmup sampling {} doesnt exist, use `random`".format(
+                "warmup sampling {} doesnt exist, use random".format(
                     self.warmup_sampling
                 )
             )
@@ -434,9 +434,9 @@ class AsyncBayesianOptimization(AbstractOptimizer):
         )
         try:
             del self.busy_locations[index]
-            self._log("{} was deleted from `busy_locations`".format(hparams))
+            self._log("{} was deleted from busy_locations".format(hparams))
         except TypeError:
-            self._log("{} was not in `busy_locations`", format(hparams))
+            self._log("{} was not in busy_locations", format(hparams))
 
     def ymin(self):
         """
