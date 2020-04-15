@@ -380,8 +380,8 @@ class AsyncBayesianOptimization(AbstractOptimizer):
             self._log("yi_busy: {}".format(yi_busy))
 
             # join observations with busy locations
-            Xi = np.vstack((Xi, Xi_busy))
-            yi = np.vstack((yi, yi_busy))
+            Xi = np.concatenate((Xi, Xi_busy))
+            yi = np.concatenate((yi, yi_busy))
 
             self._log("Xi_combined: {}".format(Xi))
             self._log("yi_combined: {}".format(yi))
