@@ -167,6 +167,7 @@ class AsyncBayesianOptimization(AbstractOptimizer):
 
             # check if there are still trials in the warmup buffer
             if self.warmup_trial_buffer:
+                self._log("take sample from warmup buffer")
                 return self.warmup_trial_buffer.pop()
 
             # update model with latest observations
@@ -176,6 +177,7 @@ class AsyncBayesianOptimization(AbstractOptimizer):
             # todo in case of BOHB/ASHA model is a dict, maybe it should be dict for every case
             if not self.model or np.random.rand() < self.random_fraction:
                 hparams = self.searchspace.get_random_parameter_values(1)[0]
+                self._log("sampled randomly: {}".format(hparams))
                 return Trial(hparams)
 
             # sample best hparam config from model
@@ -314,6 +316,8 @@ class AsyncBayesianOptimization(AbstractOptimizer):
                 )
             )
 
+        self._log("warmup configs: {}".format(warmup_configs))
+
         # add configs to trial buffer
         for hparams in warmup_configs:
             self.warmup_trial_buffer.append(Trial(hparams, trial_type="optimization"))
@@ -367,8 +371,8 @@ class AsyncBayesianOptimization(AbstractOptimizer):
         )
         yi = np.array([trial.final_metric for trial in self.final_store])
 
-        self._log("Xi: {}".format(Xi))
-        self._log("yi: {}".format(yi))
+        # self._log("Xi: {}".format(Xi))
+        # self._log("yi: {}".format(yi))
 
         # get locations of busy trials and imputed liars
         if len(self.busy_locations):
@@ -376,22 +380,22 @@ class AsyncBayesianOptimization(AbstractOptimizer):
             Xi_busy = np.array([location["params"] for location in self.busy_locations])
             yi_busy = np.array([location["metric"] for location in self.busy_locations])
 
-            self._log("Xi_busy: {}".format(Xi_busy))
-            self._log("yi_busy: {}".format(yi_busy))
+            # self._log("Xi_busy: {}".format(Xi_busy))
+            # self._log("yi_busy: {}".format(yi_busy))
 
             # join observations with busy locations
             Xi = np.concatenate((Xi, Xi_busy))
             yi = np.concatenate((yi, yi_busy))
 
-            self._log("Xi_combined: {}".format(Xi))
-            self._log("yi_combined: {}".format(yi))
+            # self._log("Xi_combined: {}".format(Xi))
+            # self._log("yi_combined: {}".format(yi))
 
         # transform hparam values
         Xi_transform = np.apply_along_axis(
             self.searchspace.transform, 1, Xi, normalize_categorical=True
         )
 
-        self._log("Xi_transform: {}".format(Xi_transform))
+        # self._log("Xi_transform: {}".format(Xi_transform))
 
         # fit model with data
         model.fit(Xi_transform, yi)
