@@ -368,6 +368,7 @@ class AsyncBayesianOptimization(AbstractOptimizer):
         yi = np.array([trial.final_metric for trial in self.final_store])
 
         self._log("Xi: {}".format(Xi))
+        self._log("yi: {}".format(yi))
 
         # get locations of busy trials and imputed liars
         if len(self.busy_locations):
@@ -375,12 +376,15 @@ class AsyncBayesianOptimization(AbstractOptimizer):
             Xi_busy = np.array([location["params"] for location in self.busy_locations])
             yi_busy = np.array([location["metric"] for location in self.busy_locations])
 
+            self._log("Xi_busy: {}".format(Xi_busy))
+            self._log("yi_busy: {}".format(yi_busy))
+
             # join observations with busy locations
             Xi = np.vstack((Xi, Xi_busy))
             yi = np.vstack((yi, yi_busy))
 
-            self._log("Xi_busy: {}".format(Xi_busy))
             self._log("Xi_combined: {}".format(Xi))
+            self._log("yi_combined: {}".format(yi))
 
         # transform hparam values
         Xi_transform = np.apply_along_axis(
