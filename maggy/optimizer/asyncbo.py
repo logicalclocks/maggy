@@ -30,7 +30,7 @@ class AsyncBayesianOptimization(AbstractOptimizer):
         num_warmup_trials,
         random_fraction,
         acq_fun,
-        acq_func_kwargs,
+        acq_fun_kwargs,
         acq_optimizer,
         acq_optimizer_kwargs,
         pruner,
@@ -46,8 +46,8 @@ class AsyncBayesianOptimization(AbstractOptimizer):
             - `"EI"` for negative expected improvement.
             - `"PI"` for negative probability of improvement.
         :type acq_fun: str
-        :param acq_func_kwargs: Additional arguments to be passed to the acquisition function.
-        :type acq_func_kwargs: dict
+        :param acq_fun_kwargs: Additional arguments to be passed to the acquisition function.
+        :type acq_fun_kwargs: dict
         :param acq_optimizer: Method to minimize the acquisition function. The fitted model
             is updated with the optimal value obtained by optimizing `acq_func`
             with `acq_optimizer`.
@@ -98,7 +98,7 @@ class AsyncBayesianOptimization(AbstractOptimizer):
                 )
             )
         self.acq_fun = acq_fun  # calculates the utility for given point and surrogate
-        self.acq_func_kwargs = acq_func_kwargs
+        self.acq_func_kwargs = acq_fun_kwargs
 
         # configure optimizer
 
@@ -226,7 +226,7 @@ class AsyncBayesianOptimization(AbstractOptimizer):
             X=X,
             model=self.model,
             y_opt=self.ymin(),
-            acq_func=self.acq_func,
+            acq_func=self.acq_fun,
             acq_func_kwargs=self.acq_func_kwargs,
         )
 
@@ -355,7 +355,7 @@ class AsyncBayesianOptimization(AbstractOptimizer):
             return
 
         # create model without any data
-        model = clone(self.base_estimator)
+        model = clone(self.base_model)
 
         # get hparams and final metrics of finished trials
         Xi = np.array(
