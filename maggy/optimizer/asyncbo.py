@@ -27,14 +27,14 @@ class AsyncBayesianOptimization(AbstractOptimizer):
 
     def __init__(
         self,
-        num_warmup_trials,
-        random_fraction,
-        acq_fun,
-        acq_fun_kwargs,
-        acq_optimizer,
-        acq_optimizer_kwargs,
-        pruner,
-        pruner_kwargs,
+        num_warmup_trials=15,
+        random_fraction=0.1,
+        acq_fun="EI",
+        acq_fun_kwargs=None,
+        acq_optimizer="lbfgs",
+        acq_optimizer_kwargs=None,
+        pruner=None,
+        pruner_kwargs=None,
     ):
         """
         :param num_warmup_trials: number of random trials at the beginning of experiment
@@ -229,7 +229,7 @@ class AsyncBayesianOptimization(AbstractOptimizer):
         values = _gaussian_acquisition(
             X=X,
             model=self.model,
-            y_opt=self.ymin(),
+            y_opt=self.ybest(),
             acq_func=self.acq_fun,
             acq_func_kwargs=self.acq_func_kwargs,
         )
@@ -253,7 +253,7 @@ class AsyncBayesianOptimization(AbstractOptimizer):
                 result = fmin_l_bfgs_b(
                     func=gaussian_acquisition_1D,
                     x0=x,
-                    args=(self.model, self.ymin(), self.acq_fun, self.acq_func_kwargs),
+                    args=(self.model, self.ybest(), self.acq_fun, self.acq_func_kwargs),
                     bounds=[(0.0, 1.0) for _ in self.searchspace.values()],
                     approx_grad=False,
                     maxiter=20,
@@ -278,9 +278,9 @@ class AsyncBayesianOptimization(AbstractOptimizer):
         # add next_x to busy locations and impute metric with constant liar
         if impute_busy:
             if self.cl_strategy == "cl_min":
-                cl = self.ymin()
+                cl = self.ybest()
             elif self.cl_strategy == "cl_max":
-                cl = self.ymax()
+                cl = self.yworst()
             elif self.cl_strategy == "cl_mean":
                 cl = self.ymean()
             else:
@@ -288,6 +288,12 @@ class AsyncBayesianOptimization(AbstractOptimizer):
                     "cl_strategy {} is not implemented, please choose from ('cl_min', 'cl_max', "
                     "'cl_mean')"
                 )
+
+            # if the optimization direction is max the above yields the negated value of the metric,
+            # in `busy_locations` the original metric values are stored
+            if self.direction == "max":
+                cl = -cl
+
             self.busy_locations.append({"params": next_x, "metric": cl})
 
         self._log("busy_locations: {}".format(self.busy_locations))
@@ -365,38 +371,18 @@ class AsyncBayesianOptimization(AbstractOptimizer):
         # create model without any data
         model = clone(self.base_model)
 
-        # get hparams and final metrics of finished trials
-        Xi = np.array(
-            [self.searchspace.dict_to_list(trial.params) for trial in self.final_store]
-        )
-        yi = np.array([trial.final_metric for trial in self.final_store])
-
-        # self._log("Xi: {}".format(Xi))
-        # self._log("yi: {}".format(yi))
-
-        # get locations of busy trials and imputed liars
-        if len(self.busy_locations):
-
-            Xi_busy = np.array([location["params"] for location in self.busy_locations])
-            yi_busy = np.array([location["metric"] for location in self.busy_locations])
-
-            # self._log("Xi_busy: {}".format(Xi_busy))
-            # self._log("yi_busy: {}".format(yi_busy))
-
-            # join observations with busy locations
-            Xi = np.concatenate((Xi, Xi_busy))
-            yi = np.concatenate((yi, yi_busy))
-
-            # self._log("Xi_combined: {}".format(Xi))
-            # self._log("yi_combined: {}".format(yi))
+        # get hparams and final metrics of finished trials combined with busy locations
+        Xi = self.get_hparams(include_busy_locations=True)
+        yi = self.get_metrics(include_busy_locations=True)
 
         # transform hparam values
         Xi_transform = np.apply_along_axis(
             self.searchspace.transform, 1, Xi, normalize_categorical=True
         )
 
-        # self._log("Xi_transform: {}".format(Xi_transform))
-
+        self._log("Xi: {}".format(Xi))
+        self._log("Xi_transform: {}".format(Xi_transform))
+        self._log("yi: {}".format(yi))
         # fit model with data
         model.fit(Xi_transform, yi)
 
@@ -458,28 +444,83 @@ class AsyncBayesianOptimization(AbstractOptimizer):
         except TypeError:
             self._log("{} was not in busy_locations".format(hparams))
 
-    def ymin(self):
+    def get_hparams(self, include_busy_locations=False):
+        """returns array of already evaluated hparams + optionally hparams that are currently evaluated
+
+        :param include_busy_locations: If True, add currently evaluating hparam configs
+        :type include_busy_locations: bool
+        :return: array of hparams, shape (n_finished_hparam_configs, n_hparams)
+        :rtype: np.ndarray[np.ndarray]
         """
-        :return: min metric of all currently finalized trials
+        hparams = np.array(
+            [self.searchspace.dict_to_list(trial.params) for trial in self.final_store]
+        )
+
+        if include_busy_locations and len(self.busy_locations):
+            hparams_busy = np.array(
+                [location["params"] for location in self.busy_locations]
+            )
+            hparams = np.concatenate((hparams, hparams_busy))
+
+        return hparams
+
+    def get_metrics(self, include_busy_locations=False):
+        """returns array of final metrics + optionally imputed metrics of currently evaluated trials
+
+        In case that the optimization `direction` is `max`, negate the metrics so it becomes a `min` problem
+
+        :param include_busy_locations: If True, add imputed metrics of currently evaluated trials
+        :type include_busy_locations: bool
+        :return: array of hparams, shape (n_final_metrics,)
+        :rtype: np.ndarray[float]
+        """
+        metrics = np.array([trial.final_metric for trial in self.final_store])
+
+        if include_busy_locations and len(self.busy_locations):
+            metrics_busy = np.array(
+                [location["metric"] for location in self.busy_locations]
+            )
+            metrics = np.concatenate((metrics, metrics_busy))
+
+        if self.direction == "max":
+            metrics = -metrics
+
+        return metrics
+
+    def ybest(self):
+        """Returns best metric of all currently finalized trials
+
+        Maximization problems are converted to minimization problems
+        I.e. if the optimization direction is `max`, returns the negated max value
+
+        :return: worst metric of all currently finalized trials
         :rtype: float
         """
-        metric_history = np.array([trial.final_metric for trial in self.final_store])
+        metric_history = self.get_metrics()
         return np.min(metric_history)
 
-    def ymax(self):
-        """
-        :return: max metric of all currently finalized trials
+    def yworst(self):
+        """Returns worst metric of all currently finalized trials
+
+        Maximization problems are converted to minimization problems
+        I.e. if the optimization direction is `max`, returns the negated min value
+
+        :return: best metric of all currently finalized trials
         :rtype: float
         """
-        metric_history = np.array([trial.final_metric for trial in self.final_store])
+        metric_history = self.get_metrics()
         return np.max(metric_history)
 
     def ymean(self):
-        """
+        """Returns best metric of all currently finalized trials
+
+        Maximization problems are converted to minimization problems
+        I.e. if the optimization direction is `max`, returns the mean of negated metrics
+
         :return: mean of all currently finalized trials metrics
         :rtype: float
         """
-        metric_history = np.array([trial.final_metric for trial in self.final_store])
+        metric_history = self.get_metrics()
         return np.mean(metric_history)
 
     def _log(self, msg):
