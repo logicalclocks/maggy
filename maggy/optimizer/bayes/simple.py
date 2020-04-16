@@ -14,12 +14,11 @@ from maggy.optimizer.bayes.base import BaseAsyncBO
 class SimpleAsyncBO(BaseAsyncBO):
     """Base class for asynchronous bayesian optimization"""
 
-    def __init__(
-        self, optimizert_kwargs, impute_strategy="cl_min",
-    ):
+    def __init__(self, impute_strategy="cl_min", **kwargs):
         """
-        :param optimizer_kwargs: parameters for initializing `BaseAsyncBO`, see docstring of `BaseAsyncBO` for more info
-        :type optimizert_kwargs: dict
+
+        See docstring of `BaseAsyncBO` for more info on parameters
+
         :param impute_strategy: Method to use as imputeing strategy in async bo.
                                 Supported options are `"cl_min"`, `"cl_max"`, `"cl_mean"`.
 
@@ -35,7 +34,7 @@ class SimpleAsyncBO(BaseAsyncBO):
                                 https://www.cs.ubc.ca/labs/beta/EARG/stack/2010_CI_Ginsbourger-ParallelKriging.pdf
         :type impute_strategy: str
         """
-        super().__init__()
+        super().__init__(**kwargs)
 
         # configure impute strategy
 
