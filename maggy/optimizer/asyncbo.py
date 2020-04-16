@@ -152,7 +152,7 @@ class AsyncBayesianOptimization(AbstractOptimizer):
         allowed_impute_strategies = ["cl_min", "cl_max", "cl_mean", "kb"]
         if impute_strategy not in allowed_impute_strategies:
             raise ValueError(
-                "expected acq_optimizer to be in {}, got {}".format(
+                "expected impute_strategy to be in {}, got {}".format(
                     allowed_impute_strategies, impute_strategy
                 )
             )
@@ -300,7 +300,7 @@ class AsyncBayesianOptimization(AbstractOptimizer):
         elif self.impute_strategy == "cl_mean":
             liar = self.ymean()
         elif self.impute_strategy == "kb":
-            liar = self.model.predict(np.array(next_x).reshape(1, -1))
+            liar = self.model.predict(np.array(next_x).reshape(1, -1))[0]
         else:
             raise NotImplementedError(
                 "cl_strategy {} is not implemented, please choose from ('cl_min', 'cl_max', "
