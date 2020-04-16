@@ -20,10 +20,7 @@ from hops import hdfs
 
 
 class AsyncBayesianOptimization(AbstractOptimizer):
-    """Base class for asynchronous bayesian optimization
-
-    todo add default init values
-    """
+    """Base class for asynchronous bayesian optimization"""
 
     def __init__(
         self,
@@ -198,12 +195,16 @@ class AsyncBayesianOptimization(AbstractOptimizer):
         return
 
     def sampling_routine(self, impute_busy=True):
-        """Samples new config from model
+        """Samples new config from surrogate model
 
-        # todo add description of what is happening
+        This methods holds logic for:
 
+        - maximizing acquisition function based on current model and observations
+        - async logic: i.e. imputing busy_locations with a liar to encourage diversity in sampling
 
-        :return: hyperparameter config
+        :param impute_busy: If True add hparam config to `busy_locations`
+        :type impute_busy: bool
+        :return: hyperparameter config that minimizes the acquisition function
         :rtype: dict
 
         """
@@ -380,9 +381,10 @@ class AsyncBayesianOptimization(AbstractOptimizer):
             self.searchspace.transform, 1, Xi, normalize_categorical=True
         )
 
-        self._log("Xi: {}".format(Xi))
-        self._log("Xi_transform: {}".format(Xi_transform))
-        self._log("yi: {}".format(yi))
+        # self._log("Xi: {}".format(Xi))
+        # self._log("Xi_transform: {}".format(Xi_transform))
+        # self._log("yi: {}".format(yi))
+
         # fit model with data
         model.fit(Xi_transform, yi)
 
@@ -421,7 +423,7 @@ class AsyncBayesianOptimization(AbstractOptimizer):
         """deletes hparams of `trial` from `busy_locations`
 
         .. note::  alternatively we could compare hparams of all finished trials with busy locations, would take longer
-                  to compute but at t,he same would ensure consistency → ask Moritz
+                  to compute but at the same would ensure consistency → ask Moritz
 
         :param trial: finished Trial
         :type trial: Trial
