@@ -1,14 +1,6 @@
 import traceback
 
 import numpy as np
-from scipy.optimize import fmin_l_bfgs_b
-
-from skopt.learning.gaussian_process import GaussianProcessRegressor
-from skopt.learning.gaussian_process.kernels import ConstantKernel
-from skopt.learning.gaussian_process.kernels import Matern
-from skopt.acquisition import _gaussian_acquisition
-from skopt.acquisition import gaussian_acquisition_1D
-from sklearn.base import clone
 
 from maggy.optimizer.abstractoptimizer import AbstractOptimizer
 from maggy.trial import Trial
@@ -19,7 +11,7 @@ from hops import hdfs
 # todo which methods should be private
 
 
-class AsyncBayesianOptimization(AbstractOptimizer):
+class BaseAsyncBO(AbstractOptimizer):
     """Base class for asynchronous bayesian optimization"""
 
     def __init__(
@@ -30,7 +22,6 @@ class AsyncBayesianOptimization(AbstractOptimizer):
         acq_fun_kwargs=None,
         acq_optimizer="lbfgs",
         acq_optimizer_kwargs=None,
-        impute_strategy="cl_min",
         pruner=None,
         pruner_kwargs=None,
     ):
@@ -59,21 +50,6 @@ class AsyncBayesianOptimization(AbstractOptimizer):
                                 - The optimal of these local minima is used to update the prior.
         :param acq_optimizer_kwargs: Additional arguments to be passed to the acquisition optimizer.
         :type acq_optimizer_kwargs: dict
-        :param impute_strategy: Method to use as imputeing strategy in async bo.
-                                Supported options are `"cl_min"`, `"cl_max"`, `"cl_mean"`.
-
-                                - If set to `cl_x`, then constant liar strategy is used
-                                  with lie objective value being minimum of observed objective
-                                  values. `"cl_mean"` and `"cl_max"` means mean and max of values
-                                  respectively.
-                                - If set to `kb`, then kriging believer strategy is used with lie objective value being
-                                  the models predictive mean
-
-                                For more information on strategies see:
-
-                                https://www.cs.ubc.ca/labs/beta/EARG/stack/2010_CI_Ginsbourger-ParallelKriging.pdf
-
-        :type impute_strategy: str
         :param pruner: # todo
         :param pruner_kwargs:
         """
@@ -147,17 +123,6 @@ class AsyncBayesianOptimization(AbstractOptimizer):
         self.model = None  # fitted model of the estimator
         self.random_fraction = random_fraction
 
-        # configure impute strategy
-
-        allowed_impute_strategies = ["cl_min", "cl_max", "cl_mean", "kb"]
-        if impute_strategy not in allowed_impute_strategies:
-            raise ValueError(
-                "expected impute_strategy to be in {}, got {}".format(
-                    allowed_impute_strategies, impute_strategy
-                )
-            )
-        self.impute_strategy = impute_strategy
-
         # configure logger
 
         self.log_file = (
@@ -193,7 +158,7 @@ class AsyncBayesianOptimization(AbstractOptimizer):
                 return self.warmup_trial_buffer.pop()
 
             # update model with latest observations
-            self._update_model()
+            self.update_model()
 
             # in case there is no model yet or random fraction applies, sample randomly
             # todo in case of BOHB/ASHA model is a dict, maybe it should be dict for every case
@@ -219,6 +184,22 @@ class AsyncBayesianOptimization(AbstractOptimizer):
 
         return
 
+    def init_model(self):
+        """initializes the surrogate model of the gaussian process
+
+        the model gets created with the right parameters, but is not fit with any data yet. the `base_model` will be
+        cloned in `update_model` and fit with observation data
+        """
+        raise NotImplementedError
+
+    def update_model(self):
+        """update surrogate model with new observations
+
+        Use observations of finished trials + liars from busy trials to build model.
+        Only build model when there are at least as many observations as hyperparameters
+        """
+        raise NotImplementedError
+
     def sampling_routine(self):
         """Samples new config from surrogate model
 
@@ -229,104 +210,8 @@ class AsyncBayesianOptimization(AbstractOptimizer):
 
         :return: hyperparameter config that minimizes the acquisition function
         :rtype: dict
-
         """
-        self._log("Start sampling routine")
-
-        # even with BFGS as optimizer we want to sample a large number
-        # of points and then pick the best ones as starting points
-        random_hparams = self.searchspace.get_random_parameter_values(self.n_points)
-        random_hparams_list = np.array(
-            [self.searchspace.dict_to_list(hparams) for hparams in random_hparams]
-        )
-
-        # transform configs
-        X = np.apply_along_axis(
-            self.searchspace.transform,
-            1,
-            random_hparams_list,
-            normalize_categorical=True,
-        )
-
-        # todo convert max problem e.g. accuracy to min problem → probably not the right place to implement it here
-        #  though
-        values = _gaussian_acquisition(
-            X=X,
-            model=self.model,
-            y_opt=self.ybest(),
-            acq_func=self.acq_fun,
-            acq_func_kwargs=self.acq_func_kwargs,
-        )
-
-        # Find the minimum of the acquisition function by randomly
-        # sampling points from the space
-        if self.acq_optimizer == "sampling":
-            next_x = X[np.argmin(values)]
-
-        # Use BFGS to find the mimimum of the acquisition function, the
-        # minimization starts from `n_restarts_optimizer` different
-        # points and the best minimum is
-        elif self.acq_optimizer == "lbfgs":
-            x0 = X[np.argsort(values)[: self.n_restarts_optimizer]]
-
-            results = []
-            for x in x0:
-                # todo evtl. use Parallel / delayed like skopt
-                # bounds of transformed hparams are always [0.0,1.0] ( if categorical encodings get normalized,
-                # which is the case here )
-                result = fmin_l_bfgs_b(
-                    func=gaussian_acquisition_1D,
-                    x0=x,
-                    args=(self.model, self.ybest(), self.acq_fun, self.acq_func_kwargs),
-                    bounds=[(0.0, 1.0) for _ in self.searchspace.values()],
-                    approx_grad=False,
-                    maxiter=20,
-                )
-                results.append(result)
-
-            cand_xs = np.array([r[0] for r in results])
-            cand_acqs = np.array([r[1] for r in results])
-            next_x = cand_xs[np.argmin(cand_acqs)]
-
-        # lbfgs should handle this but just in case there are
-        # precision errors.
-        next_x = np.clip(next_x, 0.0, 1.0)
-
-        # calculate liar for imputing metric in `busy_locations`
-        if self.impute_strategy == "cl_min":
-            liar = self.ybest()
-        elif self.impute_strategy == "cl_max":
-            liar = self.yworst()
-        elif self.impute_strategy == "cl_mean":
-            liar = self.ymean()
-        elif self.impute_strategy == "kb":
-            liar = self.model.predict(np.array(next_x).reshape(1, -1))[0]
-        else:
-            raise NotImplementedError(
-                "cl_strategy {} is not implemented, please choose from ('cl_min', 'cl_max', "
-                "'cl_mean')"
-            )
-
-        # if the optimization direction is max the above strategies yield the negated value of the metric,
-        # in `busy_locations` the original metric values are stored
-        if self.direction == "max":
-            liar = -liar
-
-        # transform back to original representation
-        next_x = self.searchspace.inverse_transform(
-            next_x, normalize_categorical=True
-        )  # is array [-3,3,"blue"]
-
-        # add next_x to busy locations and impute metric with liar
-        self.busy_locations.append({"params": next_x, "metric": liar})
-
-        self._log("Next config to evaluate: {}".format(next_x))
-        self._log("busy_locations: {}".format(self.busy_locations))
-
-        # convert list to dict representation
-        hparam_dict = self.searchspace.list_to_dict(next_x, self.searchspace.names())
-
-        return hparam_dict
+        raise NotImplementedError
 
     def warmup_routine(self):
         """implements logic for warming up bayesian optimization through random sampling by adding hparam configs to
@@ -352,70 +237,6 @@ class AsyncBayesianOptimization(AbstractOptimizer):
         # add configs to trial buffer
         for hparams in warmup_configs:
             self.warmup_trial_buffer.append(Trial(hparams, trial_type="optimization"))
-
-    def init_model(self):
-        """initializes the surrogate model of the gaussian process
-
-        the model gets created with the right parameters, but is not fit with any data yet. the `base_model` will be
-        cloned in `update_model` and fit with observation data
-        """
-
-        n_dims = len(self.searchspace.keys())
-
-        # ToDo, find out why I need this → skopt/utils.py line 377
-        cov_amplitude = ConstantKernel(1.0, (0.01, 1000.0))
-
-        # ToDo implement special case if all dimesnsions are catigorical --> skopt/utils.py l. 378ff
-        # ToDo compare the initialization of kernel parameters with other frameworks
-        other_kernel = Matern(
-            length_scale=np.ones(n_dims),
-            length_scale_bounds=[(0.01, 100)] * n_dims,
-            nu=2.5,
-        )
-        base_model = GaussianProcessRegressor(
-            kernel=cov_amplitude * other_kernel,
-            normalize_y=True,
-            noise="gaussian",
-            n_restarts_optimizer=2,
-        )
-        self.base_model = base_model
-
-    def _update_model(self):
-        """update surrogate model with new observations
-
-        Use observations of finished trials + liars from busy trials to build model.
-        Only build model when there are at least as many observations as hyperparameters
-        """
-        self._log("Start updateing model")
-
-        # check if enough observations available for model building
-        if len(self.searchspace.keys()) > len(self.final_store):
-            self._log("Not enough observations available to build yet")
-            return
-
-        # create model without any data
-        model = clone(self.base_model)
-
-        # get hparams and final metrics of finished trials combined with busy locations
-        Xi = self.get_hparams(include_busy_locations=True)
-        yi = self.get_metrics(include_busy_locations=True)
-
-        # transform hparam values
-        Xi_transform = np.apply_along_axis(
-            self.searchspace.transform, 1, Xi, normalize_categorical=True
-        )
-
-        # self._log("Xi: {}".format(Xi))
-        # self._log("Xi_transform: {}".format(Xi_transform))
-        # self._log("yi: {}".format(yi))
-
-        # fit model with data
-        model.fit(Xi_transform, yi)
-
-        self._log("Fitted Model with data")
-
-        # set current model to the fitted estimator
-        self.model = model
 
     def _acquisition_function(self):
         """calculates the utility for given point and surrogate"""

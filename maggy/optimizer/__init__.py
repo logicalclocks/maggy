@@ -4,21 +4,23 @@ from maggy.optimizer import (
     asha,
     tpe,
     singlerun,
-    asyncbo,
 )
+from maggy.optimizer.bayes import base, simple
 
 AbstractOptimizer = abstractoptimizer.AbstractOptimizer
 RandomSearch = randomsearch.RandomSearch
 Asha = asha.Asha
 TPE = tpe.TPE
 SingleRun = singlerun.SingleRun
-AsyncBO = asyncbo.AsyncBayesianOptimization
+BaseAsyncBO = base.BaseAsyncBO
+SimpleAsyncBO = simple.SimpleAsyncBO
 
 __all__ = [
     "AbstractOptimizer",
     "RandomSearch",
     "Asha",
     "TPE",
-    "AsyncBO",
+    "BaseAsyncBO",
     "SingleRun",
+    "SimpleAsyncBO",
 ]
