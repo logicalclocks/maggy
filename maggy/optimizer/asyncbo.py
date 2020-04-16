@@ -30,6 +30,7 @@ class AsyncBayesianOptimization(AbstractOptimizer):
         acq_fun_kwargs=None,
         acq_optimizer="lbfgs",
         acq_optimizer_kwargs=None,
+        impute_strategy="cl_min",
         pruner=None,
         pruner_kwargs=None,
     ):
@@ -39,26 +40,40 @@ class AsyncBayesianOptimization(AbstractOptimizer):
         :param random_fraction: fraction of random samples, between [0,1]
         :type random_fraction: float
         :param acq_fun: Function to minimize over the posterior distribution. Can be either
-            - `"LCB"` for lower confidence bound.
-            - `"EI"` for negative expected improvement.
-            - `"PI"` for negative probability of improvement.
+                        - `"LCB"` for lower confidence bound.
+                        - `"EI"` for negative expected improvement.
+                        - `"PI"` for negative probability of improvement.
         :type acq_fun: str
         :param acq_fun_kwargs: Additional arguments to be passed to the acquisition function.
         :type acq_fun_kwargs: dict
         :param acq_optimizer: Method to minimize the acquisition function. The fitted model
-            is updated with the optimal value obtained by optimizing `acq_func`
-            with `acq_optimizer`.
+                              is updated with the optimal value obtained by optimizing `acq_func`
+                              with `acq_optimizer`.
 
-            - If set to `"sampling"`, then `acq_func` is optimized by computing
-              `acq_func` at `n_points` randomly sampled points.
-            - If set to `"lbfgs"`, then `acq_func` is optimized by
-
-              - Sampling `n_restarts_optimizer` points randomly.
-              - `"lbfgs"` is run for 20 iterations with these points as initial
-                points to find local minima.
-              - The optimal of these local minima is used to update the prior.
+                              - If set to `"sampling"`, then `acq_func` is optimized by computing
+                                  `acq_func` at `n_points` randomly sampled points.
+                              - If set to `"lbfgs"`, then `acq_func` is optimized by
+                                - Sampling `n_restarts_optimizer` points randomly.
+                                - `"lbfgs"` is run for 20 iterations with these points as initial
+                                   points to find local minima.
+                                - The optimal of these local minima is used to update the prior.
         :param acq_optimizer_kwargs: Additional arguments to be passed to the acquisition optimizer.
         :type acq_optimizer_kwargs: dict
+        :param impute_strategy: Method to use as imputeing strategy in async bo.
+                                Supported options are `"cl_min"`, `"cl_max"`, `"cl_mean"`.
+
+                                - If set to `cl_x`, then constant liar strategy is used
+                                  with lie objective value being minimum of observed objective
+                                  values. `"cl_mean"` and `"cl_max"` means mean and max of values
+                                  respectively.
+                                - If set to `kb`, then kriging believer strategy is used with lie objective value being
+                                  the models predictive mean
+
+                                For more information on strategies see:
+
+                                https://www.cs.ubc.ca/labs/beta/EARG/stack/2010_CI_Ginsbourger-ParallelKriging.pdf
+
+        :type impute_strategy: str
         :param pruner: # todo
         :param pruner_kwargs:
         """
@@ -131,7 +146,17 @@ class AsyncBayesianOptimization(AbstractOptimizer):
         self.base_model = None  # estimator that has not been fit on any data.
         self.model = None  # fitted model of the estimator
         self.random_fraction = random_fraction
-        self.cl_strategy = "cl_min"
+
+        # configure impute strategy
+
+        allowed_impute_strategies = ["cl_min", "cl_max", "cl_mean", "kb"]
+        if impute_strategy not in allowed_impute_strategies:
+            raise ValueError(
+                "expected acq_optimizer to be in {}, got {}".format(
+                    allowed_impute_strategies, impute_strategy
+                )
+            )
+        self.impute_strategy = impute_strategy
 
         # configure logger
 
@@ -194,7 +219,7 @@ class AsyncBayesianOptimization(AbstractOptimizer):
 
         return
 
-    def sampling_routine(self, impute_busy=True):
+    def sampling_routine(self):
         """Samples new config from surrogate model
 
         This methods holds logic for:
@@ -202,8 +227,6 @@ class AsyncBayesianOptimization(AbstractOptimizer):
         - maximizing acquisition function based on current model and observations
         - async logic: i.e. imputing busy_locations with a liar to encourage diversity in sampling
 
-        :param impute_busy: If True add hparam config to `busy_locations`
-        :type impute_busy: bool
         :return: hyperparameter config that minimizes the acquisition function
         :rtype: dict
 
@@ -269,34 +292,35 @@ class AsyncBayesianOptimization(AbstractOptimizer):
         # precision errors.
         next_x = np.clip(next_x, 0.0, 1.0)
 
+        # calculate liar for imputing metric in `busy_locations`
+        if self.impute_strategy == "cl_min":
+            liar = self.ybest()
+        elif self.impute_strategy == "cl_max":
+            liar = self.yworst()
+        elif self.impute_strategy == "cl_mean":
+            liar = self.ymean()
+        elif self.impute_strategy == "kb":
+            liar = self.model.predict(np.array(next_x).reshape(1, -1))
+        else:
+            raise NotImplementedError(
+                "cl_strategy {} is not implemented, please choose from ('cl_min', 'cl_max', "
+                "'cl_mean')"
+            )
+
+        # if the optimization direction is max the above strategies yield the negated value of the metric,
+        # in `busy_locations` the original metric values are stored
+        if self.direction == "max":
+            liar = -liar
+
         # transform back to original representation
         next_x = self.searchspace.inverse_transform(
             next_x, normalize_categorical=True
         )  # is array [-3,3,"blue"]
 
+        # add next_x to busy locations and impute metric with liar
+        self.busy_locations.append({"params": next_x, "metric": liar})
+
         self._log("Next config to evaluate: {}".format(next_x))
-
-        # add next_x to busy locations and impute metric with constant liar
-        if impute_busy:
-            if self.cl_strategy == "cl_min":
-                cl = self.ybest()
-            elif self.cl_strategy == "cl_max":
-                cl = self.yworst()
-            elif self.cl_strategy == "cl_mean":
-                cl = self.ymean()
-            else:
-                raise NotImplementedError(
-                    "cl_strategy {} is not implemented, please choose from ('cl_min', 'cl_max', "
-                    "'cl_mean')"
-                )
-
-            # if the optimization direction is max the above yields the negated value of the metric,
-            # in `busy_locations` the original metric values are stored
-            if self.direction == "max":
-                cl = -cl
-
-            self.busy_locations.append({"params": next_x, "metric": cl})
-
         self._log("busy_locations: {}".format(self.busy_locations))
 
         # convert list to dict representation
