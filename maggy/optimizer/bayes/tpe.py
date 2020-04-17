@@ -3,7 +3,6 @@ import statsmodels.api as sm
 import scipy.stats as sps
 
 from maggy.optimizer.bayes.base import BaseAsyncBO
-from maggy.trial import Trial
 
 
 class TPE(BaseAsyncBO):
@@ -93,13 +92,13 @@ class TPE(BaseAsyncBO):
         self._log("Transformed Best Sample: {}".format(best_sample))
 
         # get original representation of hparams in dict
-        best_sample = self.searchspace.list_to_dict(
+        best_sample_dict = self.searchspace.list_to_dict(
             self.searchspace.inverse_transform(best_sample)
         )
 
-        self._log("Best Sample {}".format(best_sample))
+        self._log("Best Sample {}".format(best_sample_dict))
 
-        return Trial(best_sample)
+        return best_sample_dict
 
     def init_model(self):
         pass
