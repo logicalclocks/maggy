@@ -12,7 +12,12 @@ from hops import hdfs
 
 
 class BaseAsyncBO(AbstractOptimizer):
-    """Base class for asynchronous bayesian optimization"""
+    """Base class for asynchronous bayesian optimization
+
+    todo explain wie min/max direction gehandhabt wird
+    todo explain async bo basics
+
+    """
 
     def __init__(
         self,
@@ -125,9 +130,9 @@ class BaseAsyncBO(AbstractOptimizer):
 
         # configure logger
 
-        self.log_file = (
-            "hdfs:///Projects/demo_deep_learning_admin000/Logs/asyncbo.log"  # todo
-        )
+        self.log_file = "hdfs:///Projects/demo_deep_learning_admin000/Logs/asyncbo_.log".format(
+            self.name()
+        )  # todo make dynamic
         if not hdfs.exists(self.log_file):
             hdfs.dump("", self.log_file)
         self.fd = hdfs.open_file(self.log_file, flags="w")
@@ -312,11 +317,11 @@ class BaseAsyncBO(AbstractOptimizer):
         return hparams
 
     def get_metrics(self, include_busy_locations=False):
-        """returns array of final metrics + optionally imputed metrics of currently evaluated trials
+        """returns array of final metrics + optionally imputed metrics of currently evaluating trials
 
         In case that the optimization `direction` is `max`, negate the metrics so it becomes a `min` problem
 
-        :param include_busy_locations: If True, add imputed metrics of currently evaluated trials
+        :param include_busy_locations: If True, add imputed metrics of currently evaluating trials
         :type include_busy_locations: bool
         :return: array of hparams, shape (n_final_metrics,)
         :rtype: np.ndarray[float]
