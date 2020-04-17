@@ -92,7 +92,7 @@ class TPE(BaseAsyncBO):
 
         self._log("Transformed Best Sample: {}".format(best_sample))
 
-        # get original representation of hparams
+        # get original representation of hparams in dict
         best_sample = self.searchspace.list_to_dict(
             self.searchspace.inverse_transform(best_sample)
         )

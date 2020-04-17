@@ -139,7 +139,7 @@ class SimpleAsyncBO(BaseAsyncBO):
         self._log("busy_locations: {}".format(self.busy_locations))
 
         # convert list to dict representation
-        hparam_dict = self.searchspace.list_to_dict(next_x, self.searchspace.names())
+        hparam_dict = self.searchspace.list_to_dict(next_x)
 
         return hparam_dict
 

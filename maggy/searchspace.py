@@ -444,8 +444,7 @@ class Searchspace(object):
         """
         return list(hparams.values())
 
-    @staticmethod
-    def list_to_dict(hparams, hparam_names):
+    def list_to_dict(self, hparams):
         """Transforms list of hparams to dict representation ( for one hparam config )
 
         example:
@@ -453,11 +452,10 @@ class Searchspace(object):
 
         :param hparams: hparams in list representation
         :type hparams: list
-        :param hparam_names: list of hparam names, has to have same order as `hparams`
-        :type hparam_names: list
         :return: hparams in dict representation
         :rtype: dict
         """
+        hparam_names = self.keys()
         if len(hparam_names) != len(hparams):
             raise ValueError(
                 "hparam_names and hparams have to have same length (and order!)"
