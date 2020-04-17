@@ -2,10 +2,9 @@ from maggy.optimizer import (
     abstractoptimizer,
     randomsearch,
     asha,
-    tpe,
     singlerun,
 )
-from maggy.optimizer.bayes import base, simple
+from maggy.optimizer.bayes import base, simple, tpe
 
 AbstractOptimizer = abstractoptimizer.AbstractOptimizer
 RandomSearch = randomsearch.RandomSearch
