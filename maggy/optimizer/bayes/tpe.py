@@ -39,7 +39,7 @@ class TPE(BaseAsyncBO):
         kde_good = self.model["good"]
         kde_bad = self.model["bad"]
 
-        for sample in range(self.num_samples):
+        for sample in range(self.n_samples):
             # randomly choose one of the `good` samples as mean
             idx = np.random.randint(0, len(kde_good.data))
             obs = kde_good.data[idx]
