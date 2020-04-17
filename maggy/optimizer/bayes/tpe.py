@@ -22,12 +22,12 @@ class TPE(BaseAsyncBO):
         bw_factor=3,
         **kwargs
     ):
-        super.__init__(**kwargs)
+        super().__init__(**kwargs)
 
         # configure tpe specific meta hyperparameters
         self.gamma = gamma
-        self.n_samples = (n_samples,)
-        self.bw_estimation = (bw_estimation,)
+        self.n_samples = n_samples
+        self.bw_estimation = bw_estimation
         self.min_bw = 1e-3  # from HpBandSter
         self.bw_factor = bw_factor
 
