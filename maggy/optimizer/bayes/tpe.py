@@ -21,6 +21,20 @@ class TPE(BaseAsyncBO):
         bw_factor=3,
         **kwargs
     ):
+        """
+        See docstring of `BaseAsyncBO` for more info on parameters of base class
+
+        :param gamma: Determines the percentile of configurations that will be used as training data
+                for the kernel density estimator, e.g if set to 10 the 10% best configurations will be considered
+                for training.
+        :type gamma: float
+        :param n_samples: number of samples drawn from model to optimize EI via sampling
+        :type n_samples: int
+        :param bw_estimation: method used by statsmodel for the bandwidth estimation of the kde. Options are 'normal_reference', 'silvermann', 'scott'
+        :type bw_estimation: str
+        :param bw_factor: widens the bandwidth for contiuous parameters for proposed points to optimize EI. Higher values favor more exploration
+        :type bw_factor: float
+        """
         super().__init__(**kwargs)
 
         # configure tpe specific meta hyperparameters
@@ -61,18 +75,18 @@ class TPE(BaseAsyncBO):
                     low = -mean / bw
                     high = (1 - mean) / bw
 
-                    self._log(
-                        "Mean: {}, BW: {}, Low: {}, High: {}".format(
-                            mean, bw, low, high
-                        )
-                    )
+                    # self._log(
+                    #     "Mean: {}, BW: {}, Low: {}, High: {}".format(
+                    #         mean, bw, low, high
+                    #     )
+                    # )
 
                     rv = sps.truncnorm.rvs(low, high, loc=mean, scale=bw)
                     sample_vector.append(rv)
                 else:
                     # sample for categorical hparams (sampling logic taken from HpBandSter)
                     if np.random.rand() < (1 - bw):
-                        sample_vector.append(mean)
+                        sample_vector.append(int(mean))
                     else:
                         n_choices = len(hparam_spec["values"])
                         sample_vector.append(np.random.randint(n_choices))
@@ -82,21 +96,21 @@ class TPE(BaseAsyncBO):
             # calculate EI for current sample
             ei_val = self._calculate_ei(sample_vector, kde_good, kde_bad)
 
-            self._log("EI: {}, type: {}".format(ei_val, type(ei_val)))
+            self._log("EI: {}".format(ei_val))
 
             # todo double check with hpbandster
             if ei_val > best_improvement:
                 best_improvement = ei_val
                 best_sample = sample_vector
 
-        self._log("Transformed Best Sample: {}".format(best_sample))
+        self._log("Best Sample: {}".format(best_sample))
 
         # get original representation of hparams in dict
         best_sample_dict = self.searchspace.list_to_dict(
             self.searchspace.inverse_transform(best_sample)
         )
 
-        self._log("Best Sample {}".format(best_sample_dict))
+        self._log("Transformed Best Sample {}".format(best_sample_dict))
 
         return best_sample_dict
 
@@ -107,7 +121,7 @@ class TPE(BaseAsyncBO):
         """update surrogate model based on observations from finished trials
 
             - creating and storing kde for *good* and *bad* observations
-            - Only build model when there are at least as many observations as hyperparameters
+            - Only build model when there are more observations than hyperparameters
               i.e. for each kde
         """
         # split good and bad trials
@@ -122,6 +136,8 @@ class TPE(BaseAsyncBO):
             )
             return
 
+        self._log("We have enough observations --> update Model")
+
         transformed_good_hparams = np.apply_along_axis(
             self.searchspace.transform, 1, good_hparams
         )
@@ -129,10 +145,10 @@ class TPE(BaseAsyncBO):
             self.searchspace.transform, 1, bad_hparams
         )
 
-        self._log("good: {}".format(good_hparams))
-        self._log("normalized good: {}".format(transformed_good_hparams))
-        self._log("bad: {}".format(bad_hparams))
-        self._log("normalized bad: {}".format(transformed_bad_hparams))
+        # self._log("good: {}".format(good_hparams))
+        # self._log("normalized good: {}".format(transformed_good_hparams))
+        # self._log("bad: {}".format(bad_hparams))
+        # self._log("normalized bad: {}".format(transformed_bad_hparams))
 
         var_type = self._get_statsmodel_vartype()
 

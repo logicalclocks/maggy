@@ -17,7 +17,7 @@ class SimpleAsyncBO(BaseAsyncBO):
     def __init__(self, impute_strategy="cl_min", **kwargs):
         """
 
-        See docstring of `BaseAsyncBO` for more info on parameters
+        See docstring of `BaseAsyncBO` for more info on parameters of base class
 
         :param impute_strategy: Method to use as imputeing strategy in async bo.
                                 Supported options are `"cl_min"`, `"cl_max"`, `"cl_mean"`.
