@@ -203,8 +203,24 @@ class Model(object):
         self.layers = Layers()
         self.base_model_generator = None
 
+        # the list holding custom model generators.
+        # One (extra) trial will be generated per each item in the list.
+        self.custom_model_generators = []
+
     def set_base_model_generator(self, base_model_generator):
         self.base_model_generator = base_model_generator
+
+    def add_custom_model_generator(self, custom_model_generator, model_identifier):
+        """
+        Add a custom model architecture generator, which will result in a single ablation trial.
+        This method provides support for ablation study of arbitrarily complex models.
+
+        :param custom_model_generator: A Python callable that returns a `keras.Model`. This model generator will be
+        used as the model generation logic in the inner (training) loop of a single model ablation trial.
+        :param model_identifier: a string that will be used to track and identify the performance of the custom model
+        :type model_identifier: str
+        """
+        self.custom_model_generators.append((custom_model_generator, model_identifier))
 
 
 class Layers(object):
@@ -216,6 +232,7 @@ class Layers(object):
         """
         Include layers in the ablations study. Note that the first (input) and the last (output) layer of the base model
         can never be included in the ablation study.
+
         :param args: Strings or lists of strings, that should match layer names.
         :type args: str or list
         :return:
@@ -264,6 +281,7 @@ class Layers(object):
         Adds a group of layers that should be removed from the model together. The groups are specified either
         by being passed as a list of layer names (strings), or a string as a common prefix of their layer names.
         Each list of strings would result in a single grouping.
+
         :param prefix: A string that is a prefix of the names of a group of layers in the base model.
         :type prefix: str
         :param args: Lists of strings (layer names) to indicate groups of layers. The length of the list should be
@@ -306,6 +324,7 @@ class Layers(object):
         Removes a group of layers from being included in the ablation study. The groups are specified
         either by being passed as a list of layer names, or by passing a `prefix` argument, denoting a prefix shared by
         all layer names in a group.
+
         :param prefix: A string that is a prefix of the names of a group that is already included in the ablation study.
         :type prefix: str
         :param args: Lists of strings (layer names) that correspond to groups that are already
@@ -339,9 +358,7 @@ class Layers(object):
                 )
 
     def print_all(self):
-        """
-        Prints all single layers that are included in the current ablation study configuration.
-        """
+        """Prints all single layers that are included in the current ablation study configuration."""
         if len(self.included_layers) > 0:
             print("Included single layers are: \n")
             for layer in self.included_layers:
@@ -350,9 +367,7 @@ class Layers(object):
             print("There are no single layers in this ablation study configuration.")
 
     def print_all_groups(self):
-        """
-        Prints all layer groups that are included in the current ablation study configuration.
-        """
+        """Prints all layer groups that are included in the current ablation study configuration."""
         if len(self.included_groups) > 0:
             print("Included layer groups are: \n")
             for layer_group in self.included_groups:
