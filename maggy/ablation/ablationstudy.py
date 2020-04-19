@@ -358,10 +358,7 @@ class Layers(object):
                 )
 
     def print_all(self):
-        """
-        Prints all single layers that are included in the current ablation study configuration.
-
-        """
+        """Prints all single layers that are included in the current ablation study configuration."""
         if len(self.included_layers) > 0:
             print("Included single layers are: \n")
             for layer in self.included_layers:
@@ -370,10 +367,7 @@ class Layers(object):
             print("There are no single layers in this ablation study configuration.")
 
     def print_all_groups(self):
-        """
-        Prints all layer groups that are included in the current ablation study configuration.
-
-        """
+        """Prints all layer groups that are included in the current ablation study configuration."""
         if len(self.included_groups) > 0:
             print("Included layer groups are: \n")
             for layer_group in self.included_groups:
