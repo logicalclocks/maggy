@@ -1,5 +1,6 @@
 from maggy.ablation.ablator import AbstractAblator
 from maggy.core.exceptions import NotSupportedError
+from maggy.core.exceptions import BadArgumentsError
 from hops import featurestore
 import tensorflow as tf
 from maggy.trial import Trial
@@ -12,11 +13,12 @@ class LOCO(AbstractAblator):
         self.base_dataset_generator = self.get_dataset_generator(ablated_feature=None)
 
     def get_number_of_trials(self):
-        # plus one is for the base (reference) trial with all the components
+        # the final ' + 1 ' is for the base (reference) trial with all the components
         return (
             len(self.ablation_study.features.included_features)
             + len(self.ablation_study.model.layers.included_layers)
             + len(self.ablation_study.model.layers.included_groups)
+            + len(self.ablation_study.model.custom_model_generators)
             + 1
         )
 
@@ -93,8 +95,19 @@ class LOCO(AbstractAblator):
                     "Use 'tfrecord' or write your own custom dataset generator.",
                 )
 
-    def get_model_generator(self, layer_identifier=None):
+    def get_model_generator(self, layer_identifier=None, custom_model_generator=None):
 
+        if layer_identifier is not None and custom_model_generator is not None:
+            raise BadArgumentsError(
+                "get_model_generator",
+                "At least one of 'layer_identifier' or 'custom_model_generator' should be 'None'.",
+            )
+
+        # if this trial relates to a custom model, then return the provided custom model generator
+        if custom_model_generator:
+            return custom_model_generator[0]
+        # if this is a model ablation of a base model, construct a new model generator
+        # using the layer_identifier
         base_model_generator = self.ablation_study.model.base_model_generator
         if layer_identifier is None:
             return base_model_generator
@@ -111,6 +124,7 @@ class LOCO(AbstractAblator):
                     # the first (input) and last (output) layers should not be considered, hence list_of_layers[1:-1]
                     if base_layer["config"]["name"] == layer_identifier:
                         list_of_layers.remove(base_layer)
+                        break
             elif type(layer_identifier) is set:
                 # ablation of a layer group - all the layers in the group should be removed together
                 if len(layer_identifier) > 1:
@@ -181,6 +195,18 @@ class LOCO(AbstractAblator):
                 )
             )
 
+        # 4 - generate ablation trials based on custom model generators
+
+        for custom_model_generator in self.ablation_study.model.custom_model_generators:
+            self.trial_buffer.append(
+                Trial(
+                    self.create_trial_dict(
+                        custom_model_generator=custom_model_generator
+                    ),
+                    trial_type="ablation",
+                )
+            )
+
     def get_trial(self, trial=None):
         if self.trial_buffer:
             return self.trial_buffer.pop()
@@ -190,7 +216,9 @@ class LOCO(AbstractAblator):
     def finalize_experiment(self, trials):
         return
 
-    def create_trial_dict(self, ablated_feature=None, layer_identifier=None):
+    def create_trial_dict(
+        self, ablated_feature=None, layer_identifier=None, custom_model_generator=None
+    ):
         """
         Creates a trial dictionary that can be used for creating a Trial instance.
 
@@ -204,6 +232,8 @@ class LOCO(AbstractAblator):
         """
 
         trial_dict = {}
+
+        # 1 - determine the dataset generation logic
         if ablated_feature is None:
             trial_dict["dataset_function"] = self.base_dataset_generator
             trial_dict["ablated_feature"] = "None"
@@ -213,12 +243,16 @@ class LOCO(AbstractAblator):
             )
             trial_dict["ablated_feature"] = ablated_feature
 
-        if layer_identifier is None:
+        # 2 - determine the model generation logic
+        # 2.1 - no model ablation
+
+        if layer_identifier is None and custom_model_generator is None:
             trial_dict[
                 "model_function"
             ] = self.ablation_study.model.base_model_generator
             trial_dict["ablated_layer"] = "None"
-        else:
+        # 2.2 - layer ablation based on base model generator
+        elif layer_identifier is not None and custom_model_generator is None:
             trial_dict["model_function"] = self.get_model_generator(
                 layer_identifier=layer_identifier
             )
@@ -231,5 +265,11 @@ class LOCO(AbstractAblator):
                     trial_dict["ablated_layer"] = "Layers prefixed " + str(
                         list(layer_identifier)[0]
                     )
+        # 2.3 - model ablation based on a custom model generator
+        elif layer_identifier is None and custom_model_generator is not None:
+            trial_dict["model_function"] = self.get_model_generator(
+                custom_model_generator
+            )
+            trial_dict["ablated_layer"] = "Custom model: " + custom_model_generator[1]
 
         return trial_dict
