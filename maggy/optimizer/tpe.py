@@ -9,6 +9,9 @@ from maggy.trial import Trial
 
 from hops import hdfs
 
+# todo use optimization direction
+# todo use transform from search space
+
 
 class TPE(AbstractOptimizer):
     """
@@ -110,6 +113,8 @@ class TPE(AbstractOptimizer):
                 hparams = self.searchspace.get_random_parameter_values(1)[0]
                 return Trial(hparams)
 
+            # todo optimization direction
+
             best = -np.inf
             best_sample = None
 
@@ -132,8 +137,15 @@ class TPE(AbstractOptimizer):
 
                     if hparam_spec["type"] in ["DOUBLE", "INTEGER"]:
                         # sample for cont. hparams
-                        low = hparam_spec["values"][0]
-                        high = hparam_spec["values"][1]
+                        # clip by min bw and multiply by factor to favor more exploration
+                        bw = max(bw, self.min_bw) * self.bw_factor
+
+                        # low and high are calculated with bounds of hparamsm, because they are always [0,
+                        # 1] for transformed hparams we do not have to incorporate them explicitly
+                        # `a, b = (myclip_a - my_mean) / my_std, (myclip_b - my_mean) / my_std`
+                        # see: https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.truncnorm.html
+                        low = -mean / bw
+                        high = (1 - mean) / bw
 
                         self._log(
                             "Mean: {}, BW: {}, Low: {}, High: {}".format(
@@ -141,11 +153,6 @@ class TPE(AbstractOptimizer):
                             )
                         )
 
-                        # clip by min bw and multiply by factor to favor more exploration
-                        bw = max(bw, self.min_bw) * self.bw_factor
-
-                        low = -mean / bw
-                        high = (1 - mean) / bw
                         rv = sps.truncnorm.rvs(low, high, loc=mean, scale=bw)
                         sample_vector.append(rv)
                     else:
@@ -210,7 +217,7 @@ class TPE(AbstractOptimizer):
         if len(self.searchspace.keys()) >= len(good_trials):
             return None
 
-        # get list of hparams, each item of the list is one observation
+        # get list of hparams, each item of the list is one observation. each observation is list of hparams
         good_hparams = np.asarray(
             [list(trial.params.values()) for trial in good_trials]
         )
