@@ -52,6 +52,8 @@ class TPE(BaseAsyncBO):
         kde_good = self.model["good"]
         kde_bad = self.model["bad"]
 
+        # todo instead of loop this loop, sample all configs beforehand and then optimize acquisition function like
+        #  in simple bayes
         for sample in range(self.n_samples):
             # randomly choose one of the `good` samples as mean
             idx = np.random.randint(0, len(kde_good.data))
@@ -127,6 +129,7 @@ class TPE(BaseAsyncBO):
         # split good and bad trials
         good_hparams, bad_hparams = self._split_trials()
 
+        # todo check calculation of n_good and n_bad according to BOHB (see Notebook (local))
         n_hparams = len(self.searchspace.keys())
         if n_hparams >= len(good_hparams) or n_hparams >= len(bad_hparams):
             self._log(

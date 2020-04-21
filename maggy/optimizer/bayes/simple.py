@@ -10,6 +10,10 @@ from sklearn.base import clone
 
 from maggy.optimizer.bayes.base import BaseAsyncBO
 
+# todo what about noise in GP
+# todo how and how often do the GP meta hparams get updated
+# todo add documentation of how simple async bo works and what it is
+
 
 class SimpleAsyncBO(BaseAsyncBO):
     """Base class for asynchronous bayesian optimization"""

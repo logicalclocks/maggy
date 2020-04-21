@@ -8,7 +8,11 @@ from maggy.trial import Trial
 from hops import hdfs
 
 
-# todo which methods should be private
+# todo which methods should be private todo what about random_state → for reproducability → check skopt for reference
+# todo `trial_store` hold all busy trials, think about replacing the `busy_locations` approach with the
+#   `trial_store` data
+# todo min_delta_x → warn when similar point has been evaluated before → see skopt for reference
+# TODO implement resuming trials
 
 
 class BaseAsyncBO(AbstractOptimizer):
