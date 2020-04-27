@@ -51,7 +51,7 @@ class SimpleAsyncBO(BaseAsyncBO):
             )
         self.impute_strategy = impute_strategy
 
-    def sampling_routine(self):
+    def sampling_routine(self, budget=0):
         self._log("Start sampling routine")
 
         # even with BFGS as optimizer we want to sample a large number
@@ -71,8 +71,8 @@ class SimpleAsyncBO(BaseAsyncBO):
 
         values = _gaussian_acquisition(
             X=X,
-            model=self.model,
-            y_opt=self.ybest(),
+            model=self.models[budget],
+            y_opt=self.ybest(budget),
             acq_func=self.acq_fun,
             acq_func_kwargs=self.acq_func_kwargs,
         )
@@ -96,7 +96,12 @@ class SimpleAsyncBO(BaseAsyncBO):
                 result = fmin_l_bfgs_b(
                     func=gaussian_acquisition_1D,
                     x0=x,
-                    args=(self.model, self.ybest(), self.acq_fun, self.acq_func_kwargs),
+                    args=(
+                        self.models[budget],
+                        self.ybest(budget),
+                        self.acq_fun,
+                        self.acq_func_kwargs,
+                    ),
                     bounds=[(0.0, 1.0) for _ in self.searchspace.values()],
                     approx_grad=False,
                     maxiter=20,
@@ -113,13 +118,13 @@ class SimpleAsyncBO(BaseAsyncBO):
 
         # calculate liar for imputing metric in `busy_locations`
         if self.impute_strategy == "cl_min":
-            liar = self.ybest()
+            liar = self.ybest(budget)
         elif self.impute_strategy == "cl_max":
-            liar = self.yworst()
+            liar = self.yworst(budget)
         elif self.impute_strategy == "cl_mean":
-            liar = self.ymean()
+            liar = self.ymean(budget)
         elif self.impute_strategy == "kb":
-            liar = self.model.predict(np.array(next_x).reshape(1, -1))[0]
+            liar = self.models[budget].predict(np.array(next_x).reshape(1, -1))[0]
         else:
             raise NotImplementedError(
                 "cl_strategy {} is not implemented, please choose from ('cl_min', 'cl_max', "
@@ -137,7 +142,7 @@ class SimpleAsyncBO(BaseAsyncBO):
         )  # is array [-3,3,"blue"]
 
         # add next_x to busy locations and impute metric with liar
-        self.busy_locations.append({"params": next_x, "metric": liar})
+        self.busy_locations.append({"params": next_x, "metric": liar, "budget": budget})
 
         self._log("Next config to evaluate: {}".format(next_x))
         self._log("busy_locations: {}".format(self.busy_locations))
@@ -174,15 +179,16 @@ class SimpleAsyncBO(BaseAsyncBO):
         )
         self.base_model = base_model
 
-    def update_model(self):
+    def update_model(self, budget):
         """update surrogate model with new observations
 
         Use observations of finished trials + liars from busy trials to build model.
         Only build model when there are at least as many observations as hyperparameters
         """
-        self._log("Start updateing model")
+        self._log("Start updateing model with budget {}".format(budget))
 
         # check if enough observations available for model building
+        # todo auf budget anpassen
         if len(self.searchspace.keys()) > len(self.final_store):
             self._log("Not enough observations available to build yet")
             return
@@ -191,8 +197,8 @@ class SimpleAsyncBO(BaseAsyncBO):
         model = clone(self.base_model)
 
         # get hparams and final metrics of finished trials combined with busy locations
-        Xi = self.get_hparams(include_busy_locations=True)
-        yi = self.get_metrics(include_busy_locations=True)
+        Xi = self.get_hparams_array(include_busy_locations=True, budget=budget)
+        yi = self.get_metrics_array(include_busy_locations=True, budget=budget)
 
         # transform hparam values
         Xi_transform = np.apply_along_axis(
@@ -208,5 +214,5 @@ class SimpleAsyncBO(BaseAsyncBO):
 
         self._log("Fitted Model with data")
 
-        # set current model to the fitted estimator
-        self.model = model
+        # update model of budget
+        self.models[budget] = model

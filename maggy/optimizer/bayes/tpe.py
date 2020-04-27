@@ -44,15 +44,15 @@ class TPE(BaseAsyncBO):
         self.min_bw = 1e-3  # from HpBandSter
         self.bw_factor = bw_factor
 
-    def sampling_routine(self):
+    def sampling_routine(self, budget=0):
 
         best_improvement = -np.inf
         best_sample = None
 
-        kde_good = self.model["good"]
-        kde_bad = self.model["bad"]
+        kde_good = self.models[budget]["good"]
+        kde_bad = self.models[budget]["bad"]
 
-        # todo instead of loop this loop, sample all configs beforehand and then optimize acquisition function like
+        # todo instead of this loop, sample all configs beforehand and then optimize acquisition function like
         #  in simple bayes
         for sample in range(self.n_samples):
             # randomly choose one of the `good` samples as mean
@@ -119,16 +119,21 @@ class TPE(BaseAsyncBO):
     def init_model(self):
         pass
 
-    def update_model(self):
+    def update_model(self, budget=0):
         """update surrogate model based on observations from finished trials
 
             - creating and storing kde for *good* and *bad* observations
             - Only build model when there are more observations than hyperparameters
               i.e. for each kde
+
+        :param budget: the budget for which model should be updated
+                       If budget > 0 : multifidelity optimization. Only use observations that were run with
+                       `budget` for updateing model for that `budget`. One model exists per budget.
+                       If == 0: single fidelity optimization. Only one model exists that is fitted with all observations
+        :type budget: int
         """
         # split good and bad trials
-        good_hparams, bad_hparams = self._split_trials()
-
+        good_hparams, bad_hparams = self._split_trials(budget)
         # todo check calculation of n_good and n_bad according to BOHB (see Notebook (local))
         n_hparams = len(self.searchspace.keys())
         if n_hparams >= len(good_hparams) or n_hparams >= len(bad_hparams):
@@ -162,21 +167,23 @@ class TPE(BaseAsyncBO):
             data=transformed_bad_hparams, var_type=var_type, bw=self.bw_estimation
         )
 
-        self.model = {"good": good_kde, "bad": bad_kde}
+        self.models[budget] = {"good": good_kde, "bad": bad_kde}
 
-    def _split_trials(self):
-        """splits trials in good and bad according to tpe algo
+    def _split_trials(self, budget=0):
+        """splits trials in good and bad according to tpe algo for observation with given budget
 
+        :param budget: the budget for which observations shoul be split
+        :type budget: int
         :return: tuple with arrays of good trials and bad trials
         :rtype (np.ndarray(n_trials, n_hparams), np.ndarray(n_trials, n_params))
         """
 
-        metric_history = self.get_metrics()
+        metric_history = self.get_metrics_array(budget=budget)
         metric_idx_ascending = np.argsort(metric_history)
         n_good = int(np.ceil(self.gamma * len(metric_history)))
         # ToDo double check calculation of n_good with HpBandSter
 
-        hparam_history = self.get_hparams()
+        hparam_history = self.get_hparams_array(budget=budget)
 
         good_trails = hparam_history[np.sort(metric_idx_ascending[:n_good])]
         bad_trials = hparam_history[np.sort(metric_idx_ascending[n_good:])]

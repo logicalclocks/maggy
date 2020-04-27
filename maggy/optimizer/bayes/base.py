@@ -17,6 +17,17 @@ from hops import hdfs
 
 class BaseAsyncBO(AbstractOptimizer):
     """Base class for asynchronous bayesian optimization
+    # todo explain below
+    **async bo**
+
+    **optimization loop details**
+
+    **models**
+
+    saved as dict
+        - multifidelity vs. single fidelity
+
+    **pruner**
 
     todo explain wie min/max direction gehandhabt wird
     todo explain async bo basics
@@ -75,7 +86,7 @@ class BaseAsyncBO(AbstractOptimizer):
 
         self.num_warmup_trials = num_warmup_trials
         self.warmup_sampling = "random"  # todo other options could be latin hypercube
-        self.warmup_trial_buffer = []  # keeps track of warmup trials
+        self.warmup_configs = []  # keeps track of warmup warmup configs
 
         allowed_sampling_methods = ["random"]
         if self.warmup_sampling not in allowed_sampling_methods:
@@ -117,10 +128,8 @@ class BaseAsyncBO(AbstractOptimizer):
         self.acq_optimizer_kwargs = acq_optimizer_kwargs
 
         # todo configure pruner
-
-        self.pruner = (
-            pruner  # class vs. instance vs. string ?? → same discussion for acq_fun
-        )
+        # class vs. instance vs. string ?? → same discussion for acq_fun
+        self.pruner = pruner
         self.pruner_kwargs = pruner_kwargs
 
         # surrogate model related aruments
@@ -129,7 +138,8 @@ class BaseAsyncBO(AbstractOptimizer):
             []
         )  # each busy location is a dict {"params": hparams_list, "metric": liar}
         self.base_model = None  # estimator that has not been fit on any data.
-        self.model = None  # fitted model of the estimator
+        # todo explain how models are saved → dict, 0 is single fidelity
+        self.models = {}  # fitted model of the estimator
         self.random_fraction = random_fraction
 
         # configure logger
@@ -158,28 +168,70 @@ class BaseAsyncBO(AbstractOptimizer):
                 self._cleanup_busy_locations(trial)
 
             # check if experiment has finished
+            # todo potentially use `experiment_finished` method from pruner
             if self._experiment_finished():
                 return None
 
+            # pruning routine
+            if self.pruner:
+                next_trial_info = self.pruner.pruning_routine()
+                if next_trial_info is None:
+                    # experiment is finished
+                    return None
+                elif next_trial_info["trial_id"]:
+                    # use hparams of given promoted trial and start new trial with it
+                    parent_trial_id = next_trial_info["trial_id"]
+                    parent_trial_hparams = self.get_hparams_dict(
+                        trial_ids=parent_trial_id
+                    )[parent_trial_id]
+                    next_trial = self.create_trial(
+                        hparams=parent_trial_hparams, budget=next_trial_info["budget"]
+                    )
+                    # report new trial id to pruner
+                    self.pruner.report_trial(
+                        original_trial_id=parent_trial_id,
+                        new_trial_id=next_trial.trial_id,
+                    )
+                    return next_trial
+                else:
+                    # start sampling procedure with given budget
+                    budget = next_trial_info["budget"]
+            else:
+                budget = 0
+
             # check if there are still trials in the warmup buffer
-            if self.warmup_trial_buffer:
+            if self.warmup_configs:
                 self._log("take sample from warmup buffer")
-                return self.warmup_trial_buffer.pop()
+                next_trial_params = self.warmup_configs.pop()
+                next_trial = self.create_trial(hparams=next_trial_params, budget=budget)
+                return next_trial
 
             # update model with latest observations
-            self.update_model()
+            # skip model building if we already have a bigger model
+            if max(list(self.models.keys()) + [-np.inf]) <= budget:
+                self.update_model(budget)
 
             # in case there is no model yet or random fraction applies, sample randomly
-            # todo in case of BOHB/ASHA model is a dict, maybe it should be dict for every case
-            if not self.model or np.random.rand() < self.random_fraction:
+            if not self.models or np.random.rand() < self.random_fraction:
                 hparams = self.searchspace.get_random_parameter_values(1)[0]
+                next_trial = self.create_trial(hparams, budget)
                 self._log("sampled randomly: {}".format(hparams))
-                return Trial(hparams)
+                return next_trial
 
-            # sample best hparam config from model
-            hparams = self.sampling_routine()
+            # sample from largest model
+            max_budget = max(self.models.keys())
+            hparams = self.sampling_routine(max_budget)
 
-            return Trial(hparams)
+            # create Trial object
+            next_trial = self.create_trial(hparams, budget=budget)
+
+            # report new trial id to pruner
+            if self.pruner:
+                self.pruner.report_trial(
+                    original_trial_id=None, new_trial_id=next_trial.trial_id
+                )
+
+            return next_trial
 
         except BaseException:
             self._log(traceback.format_exc())
@@ -201,22 +253,33 @@ class BaseAsyncBO(AbstractOptimizer):
         """
         raise NotImplementedError
 
-    def update_model(self):
+    def update_model(self, budget=0):
         """update surrogate model with new observations
 
         Use observations of finished trials + liars from busy trials to build model.
         Only build model when there are at least as many observations as hyperparameters
+
+        :param budget: the budget for which model should be updated. Default is 0
+                       If budget > 0 : multifidelity optimization. Only use observations that were run with
+                       `budget` for updateing model for that `budget`. One model exists per budget.
+                       If == 0: single fidelity optimization. Only one model exists that is fitted with all observations
+        :type budget: int
         """
         raise NotImplementedError
 
-    def sampling_routine(self):
-        """Samples new config from surrogate model
+    def sampling_routine(self, budget=0):
+        """Samples new config from model
 
         This methods holds logic for:
 
         - maximizing acquisition function based on current model and observations
         - async logic: i.e. imputing busy_locations with a liar to encourage diversity in sampling
 
+        :param budget: the budget from which model should be sampled. Default is 0
+                       If budget > 0 : multifidelity optimization. Only use observations that were run with
+                       `budget` for updateing model for that `budget`. One model exists per budget.
+                       If == 0: single fidelity optimization. Only one model exists that is fitted with all observations
+        :type budget: int
         :return: hyperparameter config that minimizes the acquisition function
         :rtype: dict
         """
@@ -224,14 +287,14 @@ class BaseAsyncBO(AbstractOptimizer):
 
     def warmup_routine(self):
         """implements logic for warming up bayesian optimization through random sampling by adding hparam configs to
-        `warmup_trial_buffer`
+        `warmup_config` list
 
         todo add other options s.a. latin hypercube
         """
 
         # generate warmup hparam configs
         if self.warmup_sampling == "random":
-            warmup_configs = self.searchspace.get_random_parameter_values(
+            self.warmup_configs = self.searchspace.get_random_parameter_values(
                 self.num_warmup_trials
             )
         else:
@@ -241,11 +304,51 @@ class BaseAsyncBO(AbstractOptimizer):
                 )
             )
 
-        self._log("warmup configs: {}".format(warmup_configs))
+        self._log("warmup configs: {}".format(self.warmup_configs))
 
-        # add configs to trial buffer
-        for hparams in warmup_configs:
-            self.warmup_trial_buffer.append(Trial(hparams, trial_type="optimization"))
+    # todo, evtl. outsource to helpers or abstract optimizer or trial. possibly obsolete when trial has param budget
+    def create_trial(self, hparams, budget=0):
+        """helper function to create trial with budget
+
+        `budget == 0` means that it is a single fidelity optimization and budget does not need to be passed to Trial
+        and hence training function
+
+        :param hparams: hparam dict
+        :type hparams: dict
+        :param budget: budget for trial. implemented first version of Hyperband
+        :type budget: int
+        :return: Trial object with specified params
+        :rtype: Trial
+        """
+        if budget > 0:
+            hparams["budget"] = budget
+        return Trial(hparams, trial_type="optimization")
+
+    def get_trial(self, trial_ids):
+        """return Trial or list of Trials with `trial_id` from `final_store`
+
+        # todo, probably eliminate
+
+        :param trial_ids: single trial id or list of trial ids of the requested trials
+        :type trial_ids: str|list[str]
+        :return: Trial/ Trials with specified id
+        :rtype: Trial|list[Trial]
+        """
+        if isinstance(trial_ids, str):
+            # return single trial object
+            trial = [trial for trial in self.final_store if trial.trial_id == trial_ids]
+            if len(trial) > 0:
+                return trial[0]
+            else:
+                self._log(
+                    "There is no trial with id {} in final_store".format(trial_ids)
+                )
+        else:
+            # return list of trials, `trial_id` is list of `trial_id`
+            trials = [
+                trial for trial in self.final_store if trial.trial_id in trial_ids
+            ]
+            return trials
 
     def _acquisition_function(self):
         """calculates the utility for given point and surrogate"""
@@ -300,41 +403,103 @@ class BaseAsyncBO(AbstractOptimizer):
         except TypeError:
             self._log("{} was not in busy_locations".format(hparams))
 
-    def get_hparams(self, include_busy_locations=False):
+    def get_hparams_array(self, include_busy_locations=False, budget=0):
         """returns array of already evaluated hparams + optionally hparams that are currently evaluated
+
+        The order of the returned hparams is the same as in `final_store`
+
+        # todo get metric of specific budget of busy locations
 
         :param include_busy_locations: If True, add currently evaluating hparam configs
         :type include_busy_locations: bool
+        :param budget: If not None, only trials with this budget are returned
+        :type budget: None|int
         :return: array of hparams, shape (n_finished_hparam_configs, n_hparams)
         :rtype: np.ndarray[np.ndarray]
         """
+        # include trials with given budget or include all trials if no budget is given
+        include_trial = (
+            lambda x: x == budget or budget is None or budget == 0
+        )  # noqa: E731
+
         hparams = np.array(
-            [self.searchspace.dict_to_list(trial.params) for trial in self.final_store]
+            [
+                self.searchspace.dict_to_list(trial.params)
+                for trial in self.final_store
+                if include_trial(trial.params["budget"])
+            ]
         )
 
         if include_busy_locations and len(self.busy_locations):
             hparams_busy = np.array(
-                [location["params"] for location in self.busy_locations]
+                [
+                    location["params"]
+                    for location in self.busy_locations
+                    if location["budget"] == budget
+                ]
             )
             hparams = np.concatenate((hparams, hparams_busy))
 
         return hparams
 
-    def get_metrics(self, include_busy_locations=False):
+    def get_hparams_dict(self, trial_ids="all"):
+        """returns dict of hparams of finished trials with `trial_id` as key and hparams dict as value
+
+        :param trial_ids: trial_id or list of trial_ids that should be returned.
+                          If set to default ("all"), return all trials
+        :type trial_ids: list[str]|str
+        :return: dict of trial_ids and hparams. Example: {`trial_id1`: `hparam_dict1`, ... , `trial_idn`: `hparam_dictn`}
+        :rtype: dict
+        """
+        # return trials with specified trial_ids or return all trials
+        include_trial = (
+            lambda x: x == trial_ids or x in trial_ids or trial_ids == "all"
+        )  # noqa: E731
+
+        hparam_dict = {
+            trial.trial_id: trial.params
+            for trial in self.final_store
+            if include_trial(trial.trial_id)
+        }
+
+        return hparam_dict
+
+    def get_metrics_array(self, include_busy_locations=False, budget=0):
         """returns array of final metrics + optionally imputed metrics of currently evaluating trials
+
+        The order of the returned metrics is the same as in `final_store`
+
+        # todo get metric of specific budget of busy locations
 
         In case that the optimization `direction` is `max`, negate the metrics so it becomes a `min` problem
 
         :param include_busy_locations: If True, add imputed metrics of currently evaluating trials
         :type include_busy_locations: bool
+        :param budget: If not None, only trials with this budget are returned
+        :type budget: None|int
         :return: array of hparams, shape (n_final_metrics,)
         :rtype: np.ndarray[float]
         """
-        metrics = np.array([trial.final_metric for trial in self.final_store])
+        # include trials with given budget or include all trials if no budget is given or budget is 0
+        include_trial = (
+            lambda x: x == budget or budget is None or budget == 0
+        )  # noqa: E731
+
+        metrics = np.array(
+            [
+                trial.final_metric
+                for trial in self.final_store
+                if include_trial(trial.params["budget"])
+            ]
+        )
 
         if include_busy_locations and len(self.busy_locations):
             metrics_busy = np.array(
-                [location["metric"] for location in self.busy_locations]
+                [
+                    location["metric"]
+                    for location in self.busy_locations
+                    if location["budget"] == budget
+                ]
             )
             metrics = np.concatenate((metrics, metrics_busy))
 
@@ -343,40 +508,75 @@ class BaseAsyncBO(AbstractOptimizer):
 
         return metrics
 
-    def ybest(self):
+    def get_metrics_dict(self, trial_ids="all"):
+        """returns dict of final metrics with `trial_id` as key and final metric as value
+
+        In case that the optimization `direction` is `max`, negate the metrics so it becomes a `min` problem
+
+        :param trial_ids: trial_id or list of trial_ids that should be returned.
+                          If set to default ("all"), return all trials
+        :type trial_ids: list[str]|str
+        :return: dict of trial_ids and final_metrics. Example: {`trial_id1`: `metric1`, ... , `trial_idn`: `metricn`}
+        :rtype: dict
+        """
+        if self.direction == "max":
+            metric_multiplier = -1
+        else:
+            metric_multiplier = 1
+
+        # return trials with specified trial_ids or return all trials
+        include_trial = (
+            lambda x: x == trial_ids or x in trial_ids or trial_ids == "all"
+        )  # noqa: E731
+
+        metrics = {
+            trial.trial_id: trial.final_metric * metric_multiplier
+            for trial in self.final_store
+            if include_trial(trial.trial_id)
+        }
+
+        return metrics
+
+    def ybest(self, budget=0):
         """Returns best metric of all currently finalized trials
 
         Maximization problems are converted to minimization problems
         I.e. if the optimization direction is `max`, returns the negated max value
 
+        :param budget: the budget for which ybest should be calculated
+        :type budget: int
         :return: worst metric of all currently finalized trials
         :rtype: float
         """
-        metric_history = self.get_metrics()
+        metric_history = self.get_metrics_array(budget=budget)
         return np.min(metric_history)
 
-    def yworst(self):
+    def yworst(self, budget=0):
         """Returns worst metric of all currently finalized trials
 
         Maximization problems are converted to minimization problems
         I.e. if the optimization direction is `max`, returns the negated min value
 
+        :param budget: the budget for which yworst should be calculated
+        :type budget: int
         :return: best metric of all currently finalized trials
         :rtype: float
         """
-        metric_history = self.get_metrics()
+        metric_history = self.get_metrics_array(budget=budget)
         return np.max(metric_history)
 
-    def ymean(self):
+    def ymean(self, budget=0):
         """Returns best metric of all currently finalized trials
 
         Maximization problems are converted to minimization problems
         I.e. if the optimization direction is `max`, returns the mean of negated metrics
 
+        :param budget: the budget for which ymean should be calculated
+        :type budget: int
         :return: mean of all currently finalized trials metrics
         :rtype: float
         """
-        metric_history = self.get_metrics()
+        metric_history = self.get_metrics_array(budget=budget)
         return np.mean(metric_history)
 
     def _log(self, msg):
