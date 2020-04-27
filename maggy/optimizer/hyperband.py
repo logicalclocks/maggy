@@ -199,17 +199,17 @@ class Hyperband:
         return active
 
     def start_next_iteration(self):
-        """Sets status of next SH iteration in queue to RUNNING"""
+        """Sets state of next SH iteration in queue to RUNNING"""
         for iteration in self.iterations:
-            if iteration.status == SHIteration.INIT:
-                iteration.status = SHIteration.RUNNING
-                self.n_iterations = -1
+            if iteration.state == SHIteration.INIT:
+                iteration.state = SHIteration.RUNNING
+                self.n_iterations -= 1
                 break
 
     def finished(self):
         """returns True if all iterations have finished
 
-        :return: True, if all iterations have status == 'FINISHED'. Else, False
+        :return: True, if all iterations have state == 'FINISHED'. Else, False
         :rtype: bool
         """
         for iteration in self.iterations:
@@ -294,6 +294,8 @@ class SHIteration:
                         and the latter the `trial_id` of the trial with the same hparams - performed with the budget
                         of the current rung.
                         Having a `actual_trial_id` means that a trial has been started, but not neccessarily finished
+        n_rungs (int): number of rungs in the SH iteration
+        state (str): current state of the iteration, can be "INIT", "RUNNING" or "FINISHED
 
         Note: this strategy gives also the opportunity to later continue
               trials instead of starting new ones for promoted trials
@@ -322,16 +324,16 @@ class SHIteration:
         }
         """
         self.iteration_id = iteration_id
-        self.status = SHIteration.INIT
-        self.n_rungs = 3
-        self.current_rung = 0
+        self.state = SHIteration.INIT
         self.n_configs = n_configs  # [9, 3, 1]  n_configs per rung
         self.budgets = budgets  # [1, 3, 9]
 
-        self.trial_metric_getter = trial_metric_getter
-
+        self.n_rungs = len(n_configs)
+        self.current_rung = 0
         self.actual_n_configs = [0] * len(self.n_configs)
         self.configs = {rung: [] for rung in range(0, self.n_rungs)}
+
+        self.trial_metric_getter = trial_metric_getter
 
     def get_next_run(self):
         """returns dict with `trial_id` and `budget` for next trial.
@@ -358,7 +360,7 @@ class SHIteration:
                  example: {"trial_id": `trial_id`, "budget": 9}
         :rtype: None|dict
         """
-        if self.n_configs[self.current_rung] < self.actual_n_configs[self.current_rung]:
+        if self.n_configs[self.current_rung] > self.actual_n_configs[self.current_rung]:
             # there are still slots to fill in current rung
             if self.current_rung == 0:
                 self.actual_n_configs[self.current_rung] += 1
@@ -383,10 +385,15 @@ class SHIteration:
         ):
             # all slots in current rung have been filled
             if self.promotable():
+                # promote best performing trials to next rung
                 self.promote()
                 return self.get_next_run()
             else:
                 # all trials of current rung are started but not finished yet or last rung has finished
+                # check if SH iteration is finished
+                if self.finished():
+                    # set state so it is no longer returned in `active_iterations()`
+                    self.state = SHIteration.FINISHED
                 return None
         else:
             raise ValueError("Too many configs have been sampled")
@@ -428,6 +435,8 @@ class SHIteration:
     def promote(self):
         """promotes n_configs to the next rung based on final metric
 
+        only call this method if `promotable()` returns True.
+
         :return: list of trial ids that are advancing to the next rung
         :rtype: list[str]
         """
@@ -460,8 +469,7 @@ class SHIteration:
             )
 
     def promotable(self):
-        """checks if current rung is promotable, i.e. if all trials are finished and current rung is not the last rung,
-        i.e. SH iteration has finished
+        """checks if current rung is promotable, i.e. if all trials are finished and current rung is not the last rung
 
         :return: True if all trials of rung are finished, False else
         :rtype: bool
@@ -475,7 +483,28 @@ class SHIteration:
             return False
 
         for trial in self.configs[self.current_rung]:
-            if trial["actual_trial_id"] is None:
+            if self.trial_metric_getter(trial["actual_trial_id"]) is None:
+                # trial has not finished
+                return False
+
+        return True
+
+    def finished(self):
+        """checks if SH Iteration has finished, i.e. if all trials in the last rung are finished
+
+        :return: True if SH Iteration is finished, False else
+        :rtype: bool
+        """
+        if self.actual_n_configs[self.current_rung] < self.n_configs[self.current_rung]:
+            # not all trials in current rung have started
+            return False
+
+        if self.current_rung != self.n_rungs - 1:
+            # current rung is not the last rung in the iteration
+            return False
+
+        for trial in self.configs[self.current_rung]:
+            if self.trial_metric_getter(trial["actual_trial_id"]) is None:
                 # trial has not finished
                 return False
 
