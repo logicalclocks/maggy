@@ -1,4 +1,8 @@
+import traceback
+
 import numpy as np
+
+from hops import hdfs
 
 """
 The implementation is heavliy inspired by the BOHB (Falkner et al. 2018) paper and the HpBandSter Framework
@@ -103,7 +107,9 @@ class Hyperband:
             dtype=int,
         )
 
-        print("INIT HB. s_max: {}, budgets: {}".format(self.max_sh_rungs, self.budgets))
+        self._log(
+            "INIT HB. s_max: {}, budgets: {}".format(self.max_sh_rungs, self.budgets)
+        )
 
         # configure SH iterations
         self.iterations = []
@@ -114,6 +120,15 @@ class Hyperband:
 
         # keep track of `iteration_id` that is currently updating, needed for `self.report_trial()`
         self.updating_iteration = None
+
+        # configure logger
+        self.log_file = "hdfs:///Projects/demo_deep_learning_admin000/Logs/pruner_{}.log".format(
+            self.name()
+        )  # todo make dynamic
+        if not hdfs.exists(self.log_file):
+            hdfs.dump("", self.log_file)
+        self.fd = hdfs.open_file(self.log_file, flags="w")
+        self._log("Initialized Logger")
 
     def pruning_routine(self):
         """Returns dict with keys 'trial_id' and 'budget'
@@ -136,39 +151,44 @@ class Hyperband:
         :return: {"trial_id": `trial_id`, "budget": 9}
         :rtype: dict|None
         """
-        # check if all SH iterations in HB are finished
-        if self.finished():
-            return None
+        try:
+            # check if all SH iterations in HB are finished
+            if self.finished():
+                return None
 
-        # loop through active iterations and return config and budget of next run
-        next_run = None
-        for iteration in self.active_iterations():
-            next_run = iteration.get_next_run()
+            # loop through active iterations and return config and budget of next run
+            next_run = None
+            for iteration in self.active_iterations():
+                next_run = iteration.get_next_run()
+                if next_run is not None:
+                    # set updateing iteration
+                    self.updating_iteration = iteration.iteration_id
+                    break
+
             if next_run is not None:
-                # set updateing iteration
-                self.updating_iteration = iteration.iteration_id
-                break
-
-        if next_run is not None:
-            # schedule new run for `iteration`
-            print(
-                "{}. Iteration, {}. Rung. Run next {}".format(
-                    iteration.iteration_id, iteration.current_rung, next_run
+                # schedule new run for `iteration`
+                self._log(
+                    "{}. Iteration, {}. Rung. Run next {}".format(
+                        iteration.iteration_id, iteration.current_rung, next_run
+                    )
                 )
-            )
-            return next_run
-        else:
-            # all active iterations are busy
-            # start next iteration in the queue
-            if self.n_iterations > 0:
-                self.start_next_iteration()
+                return next_run
+            else:
+                # all active iterations are busy
+                # start next iteration in the queue
+                if self.n_iterations > 0:
+                    self.start_next_iteration()
 
-            # call pruning_routine again
-            return self.pruning_routine()
+                # call pruning_routine again
+                return self.pruning_routine()
 
-        # todo what if all iterations are busy or finished and we have a free worker → think about it
-        # → wait, otherwise their could be a recursion error if self.pruning_routine() gets called from it self constantly
-        # see line 221 ff in `master.py` of HpBandSter
+            # todo what if all iterations are busy or finished and we have a free worker → think about it
+            # → wait, otherwise their could be a recursion error if self.pruning_routine() gets called from it self constantly
+            # see line 221 ff in `master.py` of HpBandSter
+        except BaseException:
+            self._log(traceback.format_exc())
+            self.fd.flush()
+            self.fd.close()
 
     def init_iterations(self):
         """calculates budgets and amount of trials for each iteration"""
@@ -189,9 +209,10 @@ class Hyperband:
                     budgets=budgets,
                     iteration_id=iteration,
                     trial_metric_getter=self.trial_metric_getter,
+                    logger=self._log,
                 )
             )
-            print(
+            self._log(
                 "INIT SH Iteration {}. n_configs: {}, budgets: {}".format(
                     iteration, ns, budgets
                 )
@@ -216,7 +237,7 @@ class Hyperband:
         for iteration in self.iterations:
             if iteration.state == SHIteration.INIT:
                 iteration.state = SHIteration.RUNNING
-                print(
+                self._log(
                     "{}. Iteration started. n_configs: {}, budgets: {}".format(
                         iteration.iteration_id, iteration.n_configs, iteration.budgets
                     )
@@ -233,6 +254,11 @@ class Hyperband:
         for iteration in self.iterations:
             if iteration.state != SHIteration.FINISHED:
                 return False
+
+        # close logfile
+        self.fd.flush()
+        self.fd.close()
+
         return True
 
     def get_budgets(self):
@@ -263,6 +289,12 @@ class Hyperband:
         )
         self.updating_iteration = None
 
+    def name(self):
+        return str(self.__class__.__name__)
+
+    def _log(self, msg):
+        self.fd.write((msg + "\n").encode())
+
 
 class SHIteration:
     """SuccessiveHalving Iteration
@@ -286,7 +318,7 @@ class SHIteration:
     RUNNING = "RUNNING"
     FINISHED = "FINISHED"
 
-    def __init__(self, n_configs, budgets, iteration_id, trial_metric_getter):
+    def __init__(self, n_configs, budgets, iteration_id, trial_metric_getter, logger):
         """
         :param n_configs: number of trials per rung
         :type n_configs: list[int]
@@ -298,6 +330,7 @@ class SHIteration:
                              the `final_store` of the `optimizer`.
                              It's only argument is the `trial_id` or list a list of `trial_id`
         :type trial_metric_getter: function
+        :param logger: logger
 
         Attributes
         ----------
@@ -352,6 +385,9 @@ class SHIteration:
         self.configs = {rung: [] for rung in range(0, self.n_rungs)}
 
         self.trial_metric_getter = trial_metric_getter
+
+        # configure logger
+        self._log = logger
 
     def get_next_run(self):
         """returns dict with `trial_id` and `budget` for next trial.
@@ -412,7 +448,7 @@ class SHIteration:
                 if self.finished():
                     # set state so it is no longer returned in `active_iterations()`
                     self.state = SHIteration.FINISHED
-                    print("{}. Iteration finished".format(self.iteration_id))
+                    self._log("{}. Iteration finished".format(self.iteration_id))
                 return None
         else:
             raise ValueError("Too many configs have been sampled")
@@ -487,7 +523,7 @@ class SHIteration:
                 {"original_trial_id": trial, "actual_trial_id": None}
             )
 
-        print(
+        self._log(
             "{}. Iteration finished rung: {} \n with trials: {} \n promoted trials: {}".format(
                 self.iteration_id, self.current_rung, sorted_trials, promoted_trials
             )
