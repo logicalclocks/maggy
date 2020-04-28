@@ -246,6 +246,10 @@ class BaseAsyncBO(AbstractOptimizer):
             self.fd.flush()
             self.fd.close()
 
+            if self.pruner:
+                self.pruner.fd.flush()
+                self.pruner.fd.close()
+
     def finalize_experiment(self, trials):
         # close logfile
         self.fd.flush()
