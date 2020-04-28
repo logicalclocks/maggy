@@ -1,5 +1,4 @@
 import traceback
-import time
 
 import numpy as np
 
@@ -185,10 +184,10 @@ class Hyperband:
                 # start next iteration in the queue
                 if self.n_iterations > 0:
                     self.start_next_iteration()
-                else:
-                    # todo
-                    # last iteration is busy and worker is free
-                    time.sleep(3)
+                # else:
+                #     # todo
+                #     # last iteration is busy and worker is free
+                #     time.sleep(3)
                 # call pruning_routine again
                 return self.pruning_routine()
 
