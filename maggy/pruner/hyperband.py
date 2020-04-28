@@ -257,8 +257,8 @@ class Hyperband:
                 return False
 
         # close logfile
-        self.fd.flush()
-        self.fd.close()
+        # self.fd.flush()
+        # self.fd.close()
 
         return True
 
