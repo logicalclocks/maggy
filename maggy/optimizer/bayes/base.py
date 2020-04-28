@@ -354,6 +354,7 @@ class BaseAsyncBO(AbstractOptimizer):
         """
         if budget > 0:
             hparams["budget"] = budget
+        self._log("Create Trial with params: {}".format(hparams))
         return Trial(hparams, trial_type="optimization")
 
     def get_trial(self, trial_ids):
