@@ -167,6 +167,7 @@ class Hyperband:
             return self.pruning_routine()
 
         # todo what if all iterations are busy or finished and we have a free worker → think about it
+        # → wait, otherwise their could be a recursion error if self.pruning_routine() gets called from it self constantly
         # see line 221 ff in `master.py` of HpBandSter
 
     def init_iterations(self):
