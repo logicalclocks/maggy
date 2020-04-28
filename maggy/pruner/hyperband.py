@@ -89,6 +89,15 @@ class Hyperband:
         if eta < 2:
             raise ValueError("Expected eta greater or equal to 2, got {}".format(eta))
 
+        # configure logger
+        self.log_file = "hdfs:///Projects/demo_deep_learning_admin000/Logs/pruner_{}.log".format(
+            self.name()
+        )  # todo make dynamic
+        if not hdfs.exists(self.log_file):
+            hdfs.dump("", self.log_file)
+        self.fd = hdfs.open_file(self.log_file, flags="w")
+        self._log("Initialized Logger")
+
         self.min_budget = min_budget
         self.max_budget = max_budget
         self.eta = eta
@@ -120,15 +129,6 @@ class Hyperband:
 
         # keep track of `iteration_id` that is currently updating, needed for `self.report_trial()`
         self.updating_iteration = None
-
-        # configure logger
-        self.log_file = "hdfs:///Projects/demo_deep_learning_admin000/Logs/pruner_{}.log".format(
-            self.name()
-        )  # todo make dynamic
-        if not hdfs.exists(self.log_file):
-            hdfs.dump("", self.log_file)
-        self.fd = hdfs.open_file(self.log_file, flags="w")
-        self._log("Initialized Logger")
 
     def pruning_routine(self):
         """Returns dict with keys 'trial_id' and 'budget'
