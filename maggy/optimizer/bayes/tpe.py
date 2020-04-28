@@ -45,7 +45,6 @@ class TPE(BaseAsyncBO):
         self.bw_factor = bw_factor
 
     def sampling_routine(self, budget=0):
-
         best_improvement = -np.inf
         best_sample = None
 
@@ -144,7 +143,7 @@ class TPE(BaseAsyncBO):
             )
             return
 
-        self._log("We have enough observations --> update Model")
+        self._log("Update Model with budget {}")
 
         transformed_good_hparams = np.apply_along_axis(
             self.searchspace.transform, 1, good_hparams
