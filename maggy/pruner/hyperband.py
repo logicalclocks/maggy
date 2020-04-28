@@ -293,8 +293,7 @@ class Hyperband:
     def _log(self, msg):
         if not LOCAL:
             self.fd.write((msg + "\n").encode())
-        else:
-            print(msg, "\n")
+        print(msg, "\n")
 
 
 class SHIteration:
@@ -490,6 +489,15 @@ class SHIteration:
                 None,
             )
             self.configs[self.current_rung][trial_idx]["actual_trial_id"] = new_trial_id
+
+        self._log(
+            "{}. Iteration, {}. Rung. Started Trial {}/{}: \n".format(
+                self.iteration_id,
+                self.current_rung,
+                len(self.configs[self.current_rung]),
+                self.n_configs[self.current_rung],
+            )
+        )
 
     def promote(self):
         """promotes n_configs to the next rung based on final metric

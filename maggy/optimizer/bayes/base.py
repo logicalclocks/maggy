@@ -194,6 +194,11 @@ class BaseAsyncBO(AbstractOptimizer):
                         original_trial_id=parent_trial_id,
                         new_trial_id=next_trial.trial_id,
                     )
+                    self._log(
+                        "Start Trial {}: {} \n".format(
+                            next_trial.trial_id, next_trial.params
+                        )
+                    )
                     return next_trial
                 else:
                     # start sampling procedure with given budget
@@ -212,6 +217,9 @@ class BaseAsyncBO(AbstractOptimizer):
                         original_trial_id=None, new_trial_id=next_trial.trial_id
                     )
                 # todo evtl auch erst unten returnen und somit report call sparen
+                self._log(
+                    "Start Trial {}: {}".format(next_trial.trial_id, next_trial.params)
+                )
                 return next_trial
 
             # update model with latest observations
@@ -228,7 +236,9 @@ class BaseAsyncBO(AbstractOptimizer):
                 max_budget = max(self.models.keys())
                 hparams = self.sampling_routine(max_budget)
                 self._log(
-                    "sampled from model with budget {}: {}".format(max_budget, hparams)
+                    "sampled from model with budget {}: {} \n".format(
+                        max_budget, hparams
+                    )
                 )
 
             # create Trial object
@@ -238,7 +248,9 @@ class BaseAsyncBO(AbstractOptimizer):
                 self.pruner.report_trial(
                     original_trial_id=None, new_trial_id=next_trial.trial_id
                 )
-
+            self._log(
+                "Start Trial {}: {} \n".format(next_trial.trial_id, next_trial.params)
+            )
             return next_trial
 
         except BaseException:
@@ -433,9 +445,10 @@ class BaseAsyncBO(AbstractOptimizer):
         )
         try:
             del self.busy_locations[index]
-            self._log("{} was deleted from busy_locations".format(hparams))
+            # self._log("{} was deleted from busy_locations".format(hparams))
         except TypeError:
-            self._log("{} was not in busy_locations".format(hparams))
+            pass
+            # self._log("{} was not in busy_locations".format(hparams))
 
     def get_hparams_array(self, include_busy_locations=False, budget=0):
         """returns array of already evaluated hparams + optionally hparams that are currently evaluated
