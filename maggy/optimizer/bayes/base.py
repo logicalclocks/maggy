@@ -1,4 +1,5 @@
 import traceback
+from copy import deepcopy
 
 import numpy as np
 
@@ -168,7 +169,6 @@ class BaseAsyncBO(AbstractOptimizer):
                 self._cleanup_busy_locations(trial)
 
             # check if experiment has finished
-            # todo potentially use `experiment_finished` method from pruner
             if self._experiment_finished():
                 return None
 
@@ -179,11 +179,13 @@ class BaseAsyncBO(AbstractOptimizer):
                     # experiment is finished
                     return None
                 elif next_trial_info["trial_id"]:
-                    # use hparams of given promoted trial and start new trial with it
+                    # copy hparams of given promoted trial and start new trial with it
                     parent_trial_id = next_trial_info["trial_id"]
-                    parent_trial_hparams = self.get_hparams_dict(
-                        trial_ids=parent_trial_id
-                    )[parent_trial_id]
+                    parent_trial_hparams = deepcopy(
+                        self.get_hparams_dict(trial_ids=parent_trial_id)[
+                            parent_trial_id
+                        ]
+                    )
                     next_trial = self.create_trial(
                         hparams=parent_trial_hparams, budget=next_trial_info["budget"]
                     )
@@ -204,6 +206,12 @@ class BaseAsyncBO(AbstractOptimizer):
                 self._log("take sample from warmup buffer")
                 next_trial_params = self.warmup_configs.pop()
                 next_trial = self.create_trial(hparams=next_trial_params, budget=budget)
+                # report new trial id to pruner
+                if self.pruner:
+                    self.pruner.report_trial(
+                        original_trial_id=None, new_trial_id=next_trial.trial_id
+                    )
+                # todo evtl auch erst unten returnen und somit report call sparen
                 return next_trial
 
             # update model with latest observations
@@ -214,17 +222,17 @@ class BaseAsyncBO(AbstractOptimizer):
             # in case there is no model yet or random fraction applies, sample randomly
             if not self.models or np.random.rand() < self.random_fraction:
                 hparams = self.searchspace.get_random_parameter_values(1)[0]
-                next_trial = self.create_trial(hparams, budget)
                 self._log("sampled randomly: {}".format(hparams))
-                return next_trial
-
-            # sample from largest model
-            max_budget = max(self.models.keys())
-            hparams = self.sampling_routine(max_budget)
+            else:
+                # sample from largest model
+                max_budget = max(self.models.keys())
+                hparams = self.sampling_routine(max_budget)
+                self._log(
+                    "sampled from model with budget {}: {}".format(max_budget, hparams)
+                )
 
             # create Trial object
             next_trial = self.create_trial(hparams, budget=budget)
-
             # report new trial id to pruner
             if self.pruner:
                 self.pruner.report_trial(
@@ -365,8 +373,10 @@ class BaseAsyncBO(AbstractOptimizer):
         :return: True if experiment has finished, False else
         :rtype: bool
         """
-
-        if len(self.final_store) >= self.num_trials:
+        if self.pruner:
+            if self.pruner.finished():
+                return True
+        elif len(self.final_store) >= self.num_trials:
             self._log(
                 "Finished experiment, ran {}/{} trials".format(
                     len(self.final_store), self.num_trials
@@ -407,8 +417,6 @@ class BaseAsyncBO(AbstractOptimizer):
         """returns array of already evaluated hparams + optionally hparams that are currently evaluated
 
         The order of the returned hparams is the same as in `final_store`
-
-        # todo get metric of specific budget of busy locations
 
         :param include_busy_locations: If True, add currently evaluating hparam configs
         :type include_busy_locations: bool
@@ -468,8 +476,6 @@ class BaseAsyncBO(AbstractOptimizer):
         """returns array of final metrics + optionally imputed metrics of currently evaluating trials
 
         The order of the returned metrics is the same as in `final_store`
-
-        # todo get metric of specific budget of busy locations
 
         In case that the optimization `direction` is `max`, negate the metrics so it becomes a `min` problem
 

@@ -179,7 +179,7 @@ class SimpleAsyncBO(BaseAsyncBO):
         )
         self.base_model = base_model
 
-    def update_model(self, budget):
+    def update_model(self, budget=0):
         """update surrogate model with new observations
 
         Use observations of finished trials + liars from busy trials to build model.
@@ -188,9 +188,14 @@ class SimpleAsyncBO(BaseAsyncBO):
         self._log("Start updateing model with budget {}".format(budget))
 
         # check if enough observations available for model building
-        # todo auf budget anpassen
-        if len(self.searchspace.keys()) > len(self.final_store):
-            self._log("Not enough observations available to build yet")
+        if len(self.searchspace.keys()) > len(self.get_metrics_array(budget=budget)):
+            self._log(
+                "Not enough observations available to build with budget {} yet. At least {} needed, got {}".format(
+                    budget,
+                    len(self.searchspace.keys()),
+                    len(self.get_metrics_array(budget=budget)),
+                )
+            )
             return
 
         # create model without any data

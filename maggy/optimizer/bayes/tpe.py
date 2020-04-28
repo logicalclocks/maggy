@@ -138,8 +138,8 @@ class TPE(BaseAsyncBO):
         n_hparams = len(self.searchspace.keys())
         if n_hparams >= len(good_hparams) or n_hparams >= len(bad_hparams):
             self._log(
-                "Not enough observations for model building yet. n_good_hparams: {}, n_bad_hparams: {}, n_hparmas: {}".format(
-                    len(good_hparams), len(bad_hparams), n_hparams
+                "Not enough observations to build model with budget {} yet. n_good_hparams: {}, n_bad_hparams: {}, n_hparmas: {}".format(
+                    budget, len(good_hparams), len(bad_hparams), n_hparams
                 )
             )
             return
