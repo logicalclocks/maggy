@@ -1,8 +1,9 @@
 import traceback
+import time
 
 import numpy as np
 
-LOCAL = True  # if set to true, can be run locally without maggy integration
+LOCAL = False  # if set to true, can be run locally without maggy integration
 # todo all the `if not LOCAL:` clause can be removed after tested locally
 
 if not LOCAL:
@@ -184,7 +185,10 @@ class Hyperband:
                 # start next iteration in the queue
                 if self.n_iterations > 0:
                     self.start_next_iteration()
-
+                else:
+                    # todo
+                    # last iteration is busy and worker is free
+                    time.sleep(3)
                 # call pruning_routine again
                 return self.pruning_routine()
 
@@ -491,7 +495,7 @@ class SHIteration:
             self.configs[self.current_rung][trial_idx]["actual_trial_id"] = new_trial_id
 
         self._log(
-            "{}. Iteration, {}. Rung. Started Trial {}/{}: \n".format(
+            "{}. Iteration, {}. Rung. Started Trial {}/{} \n".format(
                 self.iteration_id,
                 self.current_rung,
                 len(self.configs[self.current_rung]),
@@ -541,8 +545,8 @@ class SHIteration:
             )
         )
 
-        self._log("configs: {}".format(self.configs))
-        self._log("trial_metrics: {}".format(trial_metrics))
+        # self._log("configs: {}".format(self.configs))
+        # self._log("trial_metrics: {}".format(trial_metrics))
 
     def promotable(self):
         """checks if current rung is promotable, i.e. if all trials are finished and current rung is not the last rung
