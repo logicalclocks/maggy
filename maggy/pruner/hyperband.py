@@ -334,7 +334,10 @@ class SHIteration:
         ----------
 
         actual_configs (list[int]): number of configs that have been started in each rung. To complete a SH iteration
-                                    it has do be equal to `n_configs`
+                                    it has do be equal to `n_configs`.
+                                    actual_n_configs[current_rung] and len(configs[current_rung]) are eventually
+                                    consistent. The former gets increased before info about next trial is returned to
+                                    the optimizer. The latter is appended to when a trial is created in the optimizer.
         configs (dict): keeps track of trial ids of configs in each rung. For each trial the "original_trial_id" and
                         "actual_trial_id" are stored.
                         In the first rung these to are the same and refer to the `trial_id`
@@ -533,8 +536,8 @@ class SHIteration:
         :return: True if all trials of rung are finished, False else
         :rtype: bool
         """
-        if self.actual_n_configs[self.current_rung] < self.n_configs[self.current_rung]:
-            # not all trials in current rung have started
+        if len(self.configs[self.current_rung]) < self.n_configs[self.current_rung]:
+            # not all trials have been created and started by the optimzer
             return False
 
         if self.current_rung == self.n_rungs - 1:
@@ -554,7 +557,7 @@ class SHIteration:
         :return: True if SH Iteration is finished, False else
         :rtype: bool
         """
-        if self.actual_n_configs[self.current_rung] < self.n_configs[self.current_rung]:
+        if len(self.configs[self.current_rung]) < self.n_configs[self.current_rung]:
             # not all trials in current rung have started
             return False
 
