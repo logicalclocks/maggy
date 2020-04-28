@@ -277,7 +277,9 @@ class BaseAsyncBO(AbstractOptimizer):
             )
 
         if pruner == "hyperband":
-            self.pruner = Hyperband(**pruner_kwargs)
+            self.pruner = Hyperband(
+                trial_metric_getter=self.get_metrics_dict, **pruner_kwargs
+            )
 
     def update_model(self, budget=0):
         """update surrogate model with new observations
