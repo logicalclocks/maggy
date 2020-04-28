@@ -2,7 +2,11 @@ import traceback
 
 import numpy as np
 
-from hops import hdfs
+LOCAL = False  # if set to true, can be run locally without maggy integration
+# todo all the `if not LOCAL:` clause can be removed after tested locally
+
+if not LOCAL:
+    from hops import hdfs
 
 """
 The implementation is heavliy inspired by the BOHB (Falkner et al. 2018) paper and the HpBandSter Framework
@@ -89,14 +93,15 @@ class Hyperband:
         if eta < 2:
             raise ValueError("Expected eta greater or equal to 2, got {}".format(eta))
 
-        # configure logger
-        self.log_file = "hdfs:///Projects/demo_deep_learning_admin000/Logs/pruner_{}.log".format(
-            self.name()
-        )  # todo make dynamic
-        if not hdfs.exists(self.log_file):
-            hdfs.dump("", self.log_file)
-        self.fd = hdfs.open_file(self.log_file, flags="w")
-        self._log("Initialized Logger")
+        if not LOCAL:
+            # configure logger
+            self.log_file = "hdfs:///Projects/demo_deep_learning_admin000/Logs/pruner_{}.log".format(
+                self.name()
+            )  # todo make dynamic
+            if not hdfs.exists(self.log_file):
+                hdfs.dump("", self.log_file)
+            self.fd = hdfs.open_file(self.log_file, flags="w")
+            self._log("Initialized Logger")
 
         self.min_budget = min_budget
         self.max_budget = max_budget
@@ -188,8 +193,9 @@ class Hyperband:
             # see line 221 ff in `master.py` of HpBandSter
         except BaseException:
             self._log(traceback.format_exc())
-            self.fd.flush()
-            self.fd.close()
+            if not LOCAL:
+                self.fd.flush()
+                self.fd.close()
 
     def init_iterations(self):
         """calculates budgets and amount of trials for each iteration"""
@@ -256,9 +262,10 @@ class Hyperband:
             if iteration.state != SHIteration.FINISHED:
                 return False
 
-        if not self.fd.closed:
-            self.fd.flush()
-            self.fd.close()
+        if not LOCAL:
+            if not self.fd.closed:
+                self.fd.flush()
+                self.fd.close()
 
         return True
 
@@ -281,7 +288,10 @@ class Hyperband:
         return str(self.__class__.__name__)
 
     def _log(self, msg):
-        self.fd.write((msg + "\n").encode())
+        if not LOCAL:
+            self.fd.write((msg + "\n").encode())
+        else:
+            print(msg, "\n")
 
 
 class SHIteration:
