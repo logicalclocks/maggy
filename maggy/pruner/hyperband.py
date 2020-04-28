@@ -262,19 +262,6 @@ class Hyperband:
 
         return True
 
-    def get_budgets(self):
-        """returns list with budgets
-
-        # todo probably eliminate
-
-        This method is an interface to the optimizer
-
-        :return: list of budgets
-        :rtype: list[int]
-        """
-        # todo implement
-        return
-
     def report_trial(self, original_trial_id, new_trial_id):
         """reports new trial_id to HB, i.e. add trial_id to the currently updateing SH iteration
 
