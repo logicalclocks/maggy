@@ -256,9 +256,9 @@ class Hyperband:
             if iteration.state != SHIteration.FINISHED:
                 return False
 
-        # close logfile
-        # self.fd.flush()
-        # self.fd.close()
+        if not self.fd.closed:
+            self.fd.flush()
+            self.fd.close()
 
         return True
 
