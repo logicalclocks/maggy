@@ -92,26 +92,26 @@ class TPE(BaseAsyncBO):
                         n_choices = len(hparam_spec["values"])
                         sample_vector.append(np.random.randint(n_choices))
 
-            self._log("Sample Vector: {}".format(sample_vector))
+            # self._log("Sample Vector: {}".format(sample_vector))
 
             # calculate EI for current sample
             ei_val = self._calculate_ei(sample_vector, kde_good, kde_bad)
 
-            self._log("EI: {}".format(ei_val))
+            # self._log("EI: {}".format(ei_val))
 
             # todo double check with hpbandster
             if ei_val > best_improvement:
                 best_improvement = ei_val
                 best_sample = sample_vector
 
-        self._log("Best Sample: {}".format(best_sample))
+        # self._log("Best Sample: {}".format(best_sample))
 
         # get original representation of hparams in dict
         best_sample_dict = self.searchspace.list_to_dict(
             self.searchspace.inverse_transform(best_sample)
         )
 
-        self._log("Transformed Best Sample {}".format(best_sample_dict))
+        # self._log("Transformed Best Sample {}".format(best_sample_dict))
 
         return best_sample_dict
 

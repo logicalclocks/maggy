@@ -159,10 +159,10 @@ class BaseAsyncBO(AbstractOptimizer):
 
     def get_suggestion(self, trial=None):
         try:
-            if trial:
-                self._log("Last finished Trial: {}".format(trial.trial_id))
-            else:
-                self._log("no previous finished trial")
+            # if trial:
+            #     self._log("Last finished Trial: {}".format(trial.trial_id))
+            # else:
+            #     self._log("no previous finished trial")
 
             # remove hparams of last finished trial from `busy_locations`
             if trial:
