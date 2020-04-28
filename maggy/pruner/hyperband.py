@@ -530,6 +530,9 @@ class SHIteration:
             )
         )
 
+        self._log("configs: {}".format(self.configs))
+        self._log("trial_metrics: {}".format(trial_metrics))
+
     def promotable(self):
         """checks if current rung is promotable, i.e. if all trials are finished and current rung is not the last rung
 
