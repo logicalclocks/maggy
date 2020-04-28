@@ -4,6 +4,7 @@ from copy import deepcopy
 import numpy as np
 
 from maggy.optimizer.abstractoptimizer import AbstractOptimizer
+from maggy.pruner import Hyperband
 from maggy.trial import Trial
 
 from hops import hdfs
@@ -128,13 +129,12 @@ class BaseAsyncBO(AbstractOptimizer):
         self.n_restarts_optimizer = acq_optimizer_kwargs.get("n_restarts_optimizer", 5)
         self.acq_optimizer_kwargs = acq_optimizer_kwargs
 
-        # todo configure pruner
-        # class vs. instance vs. string ?? → same discussion for acq_fun
-        self.pruner = pruner
-        self.pruner_kwargs = pruner_kwargs
+        # configure pruner
+        self.pruner = None
+        if pruner:
+            self.init_pruner(pruner, pruner_kwargs)
 
         # surrogate model related aruments
-
         self.busy_locations = (
             []
         )  # each busy location is a dict {"params": hparams_list, "metric": liar}
@@ -260,6 +260,24 @@ class BaseAsyncBO(AbstractOptimizer):
         cloned in `update_model` and fit with observation data
         """
         raise NotImplementedError
+
+    def init_pruner(self, pruner, pruner_kwargs):
+        """intializes pruner
+
+        :param pruner: name of pruner. so far only "hyperband" implemented
+        :type pruner: str
+        :param pruner_kwargs: dict of pruner kwargs
+        :type pruner_kwargs: dict
+        :return: initiated pruner instance
+        """
+        allowed_pruners = ["hyperband"]
+        if pruner not in allowed_pruners:
+            raise ValueError(
+                "expected pruner to be in {}, got {}".format(allowed_pruners, pruner)
+            )
+
+        if pruner == "hyperband":
+            self.pruner = Hyperband(**pruner_kwargs)
 
     def update_model(self, budget=0):
         """update surrogate model with new observations
