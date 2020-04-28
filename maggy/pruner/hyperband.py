@@ -548,7 +548,7 @@ class SHIteration:
             return False
 
         for trial in self.configs[self.current_rung]:
-            if self.trial_metric_getter(trial["actual_trial_id"]) is None:
+            if self.trial_metric_getter(trial["actual_trial_id"]):
                 # trial has not finished
                 return False
 
@@ -569,7 +569,7 @@ class SHIteration:
             return False
 
         for trial in self.configs[self.current_rung]:
-            if self.trial_metric_getter(trial["actual_trial_id"]) is None:
+            if self.trial_metric_getter(trial["actual_trial_id"]):
                 # trial has not finished
                 return False
 
