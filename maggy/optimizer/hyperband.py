@@ -103,6 +103,8 @@ class Hyperband:
             dtype=int,
         )
 
+        print("INIT HB. s_max: {}, budgets: {}".format(self.max_sh_rungs, self.budgets))
+
         # configure SH iterations
         self.iterations = []
         self.init_iterations()
@@ -149,6 +151,11 @@ class Hyperband:
 
         if next_run is not None:
             # schedule new run for `iteration`
+            print(
+                "{}. Iteration, {}. Rung. Run next {}".format(
+                    iteration.iteration_id, iteration.current_rung, next_run
+                )
+            )
             return next_run
         else:
             # all active iterations are busy
@@ -183,6 +190,11 @@ class Hyperband:
                     trial_metric_getter=self.trial_metric_getter,
                 )
             )
+            print(
+                "INIT SH Iteration {}. n_configs: {}, budgets: {}".format(
+                    iteration, ns, budgets
+                )
+            )
 
     def active_iterations(self):
         """returns currently active (i.e. state == "RUNNING") iterations
@@ -203,6 +215,11 @@ class Hyperband:
         for iteration in self.iterations:
             if iteration.state == SHIteration.INIT:
                 iteration.state = SHIteration.RUNNING
+                print(
+                    "{}. Iteration started. n_configs: {}, budgets: {}".format(
+                        iteration.iteration_id, iteration.n_configs, iteration.budgets
+                    )
+                )
                 self.n_iterations -= 1
                 break
 
@@ -394,6 +411,7 @@ class SHIteration:
                 if self.finished():
                     # set state so it is no longer returned in `active_iterations()`
                     self.state = SHIteration.FINISHED
+                    print("{}. Iteration finished".format(self.iteration_id))
                 return None
         else:
             raise ValueError("Too many configs have been sampled")
@@ -467,6 +485,12 @@ class SHIteration:
             self.configs[self.current_rung].append(
                 {"original_trial_id": trial, "actual_trial_id": None}
             )
+
+        print(
+            "{}. Iteration finished rung: {} \n with trials: {} \n promoted trials: {}".format(
+                self.iteration_id, self.current_rung, sorted_trials, promoted_trials
+            )
+        )
 
     def promotable(self):
         """checks if current rung is promotable, i.e. if all trials are finished and current rung is not the last rung
