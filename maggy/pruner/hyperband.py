@@ -2,7 +2,7 @@ import traceback
 
 import numpy as np
 
-LOCAL = False  # if set to true, can be run locally without maggy integration
+LOCAL = True  # if set to true, can be run locally without maggy integration
 # todo all the `if not LOCAL:` clause can be removed after tested locally
 
 if not LOCAL:
@@ -196,6 +196,9 @@ class Hyperband:
             if not LOCAL:
                 self.fd.flush()
                 self.fd.close()
+                raise Exception(
+                    "Exception in Hyperband. {}".format(traceback.format_exc())
+                )
 
     def init_iterations(self):
         """calculates budgets and amount of trials for each iteration"""
@@ -539,6 +542,11 @@ class SHIteration:
         :return: True if all trials of rung are finished, False else
         :rtype: bool
         """
+        self._log(
+            "{}. Iteration, check if rung {} is promotable".format(
+                self.iteration_id, self.current_rung
+            )
+        )
         if len(self.configs[self.current_rung]) < self.n_configs[self.current_rung]:
             # not all trials have been created and started by the optimzer
             return False
@@ -548,7 +556,7 @@ class SHIteration:
             return False
 
         for trial in self.configs[self.current_rung]:
-            if self.trial_metric_getter(trial["actual_trial_id"]):
+            if not self.trial_metric_getter(trial["actual_trial_id"]):
                 # trial has not finished
                 return False
 
@@ -569,7 +577,7 @@ class SHIteration:
             return False
 
         for trial in self.configs[self.current_rung]:
-            if self.trial_metric_getter(trial["actual_trial_id"]):
+            if not self.trial_metric_getter(trial["actual_trial_id"]):
                 # trial has not finished
                 return False
 
