@@ -477,7 +477,7 @@ class ExperimentDriver(object):
                     # 4. Let executor be idle
                     elif msg["type"] == "IDLE":
                         if self.experiment_type == "optimization":
-                            trial = self.optimizer.get_suggestion(trial)
+                            trial = self.optimizer.get_suggestion()
                             if trial is None:
                                 self.server.reservations.assign_trial(
                                     msg["partition_id"], None
