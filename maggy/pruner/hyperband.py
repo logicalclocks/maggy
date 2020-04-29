@@ -184,6 +184,10 @@ class Hyperband:
                     return self.pruning_routine()
                 elif self.finished():
                     # All SH iterations in HB are finished
+                    if not LOCAL:
+                        if not self.fd.closed:
+                            self.fd.flush()
+                            self.fd.close()
                     self._log("All Iterations have finished")
                     return None
                 else:
@@ -269,11 +273,6 @@ class Hyperband:
         for iteration in self.iterations:
             if iteration.state != SHIteration.FINISHED:
                 return False
-
-        if not LOCAL:
-            if not self.fd.closed:
-                self.fd.flush()
-                self.fd.close()
 
         return True
 
