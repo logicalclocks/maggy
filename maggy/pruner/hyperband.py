@@ -184,12 +184,14 @@ class Hyperband:
                 # start next iteration in the queue
                 if self.n_iterations > 0:
                     self.start_next_iteration()
-                # else:
-                #     # todo
+                    return self.pruning_routine()
+                else:
+                    # todo
+                    return None
                 #     # last iteration is busy and worker is free
                 #     time.sleep(3)
                 # call pruning_routine again
-                return self.pruning_routine()
+                # return self.pruning_routine()
 
             # todo what if all iterations are busy or finished and we have a free worker → think about it
             # → wait, otherwise their could be a recursion error if self.pruning_routine() gets called from it self constantly
