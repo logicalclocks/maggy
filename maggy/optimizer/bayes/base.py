@@ -271,6 +271,7 @@ class BaseAsyncBO(AbstractOptimizer):
                 self.pruner.fd.close()
 
     def finalize_experiment(self, trials):
+        self._log("Experiment finished")
         # close logfile
         if not self.fd.closed:
             self.fd.flush()
