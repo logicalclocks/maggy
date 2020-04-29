@@ -1,5 +1,5 @@
 import traceback
-import time
+
 import numpy as np
 
 LOCAL = False  # if set to true, can be run locally without maggy integration
@@ -142,7 +142,7 @@ class Hyperband:
         This method is the interface to `Optimizer` and is called in the `get_suggestion()` method.
         It decides over the budget and hparams for the next trial in the optimization loop
 
-        **There are 3 possible outcomes:**
+        **There are 3 possible outcomes:** # todo add IDLE
 
         1. There are still slots to fill in the first rung of an active SH Iteration and hence the optimizer should
            sample a new hparam config from its model.
@@ -186,15 +186,13 @@ class Hyperband:
                     self.start_next_iteration()
                     return self.pruning_routine()
                 else:
-                    # todo
-                    time.sleep(20)
-                    return None
-                #     # last iteration is busy and worker is free
-                #     time.sleep(3)
-                # call pruning_routine again
-                # return self.pruning_routine()
-
-            # todo what if all iterations are busy or finished and we have a free worker → think about it
+                    # no immediate run can be scheduled, because all iterations are busy.
+                    self._log(
+                        "All Iterations are busy and no new Iteration can be started. Wait until new run can be "
+                        "scheduled"
+                    )
+                    return "IDLE"
+            # todo
             # → wait, otherwise their could be a recursion error if self.pruning_routine() gets called from it self constantly
             # see line 221 ff in `master.py` of HpBandSter
         except BaseException:

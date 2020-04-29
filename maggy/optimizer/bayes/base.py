@@ -159,10 +159,10 @@ class BaseAsyncBO(AbstractOptimizer):
 
     def get_suggestion(self, trial=None):
         try:
-            # if trial:
-            #     self._log("Last finished Trial: {}".format(trial.trial_id))
-            # else:
-            #     self._log("no previous finished trial")
+            if trial:
+                self._log("Last finished Trial: {}".format(trial.trial_id))
+            else:
+                self._log("no previous finished trial")
 
             # remove hparams of last finished trial from `busy_locations`
             if trial:
@@ -175,7 +175,12 @@ class BaseAsyncBO(AbstractOptimizer):
             # pruning routine
             if self.pruner:
                 next_trial_info = self.pruner.pruning_routine()
-                if next_trial_info is None:
+                if next_trial_info == "IDLE":
+                    self._log(
+                        "Worker is IDLE and has to wait until a new trial can be scheduled \n"
+                    )
+                    return "IDLE"
+                elif next_trial_info is None:
                     # experiment is finished
                     return None
                 elif next_trial_info["trial_id"]:
@@ -218,7 +223,9 @@ class BaseAsyncBO(AbstractOptimizer):
                     )
                 # todo evtl auch erst unten returnen und somit report call sparen
                 self._log(
-                    "Start Trial {}: {}".format(next_trial.trial_id, next_trial.params)
+                    "Start Trial {}: {} \n".format(
+                        next_trial.trial_id, next_trial.params
+                    )
                 )
                 return next_trial
 
