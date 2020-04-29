@@ -255,17 +255,19 @@ class BaseAsyncBO(AbstractOptimizer):
 
         except BaseException:
             self._log(traceback.format_exc())
-            self.fd.flush()
-            self.fd.close()
+            if not self.fd.closed:
+                self.fd.flush()
+                self.fd.close()
 
-            if self.pruner:
+            if self.pruner and not self.pruner.fd.closed:
                 self.pruner.fd.flush()
                 self.pruner.fd.close()
 
     def finalize_experiment(self, trials):
         # close logfile
-        self.fd.flush()
-        self.fd.close()
+        if not self.fd.closed:
+            self.fd.flush()
+            self.fd.close()
 
         # todo eliminiate
         if not self.pruner.fd.closed:
