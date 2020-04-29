@@ -158,10 +158,6 @@ class Hyperband:
         :rtype: dict|None
         """
         try:
-            # check if all SH iterations in HB are finished
-            if self.finished():
-                return None
-
             # loop through active iterations and return config and budget of next run
             next_run = None
             for iteration in self.active_iterations():
@@ -179,12 +175,17 @@ class Hyperband:
                     )
                 )
                 return next_run
+
             else:
-                # all active iterations are busy
-                # start next iteration in the queue
+                # all active iterations are busy or finished, no immediate run can be scheduled
                 if self.n_iterations > 0:
+                    # start next iteration in the queue
                     self.start_next_iteration()
                     return self.pruning_routine()
+                elif self.finished():
+                    # All SH iterations in HB are finished
+                    self._log("All Iterations have finished")
+                    return None
                 else:
                     # no immediate run can be scheduled, because all iterations are busy.
                     self._log(
@@ -495,7 +496,7 @@ class SHIteration:
             self.configs[self.current_rung][trial_idx]["actual_trial_id"] = new_trial_id
 
         self._log(
-            "{}. Iteration, {}. Rung. Started Trial {}/{} \n".format(
+            "{}. Iteration, {}. Rung. Started Trial {}/{}".format(
                 self.iteration_id,
                 self.current_rung,
                 self.actual_n_configs[self.current_rung],
@@ -561,17 +562,37 @@ class SHIteration:
         )
         if len(self.configs[self.current_rung]) < self.n_configs[self.current_rung]:
             # not all trials have been created and started by the optimzer
+            self._log(
+                "{}. Iteration, rung {} is not promotable. Not all slots in rung filled yet".format(
+                    self.iteration_id, self.current_rung
+                )
+            )
             return False
 
         if self.current_rung == self.n_rungs - 1:
             # current rung is the last rung in the iteration
+            self._log(
+                "{}. Iteration, rung {} is promotable.".format(
+                    self.iteration_id, self.current_rung
+                )
+            )
             return False
 
         for trial in self.configs[self.current_rung]:
             if not self.trial_metric_getter(trial["actual_trial_id"]):
                 # trial has not finished
+                self._log(
+                    "{}. Iteration, rung {} is not promotable. At least one trial ({}) is not finished yet".format(
+                        self.iteration_id, self.current_rung, trial["actual_trial_id"]
+                    )
+                )
                 return False
 
+        self._log(
+            "{}. Iteration, rung {} is not promotable. Not all slots in rung filled yet".format(
+                self.iteration_id, self.current_rung
+            )
+        )
         return True
 
     def finished(self):
