@@ -484,6 +484,7 @@ class ExperimentDriver(object):
                                 )
                                 self.experiment_done = True
                             elif trial == "IDLE":
+                                time.sleep(1)  # todo soll das bleiben ?
                                 self.add_message(msg)
                             else:
                                 with trial.lock:
