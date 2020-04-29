@@ -1,5 +1,5 @@
 import traceback
-
+import time
 import numpy as np
 
 LOCAL = False  # if set to true, can be run locally without maggy integration
@@ -187,7 +187,10 @@ class Hyperband:
                     return self.pruning_routine()
                 else:
                     # todo
-                    raise Exception("All Iterations Busy and Free Worker available")
+                    time.sleep(40)
+                    self.fd.flush()
+                    self.fd.close()
+                    return None
                 #     # last iteration is busy and worker is free
                 #     time.sleep(3)
                 # call pruning_routine again
@@ -499,7 +502,7 @@ class SHIteration:
             "{}. Iteration, {}. Rung. Started Trial {}/{} \n".format(
                 self.iteration_id,
                 self.current_rung,
-                len(self.configs[self.current_rung]),
+                self.actual_n_configs[self.current_rung],
                 self.n_configs[self.current_rung],
             )
         )
@@ -542,7 +545,7 @@ class SHIteration:
 
         self._log(
             "{}. Iteration finished rung: {} \n with trials: {} \n promoted trials: {}".format(
-                self.iteration_id, self.current_rung, sorted_trials, promoted_trials
+                self.iteration_id, self.current_rung - 1, sorted_trials, promoted_trials
             )
         )
 
