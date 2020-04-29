@@ -571,7 +571,7 @@ class SHIteration:
         if self.current_rung == self.n_rungs - 1:
             # current rung is the last rung in the iteration
             self._log(
-                "{}. Iteration, rung {} is promotable.".format(
+                "{}. Iteration, rung {} is the last rung and hence not promotable.".format(
                     self.iteration_id, self.current_rung
                 )
             )

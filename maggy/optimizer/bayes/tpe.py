@@ -143,7 +143,7 @@ class TPE(BaseAsyncBO):
             )
             return
 
-        self._log("Update Model with budget {}")
+        self._log("Update Model with budget {}".format(budget))
 
         transformed_good_hparams = np.apply_along_axis(
             self.searchspace.transform, 1, good_hparams

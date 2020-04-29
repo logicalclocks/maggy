@@ -182,6 +182,7 @@ class BaseAsyncBO(AbstractOptimizer):
                     return "IDLE"
                 elif next_trial_info is None:
                     # experiment is finished
+                    self._log("Experiment has finished")
                     return None
                 elif next_trial_info["trial_id"]:
                     # copy hparams of given promoted trial and start new trial with it
@@ -200,8 +201,8 @@ class BaseAsyncBO(AbstractOptimizer):
                         new_trial_id=next_trial.trial_id,
                     )
                     self._log(
-                        "Start Trial {}: {} \n".format(
-                            next_trial.trial_id, next_trial.params
+                        "Use hparams from promoted Trial {]. \n Start Trial {}: {} \n".format(
+                            parent_trial_id, next_trial.trial_id, next_trial.params
                         )
                     )
                     return next_trial
@@ -243,9 +244,7 @@ class BaseAsyncBO(AbstractOptimizer):
                 max_budget = max(self.models.keys())
                 hparams = self.sampling_routine(max_budget)
                 self._log(
-                    "sampled from model with budget {}: {} \n".format(
-                        max_budget, hparams
-                    )
+                    "sampled from model with budget {}: {}".format(max_budget, hparams)
                 )
 
             # create Trial object
