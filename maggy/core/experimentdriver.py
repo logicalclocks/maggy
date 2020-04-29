@@ -458,6 +458,13 @@ class ExperimentDriver(object):
                                 msg["partition_id"], None
                             )
                             self.experiment_done = True
+                        elif trial == "IDLE":
+                            self.add_message(
+                                {"type": "IDLE", "partition_id": msg["partition_id"]}
+                            )
+                            self.server.reservations.assign_trial(
+                                msg["partition_id"], None
+                            )
                         else:
                             with trial.lock:
                                 trial.start = time.time()
@@ -466,6 +473,26 @@ class ExperimentDriver(object):
                                     msg["partition_id"], trial.trial_id
                                 )
                                 self.add_trial(trial)
+
+                    # 4. Let executor be idle
+                    elif msg["type"] == "IDLE":
+                        if self.experiment_type == "optimization":
+                            trial = self.optimizer.get_suggestion(trial)
+                            if trial is None:
+                                self.server.reservations.assign_trial(
+                                    msg["partition_id"], None
+                                )
+                                self.experiment_done = True
+                            elif trial == "IDLE":
+                                self.add_message(msg)
+                            else:
+                                with trial.lock:
+                                    trial.start = time.time()
+                                    trial.status = Trial.SCHEDULED
+                                    self.server.reservations.assign_trial(
+                                        msg["partition_id"], trial.trial_id
+                                    )
+                                    self.add_trial(trial)
 
                     # 4. REG
                     elif msg["type"] == "REG":
