@@ -187,7 +187,7 @@ class Hyperband:
                     return self.pruning_routine()
                 else:
                     # todo
-                    return None
+                    raise Exception("All Iterations Busy and Free Worker available")
                 #     # last iteration is busy and worker is free
                 #     time.sleep(3)
                 # call pruning_routine again
