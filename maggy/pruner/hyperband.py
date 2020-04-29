@@ -187,9 +187,7 @@ class Hyperband:
                     return self.pruning_routine()
                 else:
                     # todo
-                    time.sleep(40)
-                    self.fd.flush()
-                    self.fd.close()
+                    time.sleep(20)
                     return None
                 #     # last iteration is busy and worker is free
                 #     time.sleep(3)

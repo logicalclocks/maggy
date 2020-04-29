@@ -267,6 +267,11 @@ class BaseAsyncBO(AbstractOptimizer):
         self.fd.flush()
         self.fd.close()
 
+        # todo eliminiate
+        if not self.pruner.fd.closed:
+            self.fd.flush()
+            self.fd.close()
+
         return
 
     def init_model(self):
