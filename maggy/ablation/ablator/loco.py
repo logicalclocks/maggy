@@ -37,6 +37,7 @@ class LOCO(AbstractAblator):
 
                 def create_tf_dataset(num_epochs, batch_size):
                     import tensorflow as tf
+
                     dataset_dir = featurestore.get_training_dataset_path(
                         training_dataset_name, training_dataset_version
                     )
@@ -114,6 +115,7 @@ class LOCO(AbstractAblator):
 
         def model_generator():
             import tensorflow as tf
+
             base_model = base_model_generator()
 
             list_of_layers = [
