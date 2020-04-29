@@ -271,8 +271,8 @@ class BaseAsyncBO(AbstractOptimizer):
 
         # todo eliminiate
         if not self.pruner.fd.closed:
-            self.fd.flush()
-            self.fd.close()
+            self.pruner.fd.flush()
+            self.pruner.fd.close()
 
         return
 
