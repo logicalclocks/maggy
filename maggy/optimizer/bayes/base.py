@@ -262,25 +262,17 @@ class BaseAsyncBO(AbstractOptimizer):
 
         except BaseException:
             self._log(traceback.format_exc())
-            if not self.fd.closed:
-                self.fd.flush()
-                self.fd.close()
+            self._close_log()
 
-            if self.pruner and not self.pruner.fd.closed:
-                self.pruner.fd.flush()
-                self.pruner.fd.close()
+            if self.pruner:
+                self.pruner._close_log()
 
     def finalize_experiment(self, trials):
         self._log("Experiment finished")
-        # close logfile
-        if not self.fd.closed:
-            self.fd.flush()
-            self.fd.close()
+        self._close_log()
 
         # todo eliminiate
-        if not self.pruner.fd.closed:
-            self.pruner.fd.flush()
-            self.pruner.fd.close()
+        self.pruner._close_log()
 
         return
 
@@ -638,4 +630,10 @@ class BaseAsyncBO(AbstractOptimizer):
         return np.mean(metric_history)
 
     def _log(self, msg):
-        self.fd.write((msg + "\n").encode())
+        if not self.fd.closed:
+            self.fd.write((msg + "\n").encode())
+
+    def _close_log(self):
+        if not self.fd.closed:
+            self.fd.flush()
+            self.fd.close()

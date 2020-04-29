@@ -184,11 +184,8 @@ class Hyperband:
                     return self.pruning_routine()
                 elif self.finished():
                     # All SH iterations in HB are finished
-                    if not LOCAL:
-                        if not self.fd.closed:
-                            self.fd.flush()
-                            self.fd.close()
                     self._log("All Iterations have finished")
+                    self._close_log()
                     return None
                 else:
                     # no immediate run can be scheduled, because all iterations are busy.
@@ -202,12 +199,8 @@ class Hyperband:
             # see line 221 ff in `master.py` of HpBandSter
         except BaseException:
             self._log(traceback.format_exc())
-            if not LOCAL:
-                self.fd.flush()
-                self.fd.close()
-                raise Exception(
-                    "Exception in Hyperband. {}".format(traceback.format_exc())
-                )
+            self._close_log()
+            raise Exception("Exception in Hyperband. {}".format(traceback.format_exc()))
 
     def init_iterations(self):
         """calculates budgets and amount of trials for each iteration"""
@@ -296,8 +289,15 @@ class Hyperband:
 
     def _log(self, msg):
         if not LOCAL:
-            self.fd.write((msg + "\n").encode())
+            if not self.fd.closed:
+                self.fd.write((msg + "\n").encode())
         print(msg, "\n")
+
+    def _close_log(self):
+        if not LOCAL:
+            if not self.fd.closed:
+                self.fd.flush()
+                self.fd.close()
 
 
 class SHIteration:
