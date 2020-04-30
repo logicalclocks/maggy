@@ -74,6 +74,12 @@ class BaseAsyncBO(AbstractOptimizer):
         :type acq_optimizer_kwargs: dict
         :param pruner: # todo
         :param pruner_kwargs:
+
+        Attributes
+        ----------
+
+        # todo
+
         """
         super().__init__()
 
@@ -121,7 +127,7 @@ class BaseAsyncBO(AbstractOptimizer):
             )
         self.acq_optimizer = acq_optimizer
 
-        # record other arguments
+        # configure other arguments
         if acq_optimizer_kwargs is None:
             acq_optimizer_kwargs = dict()
 
@@ -137,7 +143,7 @@ class BaseAsyncBO(AbstractOptimizer):
         # surrogate model related aruments
         self.busy_locations = (
             []
-        )  # each busy location is a dict {"params": hparams_list, "metric": liar}
+        )  # each busy location is a dict {"params": hparams_list, "metric": liar} # todo how is budget saved budget
         self.base_model = None  # estimator that has not been fit on any data.
         # todo explain how models are saved → dict, 0 is single fidelity
         self.models = {}  # fitted model of the estimator
@@ -271,7 +277,8 @@ class BaseAsyncBO(AbstractOptimizer):
         self._close_log()
 
         # todo eliminiate
-        self.pruner._close_log()
+        if self.pruner:
+            self.pruner._close_log()
 
         return
 
@@ -468,27 +475,33 @@ class BaseAsyncBO(AbstractOptimizer):
         :return: array of hparams, shape (n_finished_hparam_configs, n_hparams)
         :rtype: np.ndarray[np.ndarray]
         """
-        # include trials with given budget or include all trials if no budget is given
-        include_trial = (
-            lambda x: x == budget or budget is None or budget == 0
-        )  # noqa: E731
+        include_trial = lambda x: x == budget  # noqa: E731
 
         hparams = np.array(
             [
                 self.searchspace.dict_to_list(trial.params)
                 for trial in self.final_store
-                if include_trial(trial.params["budget"])
+                # include trials with given budget or include all trials if no budget is given
+                if budget == 0
+                or budget is None
+                or include_trial(trial.params["budget"])
             ]
         )
 
         if include_busy_locations and len(self.busy_locations):
-            hparams_busy = np.array(
-                [
-                    location["params"]
-                    for location in self.busy_locations
-                    if location["budget"] == budget
-                ]
-            )
+            # todo if/else wont be necessary when budget is attr of Trial
+            if budget == 0 or budget is None:
+                hparams_busy = np.array(
+                    [location["params"] for location in self.busy_locations]
+                )
+            else:
+                hparams_busy = np.array(
+                    [
+                        np.append(location["params"], budget)
+                        for location in self.busy_locations
+                        if location["budget"] == budget
+                    ]
+                )
             hparams = np.concatenate((hparams, hparams_busy))
 
         return hparams
@@ -529,16 +542,16 @@ class BaseAsyncBO(AbstractOptimizer):
         :return: array of hparams, shape (n_final_metrics,)
         :rtype: np.ndarray[float]
         """
-        # include trials with given budget or include all trials if no budget is given or budget is 0
-        include_trial = (
-            lambda x: x == budget or budget is None or budget == 0
-        )  # noqa: E731
+        include_trial = lambda x: x == budget  # noqa: E731
 
         metrics = np.array(
             [
                 trial.final_metric
                 for trial in self.final_store
-                if include_trial(trial.params["budget"])
+                # include trials with given budget or include all trials if no budget is given
+                if budget == 0
+                or budget is None
+                or include_trial(trial.params["budget"])
             ]
         )
 
@@ -547,7 +560,7 @@ class BaseAsyncBO(AbstractOptimizer):
                 [
                     location["metric"]
                     for location in self.busy_locations
-                    if location["budget"] == budget
+                    if budget == 0 or budget is None or location["budget"] == budget
                 ]
             )
             metrics = np.concatenate((metrics, metrics_busy))
