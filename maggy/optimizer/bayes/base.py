@@ -151,7 +151,7 @@ class BaseAsyncBO(AbstractOptimizer):
 
         # configure logger
 
-        self.log_file = "hdfs:///Projects/demo_deep_learning_admin000/Logs/asyncbo_{}_{}.log".format(
+        self.log_file = "hdfs:///Projects/demo_deep_learning_admin000/Logs/optimizer_{}_{}.log".format(
             self.name(), self.pruner.name() if self.pruner else ""
         )  # todo make dynamic
         if not hdfs.exists(self.log_file):
@@ -502,7 +502,8 @@ class BaseAsyncBO(AbstractOptimizer):
                         if location["budget"] == budget
                     ]
                 )
-            hparams = np.concatenate((hparams, hparams_busy))
+            if len(hparams_busy) > 0:
+                hparams = np.concatenate((hparams, hparams_busy))
 
         return hparams
 
@@ -563,7 +564,8 @@ class BaseAsyncBO(AbstractOptimizer):
                     if budget == 0 or budget is None or location["budget"] == budget
                 ]
             )
-            metrics = np.concatenate((metrics, metrics_busy))
+            if len(metrics_busy) > 0:
+                metrics = np.concatenate((metrics, metrics_busy))
 
         if self.direction == "max":
             metrics = -metrics
