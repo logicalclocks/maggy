@@ -2,11 +2,7 @@ import traceback
 
 import numpy as np
 
-LOCAL = False  # if set to true, can be run locally without maggy integration
-# todo all the `if not LOCAL:` clause can be removed after tested locally
-
-if not LOCAL:
-    from hops import hdfs
+from maggy.pruner.abstractpruner import AbstractPruner
 
 """
 The implementation is heavliy inspired by the BOHB (Falkner et al. 2018) paper and the HpBandSter Framework
@@ -16,7 +12,7 @@ HpBandSter: https://github.com/automl/HpBandSter
 """
 
 
-class Hyperband:
+class Hyperband(AbstractPruner):
     """
     **Hyperband**
 
@@ -53,7 +49,7 @@ class Hyperband:
     - New SH runs are only started, when the SH runs currently executed are not waiting for a worker to free up
     """
 
-    def __init__(self, min_budget, max_budget, eta, n_iterations, trial_metric_getter):
+    def __init__(self, min_budget, max_budget, eta, n_iterations, **kwargs):
         """
         :param min_budget: The smallest budget to consider. Needs to be positive!
         :type min_budget: int
@@ -67,10 +63,12 @@ class Hyperband:
         :type eta: int
         :param n_iterations: number of SH Iterations
         :type n_iterations: int
-        :param trial_metric_getter: a function that returns a dict with `trial_id` as key and `metric` as value
+        :param trial_metric_getter: a that returns a dict with `trial_id` as key and `metric` as value
                              with the lowest metric being the "best"
                              It's only argument is `trial_ids`, it can be either str of single trial or list of trial ids
         :type trial_metric_getter: function
+
+        Note: `trial_metric_getter` is param of parent class and has to be passed as kwarg
 
         Attributes
         ----------
@@ -81,6 +79,8 @@ class Hyperband:
         - updating_iteration (None|int): id of currently updating SH iteration
 
         """
+        super().__init__(**kwargs)
+
         # checks
         if not min_budget > 0:
             raise ValueError("Expected `min_budget` > 0, got {}".format(min_budget))
@@ -93,22 +93,10 @@ class Hyperband:
         if eta < 2:
             raise ValueError("Expected eta greater or equal to 2, got {}".format(eta))
 
-        if not LOCAL:
-            # configure logger
-            self.log_file = "hdfs:///Projects/demo_deep_learning_admin000/Logs/pruner_{}_{}.log".format(
-                self.name(),
-                trial_metric_getter.__self__.__class__.__name__ if not LOCAL else "",
-            )  # todo make dynamic
-            if not hdfs.exists(self.log_file):
-                hdfs.dump("", self.log_file)
-            self.fd = hdfs.open_file(self.log_file, flags="w")
-            self._log("Initialized Logger")
-
         self.min_budget = min_budget
         self.max_budget = max_budget
         self.eta = eta
         self.n_iterations = n_iterations
-        self.trial_metric_getter = trial_metric_getter
 
         # calculate HB params
         self.max_sh_rungs = (
@@ -284,21 +272,6 @@ class Hyperband:
             original_trial_id, new_trial_id
         )
         self.updating_iteration = None
-
-    def name(self):
-        return str(self.__class__.__name__)
-
-    def _log(self, msg):
-        if not LOCAL:
-            if not self.fd.closed:
-                self.fd.write((msg + "\n").encode())
-        print(msg, "\n")
-
-    def _close_log(self):
-        if not LOCAL:
-            if not self.fd.closed:
-                self.fd.flush()
-                self.fd.close()
 
 
 class SHIteration:
