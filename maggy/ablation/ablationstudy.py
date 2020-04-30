@@ -48,6 +48,7 @@ class AblationStudy(object):
 
     >>> # you only need to add the `name` parameter to layer initializers
     >>> def base_model_generator():
+    >>>     import tensorflow as tf
     >>>     model = tf.keras.Sequential()
     >>>     model.add(tf.keras.layers.Dense(64, activation='relu'))
     >>>     model.add(tf.keras.layers.Dense(..., name='my_dense_two', ...)
