@@ -142,7 +142,7 @@ class Hyperband:
         This method is the interface to `Optimizer` and is called in the `get_suggestion()` method.
         It decides over the budget and hparams for the next trial in the optimization loop
 
-        **There are 3 possible outcomes:** # todo add IDLE
+        **There are 3 possible outcomes:**
 
         1. There are still slots to fill in the first rung of an active SH Iteration and hence the optimizer should
            sample a new hparam config from its model.
@@ -150,12 +150,15 @@ class Hyperband:
         2. A hparam config was promoted to the next rung of a SH Iteration and hence a new trial should be started with
            these hparams on the budget of the next rung.
             - return {"trial_id": `promoted_trial_id`, "budget": `budget`}
-        3. All SH Iterations have been finished
+        3. It is not possible to immediatley start a new run, because all Iterations have been started and are currently
+           busy ( i.e. all trials in current rung are evaluating )
+            - return "IDLE"
+        4. All SH Iterations have been finished
             - return None
 
 
         :return: {"trial_id": `trial_id`, "budget": 9}
-        :rtype: dict|None
+        :rtype: dict|None|str
         """
         try:
             # loop through active iterations and return config and budget of next run
@@ -190,13 +193,10 @@ class Hyperband:
                 else:
                     # no immediate run can be scheduled, because all iterations are busy.
                     self._log(
-                        "All Iterations are busy and no new Iteration can be started. Wait until new run can be "
-                        "scheduled"
+                        "All Iterations have been started and all trials in their current rung have been started. "
+                        "Wait until new run can be scheduled"
                     )
                     return "IDLE"
-            # todo
-            # → wait, otherwise their could be a recursion error if self.pruning_routine() gets called from it self constantly
-            # see line 221 ff in `master.py` of HpBandSter
         except BaseException:
             self._log(traceback.format_exc())
             self._close_log()
@@ -458,8 +458,11 @@ class SHIteration:
                     self._log("{}. Iteration finished".format(self.iteration_id))
                 return None
         else:
-            raise ValueError("Too many configs have been sampled")
-            # todo add sinnvolle error msg + code
+            raise ValueError(
+                "Too many configs have been sampled in iteration {}".format(
+                    self.iteration_id
+                )
+            )
 
     def report_trial(self, original_trial_id, new_trial_id):
         """adds trial_id to iteration
