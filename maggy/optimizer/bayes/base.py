@@ -151,8 +151,8 @@ class BaseAsyncBO(AbstractOptimizer):
 
         # configure logger
 
-        self.log_file = "hdfs:///Projects/demo_deep_learning_admin000/Logs/asyncbo_{}.log".format(
-            self.name()
+        self.log_file = "hdfs:///Projects/demo_deep_learning_admin000/Logs/asyncbo_{}_{}.log".format(
+            self.name(), self.pruner.name() if self.pruner else ""
         )  # todo make dynamic
         if not hdfs.exists(self.log_file):
             hdfs.dump("", self.log_file)
