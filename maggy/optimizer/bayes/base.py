@@ -90,6 +90,15 @@ class BaseAsyncBO(AbstractOptimizer):
         # self.num_trials
         # self.searchspace
 
+        # configure pruner
+        self.pruner = None
+        if pruner:
+            self.init_pruner(pruner, pruner_kwargs)
+
+        # configure number of trials ( for maggy progress bar )
+        if pruner:
+            self.num_trials = self.pruner.num_trials()
+
         # configure warmup routine
 
         self.num_warmup_trials = num_warmup_trials
@@ -134,11 +143,6 @@ class BaseAsyncBO(AbstractOptimizer):
         self.n_points = acq_optimizer_kwargs.get("n_points", 10000)
         self.n_restarts_optimizer = acq_optimizer_kwargs.get("n_restarts_optimizer", 5)
         self.acq_optimizer_kwargs = acq_optimizer_kwargs
-
-        # configure pruner
-        self.pruner = None
-        if pruner:
-            self.init_pruner(pruner, pruner_kwargs)
 
         # surrogate model related aruments
         self.busy_locations = (

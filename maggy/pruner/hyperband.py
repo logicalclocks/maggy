@@ -258,6 +258,13 @@ class Hyperband(AbstractPruner):
 
         return True
 
+    def num_trials(self):
+        n_trials = 0
+        for iteration in self.iterations:
+            n_trials += sum(iteration.n_configs)
+
+        return n_trials
+
     def report_trial(self, original_trial_id, new_trial_id):
         """reports new trial_id to HB, i.e. add trial_id to the currently updateing SH iteration
 

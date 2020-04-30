@@ -53,6 +53,15 @@ class AbstractPruner(ABC):
         """
         pass
 
+    @abstractmethod
+    def num_trials(self):
+        """
+        calculates the number of trials in the experiment
+
+        :return: number of trials
+        :rtype: int
+        """
+
     def name(self):
         return str(self.__class__.__name__)
 
