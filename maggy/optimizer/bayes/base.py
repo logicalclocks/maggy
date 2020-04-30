@@ -201,7 +201,7 @@ class BaseAsyncBO(AbstractOptimizer):
                         new_trial_id=next_trial.trial_id,
                     )
                     self._log(
-                        "Use hparams from promoted Trial {]. \n Start Trial {}: {} \n".format(
+                        "Use hparams from promoted Trial {}. \n Start Trial {}: {} \n".format(
                             parent_trial_id, next_trial.trial_id, next_trial.params
                         )
                     )
