@@ -97,7 +97,9 @@ class BaseAsyncBO(AbstractOptimizer):
 
         # configure number of trials ( for maggy progress bar )
         if pruner:
-            self.num_trials = self.pruner.num_trials()
+            self.num_trials = (
+                self.pruner.num_trials()
+            )  # todo does not work yet, progress bar uses num_trials from kwarg of optimizer
 
         # configure warmup routine
 
