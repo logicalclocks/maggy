@@ -99,7 +99,6 @@ class TPE(BaseAsyncBO):
 
             # self._log("EI: {}".format(ei_val))
 
-            # todo double check with hpbandster
             if ei_val > best_improvement:
                 best_improvement = ei_val
                 best_sample = sample_vector

@@ -131,7 +131,7 @@ class Hyperband(AbstractPruner):
         This method is the interface to `Optimizer` and is called in the `get_suggestion()` method.
         It decides over the budget and hparams for the next trial in the optimization loop
 
-        **There are 3 possible outcomes:**
+        **There are 4 possible outcomes:**
 
         1. There are still slots to fill in the first rung of an active SH Iteration and hence the optimizer should
            sample a new hparam config from its model.

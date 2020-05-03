@@ -10,30 +10,40 @@ from maggy.trial import Trial
 from hops import hdfs
 
 
-# todo which methods should be private todo what about random_state → for reproducability → check skopt for reference
+# todo which methods should be private
+# todo what about random_state → for reproducability → check skopt for reference
 # todo `trial_store` hold all busy trials, think about replacing the `busy_locations` approach with the
 #   `trial_store` data
 # todo min_delta_x → warn when similar point has been evaluated before → see skopt for reference
+# todo possibly outsource busy locations to simple.py
 # TODO implement resuming trials
 
 
 class BaseAsyncBO(AbstractOptimizer):
     """Base class for asynchronous bayesian optimization
-    # todo explain below
     **async bo**
+
+    todo explain async bo basics
 
     **optimization loop details**
 
+
+    **optimization direction**
+
+    all optimizations are converted to minimizations problems via the `get_metrics_dict()` and `get_metrics_array()`
+    methods, where the metrics are negated in case of a maximization.
+    In the `final_store` the original metric values are saved.
+
     **models**
 
-    saved as dict
-        - multifidelity vs. single fidelity
+    The surrogate models for different budgets are saved in the `models` dict with the budgets as key. In case of
+    a single fidelity optimization without a pruner. The only model has the key `0`.
 
     **pruner**
 
-    todo explain wie min/max direction gehandhabt wird
-    todo explain async bo basics
-
+    Pruners can be run as a subroutine of an optimizer. It's interface `pruner.pruning_routine()` is called at the beginning
+    of the `get_suggestion()` method and returns the hparam config and budget for the trial. The `trial_id` of the
+    newly created Trial object is reported back to the pruner via `pruner.report_trial()`.
     """
 
     def __init__(
@@ -78,7 +88,13 @@ class BaseAsyncBO(AbstractOptimizer):
         Attributes
         ----------
 
-        # todo
+        busy_locations (list[dict]): list of currently evaluating trials, each busy location is a dict
+                              {"params": hparams_list, "metric": liar, "budget": 3}. Key "budget" only exists if pruner
+                              exists.
+        base_model (any): estimator that has not been fit on any data.
+        models (dict): The surrogate models for different budgets are saved in the `models` dict with the budgets as key.
+                       In case of a single fidelity optimization without a pruner. The only model has the key `0`.
+        warm_up_configs(list[dict]): list of hparam configs used for warming up
 
         """
         super().__init__()
@@ -104,7 +120,7 @@ class BaseAsyncBO(AbstractOptimizer):
         # configure warmup routine
 
         self.num_warmup_trials = num_warmup_trials
-        self.warmup_sampling = "random"  # todo other options could be latin hypercube
+        self.warmup_sampling = "random"
         self.warmup_configs = []  # keeps track of warmup warmup configs
 
         allowed_sampling_methods = ["random"]
@@ -117,7 +133,7 @@ class BaseAsyncBO(AbstractOptimizer):
 
         # configure acquisition function
 
-        allowed_acq_funcs = ["EI"]
+        allowed_acq_funcs = ["EI"]  # todo so far only EI implemented
         if acq_fun not in allowed_acq_funcs:
             raise ValueError(
                 "expected acq_fun to be in {}, got {}".format(
@@ -147,19 +163,15 @@ class BaseAsyncBO(AbstractOptimizer):
         self.acq_optimizer_kwargs = acq_optimizer_kwargs
 
         # surrogate model related aruments
-        self.busy_locations = (
-            []
-        )  # each busy location is a dict {"params": hparams_list, "metric": liar} # todo how is budget saved budget
+        self.busy_locations = []
         self.base_model = None  # estimator that has not been fit on any data.
-        # todo explain how models are saved → dict, 0 is single fidelity
         self.models = {}  # fitted model of the estimator
         self.random_fraction = random_fraction
 
         # configure logger
-
         self.log_file = "hdfs:///Projects/{}/Logs/optimizer_{}_{}.log".format(
             hdfs.project_name(), self.name(), self.pruner.name() if self.pruner else ""
-        )  # todo make dynamic
+        )
         if not hdfs.exists(self.log_file):
             hdfs.dump("", self.log_file)
         self.fd = hdfs.open_file(self.log_file, flags="w")
