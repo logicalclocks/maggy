@@ -271,6 +271,14 @@ class BaseAsyncBO(AbstractOptimizer):
                     "sampled from model with budget {}: {}".format(max_budget, hparams)
                 )
 
+            # check if Trial with same hparams has already been created
+            if self.hparams_exist(hparams, budget=budget):
+                self._log(
+                    "WARNING: Hparams {} with Budget {} have already been evaluated, sample randomly to "
+                    "encourage exploration"
+                )
+                hparams = self.searchspace.get_random_parameter_values(1)[0]
+
             # create Trial object
             next_trial = self.create_trial(hparams, budget=budget)
             # report new trial id to pruner
@@ -398,6 +406,44 @@ class BaseAsyncBO(AbstractOptimizer):
         if budget > 0:
             hparams["budget"] = budget
         return Trial(hparams, trial_type="optimization")
+
+    def hparams_exist(self, hparams, budget=0):
+        """Checks if Trial with hparams and budget has already been started
+
+        :param hparams: hparam dict
+        :type hparams: dict
+        :param budget: budget for trial. implemented first version of Hyperband
+        :type budget: int
+        :return: True, if trial with same params already exists
+        :rtype: bool
+
+        """
+        x = deepcopy(hparams)
+        if budget > 0:
+            x["budget"] = budget
+
+        # check in finished trials
+        for idx, trial in enumerate(self.final_store):
+            if x == trial["params"]:
+                self._log(
+                    "WARNING: Hparams {} are equal to params of finished trial no. {}: {}".format(
+                        x, idx, trial.to_dict()
+                    )
+                )
+                return True
+
+        # check in currently evaluating trials
+        for trial_id, trial in self.trial_store:
+            if x == trial["params"]:
+                self._log(
+                    "WARNING: Hparams {} are equal to currently evaluating Trial: {}".format(
+                        x, trial.to_dict()
+                    )
+                )
+                self._log("Busy Locations: {}".format(self.busy_locations))
+                return True
+
+        return False
 
     def get_trial(self, trial_ids):
         """return Trial or list of Trials with `trial_id` from `final_store`
