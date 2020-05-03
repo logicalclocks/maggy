@@ -433,7 +433,7 @@ class BaseAsyncBO(AbstractOptimizer):
                 return True
 
         # check in currently evaluating trials
-        for trial_id, trial in self.trial_store:
+        for trial_id, trial in self.trial_store.items():
             if x == trial.params:
                 self._log(
                     "WARNING: Hparams {} are equal to currently evaluating Trial: {}".format(
