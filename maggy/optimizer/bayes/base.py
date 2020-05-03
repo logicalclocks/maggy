@@ -273,10 +273,7 @@ class BaseAsyncBO(AbstractOptimizer):
 
             # check if Trial with same hparams has already been created
             if self.hparams_exist(hparams, budget=budget):
-                self._log(
-                    "WARNING: Hparams {} with Budget {} have already been evaluated, sample randomly to "
-                    "encourage exploration"
-                )
+                self._log("Sample randomly to encourage exploration")
                 hparams = self.searchspace.get_random_parameter_values(1)[0]
 
             # create Trial object
@@ -509,14 +506,18 @@ class BaseAsyncBO(AbstractOptimizer):
         :type trial: Trial
         """
         # convert to list, because `busy_locations` stores params in list format
-        hparams = self.searchspace.dict_to_list(trial.params)
+        hparams = self.searchspace.dict_to_list(deepcopy(trial.params))
+        if "budget" in trial.params.keys():
+            budget = hparams.pop()
+        else:
+            budget = 0
 
         # find and delete from busy location
         index = next(
             (
                 index
                 for (index, d) in enumerate(self.busy_locations)
-                if d["params"] == hparams
+                if d["params"] == hparams and (budget == 0 or budget == d["budget"])
             ),
             None,
         )
