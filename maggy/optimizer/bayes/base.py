@@ -424,7 +424,7 @@ class BaseAsyncBO(AbstractOptimizer):
 
         # check in finished trials
         for idx, trial in enumerate(self.final_store):
-            if x == trial["params"]:
+            if x == trial.params:
                 self._log(
                     "WARNING: Hparams {} are equal to params of finished trial no. {}: {}".format(
                         x, idx, trial.to_dict()
@@ -434,7 +434,7 @@ class BaseAsyncBO(AbstractOptimizer):
 
         # check in currently evaluating trials
         for trial_id, trial in self.trial_store:
-            if x == trial["params"]:
+            if x == trial.params:
                 self._log(
                     "WARNING: Hparams {} are equal to currently evaluating Trial: {}".format(
                         x, trial.to_dict()
