@@ -187,7 +187,11 @@ class BaseAsyncBO(AbstractOptimizer):
     def get_suggestion(self, trial=None):
         try:
             if trial:
-                self._log("Last finished Trial: {}".format(trial.trial_id))
+                self._log(
+                    "Last finished Trial: {} with params {}".format(
+                        trial.trial_id, trial.params
+                    )
+                )
             else:
                 self._log("no previous finished trial")
 
@@ -232,6 +236,7 @@ class BaseAsyncBO(AbstractOptimizer):
                             parent_trial_id, next_trial.trial_id, next_trial.params
                         )
                     )
+                    # todo add to busy locations
                     return next_trial
                 else:
                     # start sampling procedure with given budget
@@ -511,6 +516,7 @@ class BaseAsyncBO(AbstractOptimizer):
         # convert to list, because `busy_locations` stores params in list format
         hparams = self.searchspace.dict_to_list(deepcopy(trial.params))
         if "budget" in trial.params.keys():
+            # `params` key in busy_location objects dont have info about budget ( it is in seperate key ).
             hparams.pop()
 
         # find and delete from busy location

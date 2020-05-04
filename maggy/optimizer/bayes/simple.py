@@ -52,7 +52,7 @@ class SimpleAsyncBO(BaseAsyncBO):
         self.impute_strategy = impute_strategy
 
     def sampling_routine(self, budget=0):
-        self._log("Start sampling routine")
+        self._log("Start sampling routine from model with budget {}".format(budget))
 
         # even with BFGS as optimizer we want to sample a large number
         # of points and then pick the best ones as starting points
@@ -185,7 +185,11 @@ class SimpleAsyncBO(BaseAsyncBO):
         Use observations of finished trials + liars from busy trials to build model.
         Only build model when there are at least as many observations as hyperparameters
         """
-        self._log("Start updateing model with budget {}".format(budget))
+        self._log("Start updateing model with budget {} \n".format(budget))
+        self._log("Busy Locations: {} \n".format(self.busy_locations))
+        self._log("Trial Store:")
+        for key, val in self.trial_store:
+            self._log("{}: {} \n".format(key, val))
 
         # check if enough observations available for model building
         if len(self.searchspace.keys()) > len(self.get_metrics_array(budget=budget)):
