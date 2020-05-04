@@ -188,7 +188,7 @@ class SimpleAsyncBO(BaseAsyncBO):
         self._log("Start updateing model with budget {} \n".format(budget))
         self._log("Busy Locations: {} \n".format(self.busy_locations))
         self._log("Trial Store:")
-        for key, val in self.trial_store:
+        for key, val in self.trial_store.items():
             self._log("{}: {} \n".format(key, val))
 
         # check if enough observations available for model building
