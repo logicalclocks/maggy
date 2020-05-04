@@ -199,6 +199,12 @@ class BaseAsyncBO(AbstractOptimizer):
             if trial:
                 self._cleanup_busy_locations(trial)
 
+            # todo eliminate
+            self._log("Busy Locations: {} \n".format(self.busy_locations))
+            self._log("Trial Store:")
+            for key, val in self.trial_store:
+                self._log("{}: {} \n".format(key, val))
+
             # check if experiment has finished
             if self._experiment_finished():
                 return None
