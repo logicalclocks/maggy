@@ -203,7 +203,7 @@ class BaseAsyncBO(AbstractOptimizer):
             self._log("Busy Locations: {} \n".format(self.busy_locations))
             self._log("Trial Store:")
             for key, val in self.trial_store.items():
-                self._log("{}: {} \n".format(key, val))
+                self._log("{}: {} \n".format(key, val.params))
 
             # check if experiment has finished
             if self._experiment_finished():
