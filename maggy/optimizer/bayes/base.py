@@ -17,6 +17,8 @@ from hops import hdfs
 # todo min_delta_x → warn when similar point has been evaluated before → see skopt for reference
 # todo possibly outsource busy locations to simple.py
 # TODO implement resuming trials
+# TODO when intermediate trial metric per budget is implemented, update models of lower budgets with intermediate
+#  results of trials with larger budget
 
 
 class BaseAsyncBO(AbstractOptimizer):
@@ -38,6 +40,7 @@ class BaseAsyncBO(AbstractOptimizer):
 
     The surrogate models for different budgets are saved in the `models` dict with the budgets as key. In case of
     a single fidelity optimization without a pruner. The only model has the key `0`.
+    Sample new hparam configs always from the biggest model available (i.e. biggest budget)
 
     **pruner**
 
@@ -508,16 +511,14 @@ class BaseAsyncBO(AbstractOptimizer):
         # convert to list, because `busy_locations` stores params in list format
         hparams = self.searchspace.dict_to_list(deepcopy(trial.params))
         if "budget" in trial.params.keys():
-            budget = hparams.pop()
-        else:
-            budget = 0
+            hparams.pop()
 
         # find and delete from busy location
         index = next(
             (
                 index
                 for (index, d) in enumerate(self.busy_locations)
-                if d["params"] == hparams and (budget == 0 or budget == d["budget"])
+                if d["params"] == hparams
             ),
             None,
         )
