@@ -166,7 +166,6 @@ class BaseAsyncBO(AbstractOptimizer):
         self.acq_optimizer_kwargs = acq_optimizer_kwargs
 
         # surrogate model related aruments
-        self.busy_locations = []
         self.base_model = None  # estimator that has not been fit on any data.
         self.models = {}  # fitted model of the estimator
         self.random_fraction = random_fraction
@@ -195,12 +194,7 @@ class BaseAsyncBO(AbstractOptimizer):
             else:
                 self._log("no previous finished trial")
 
-            # remove hparams of last finished trial from `busy_locations`
-            if trial:
-                self._cleanup_busy_locations(trial)
-
             # todo eliminate
-            self._log("Busy Locations: {} \n".format(self.busy_locations))
             self._log("Trial Store:")
             for key, val in self.trial_store.items():
                 self._log("{}: {} \n".format(key, val.params))
@@ -448,8 +442,8 @@ class BaseAsyncBO(AbstractOptimizer):
             )
 
         # init trial info dict
-        trial_info_dict = {"run_budget": run_budget, "sampled": sample_type}
-        if model_budget:
+        trial_info_dict = {"run_budget": run_budget, "sample_type": sample_type}
+        if model_budget is not None:
             trial_info_dict["model_budget"] = model_budget
 
         # todo legacy → in the long run have budget as explicit attr of trial object
@@ -486,7 +480,6 @@ class BaseAsyncBO(AbstractOptimizer):
                         trial.params, busy_trial.to_dict()
                     )
                 )
-                self._log("Busy Locations: {}".format(self.busy_locations))
                 return True
 
         return False
@@ -545,48 +538,20 @@ class BaseAsyncBO(AbstractOptimizer):
         else:
             return False
 
-    def _cleanup_busy_locations(self, trial):
-        """deletes hparams of `trial` from `busy_locations`
-
-        .. note::  alternatively we could compare hparams of all finished trials with busy locations, would take longer
-                  to compute but at the same would ensure consistency → ask Moritz
-
-        :param trial: finished Trial
-        :type trial: Trial
-        """
-        # convert to list, because `busy_locations` stores params in list format
-        hparams = self.searchspace.dict_to_list(deepcopy(trial.params))
-        if "budget" in trial.params.keys():
-            # `params` key in busy_location objects dont have info about budget ( it is in seperate key ).
-            hparams.pop()
-
-        # find and delete from busy location
-        index = next(
-            (
-                index
-                for (index, d) in enumerate(self.busy_locations)
-                if d["params"] == hparams
-            ),
-            None,
-        )
-        try:
-            del self.busy_locations[index]
-            # self._log("{} was deleted from busy_locations".format(hparams))
-        except TypeError:
-            pass
-            # self._log("{} was not in busy_locations".format(hparams))
-
     def get_hparams_array(self, include_busy_locations=False, budget=0):
-        """returns array of already evaluated hparams + optionally hparams that are currently evaluated
+        """returns array of hparams that were evaluated with `budget`
+        + optionally currently evaluating hparams that were sampled from the model with `budget`
 
         The order of the returned hparams is the same as in `final_store`
 
         :param include_busy_locations: If True, add currently evaluating hparam configs
         :type include_busy_locations: bool
-        :param budget: If not None, only trials with this budget are returned
-        :type budget: None|int
+        :param budget: budget of trials to return
+        :type budget: int
         :return: array of hparams, shape (n_finished_hparam_configs, n_hparams)
         :rtype: np.ndarray[np.ndarray]
+
+        # todo when budget becomes attr of Trial object ( and not part of params anymore ) adapt
         """
         include_trial = lambda x: x == budget  # noqa: E731
 
@@ -601,22 +566,27 @@ class BaseAsyncBO(AbstractOptimizer):
             ]
         )
 
-        if include_busy_locations and len(self.busy_locations):
-            # todo if/else wont be necessary when budget is attr of Trial
-            if budget == 0 or budget is None:
-                hparams_busy = np.array(
-                    [location["params"] for location in self.busy_locations]
+        if include_busy_locations:
+            # validate that optimizer has `impute_metric` method
+            if "impute_metric" not in dir(self):
+                raise ValueError(
+                    "Optimizer wants to include busy locations, but does not have a `impute_metric()`"
+                    "method"
                 )
-            else:
-                hparams_busy = np.array(
-                    [
-                        np.append(location["params"], budget)
-                        for location in self.busy_locations
-                        if location["budget"] == budget
-                    ]
-                )
+
+            hparams_busy = np.array(
+                [
+                    self.searchspace.dict_to_list(trial.params)
+                    for trial_id, trial in self.trial_store.items()
+                    if trial.info_dict["sample_type"] == "model"
+                    and trial.info_dict["model_budget"] == budget
+                ]
+            )
+
             if len(hparams_busy) > 0:
                 hparams = np.concatenate((hparams, hparams_busy))
+
+        self._log("{} hparams with budget {}: {}".format(len(hparams), budget, hparams))
 
         return hparams
 
@@ -643,7 +613,8 @@ class BaseAsyncBO(AbstractOptimizer):
         return hparam_dict
 
     def get_metrics_array(self, include_busy_locations=False, budget=0):
-        """returns array of final metrics + optionally imputed metrics of currently evaluating trials
+        """returns array of final metrics of trials that were run with `budget`
+         + optionally imputed metrics of currently evaluating trials that were sampled from model with `budget`
 
         The order of the returned metrics is the same as in `final_store`
 
@@ -651,8 +622,8 @@ class BaseAsyncBO(AbstractOptimizer):
 
         :param include_busy_locations: If True, add imputed metrics of currently evaluating trials
         :type include_busy_locations: bool
-        :param budget: If not None, only trials with this budget are returned
-        :type budget: None|int
+        :param budget: budget of trials to return
+        :type budget: int
         :return: array of hparams, shape (n_final_metrics,)
         :rtype: np.ndarray[float]
         """
@@ -669,19 +640,44 @@ class BaseAsyncBO(AbstractOptimizer):
             ]
         )
 
-        if include_busy_locations and len(self.busy_locations):
-            metrics_busy = np.array(
-                [
-                    location["metric"]
-                    for location in self.busy_locations
-                    if budget == 0 or budget is None or location["budget"] == budget
-                ]
-            )
+        if include_busy_locations:
+            # validate that optimizer has `impute_metric` method
+            if "impute_metric" not in dir(self):
+                # impute_metric() has to be defined in sub class
+                raise ValueError(
+                    "Optimizer wants to include busy locations, but does not have a `impute_metric()`"
+                    "method"
+                )
+            metrics_busy = np.empty(0, dtype=float)
+            for trial_id, trial in self.trial_store.items():
+                if (
+                    trial.info_dict["sample_type"] == "model"
+                    and trial.info_dict["model_budget"] == budget
+                ):
+                    imputed_metric = self.impute_metric(trial.params, budget)
+                    metrics_busy = np.append(metrics_busy, imputed_metric)
+                    # add info about imputed metric to trial info dict
+                    if "imputed_metrics" in trial.info_dict.keys():
+                        trial.info_dict["imputed_metrics"].append(imputed_metric)
+                    else:
+                        trial.info_dict["imputed_metrics"] = [imputed_metric]
+
+            # todo elim
+            # metrics_busy = np.array(
+            #     [
+            #         self.impute_metric(trial.params, budget)
+            #         for trial_id, trial in self.trial_store.items()
+            #         if trial.info_dict["sample_type"] == "model" and trial.info_dict["model_budget"] == budget
+            #     ]
+            # )
             if len(metrics_busy) > 0:
                 metrics = np.concatenate((metrics, metrics_busy))
 
         if self.direction == "max":
             metrics = -metrics
+
+        # todo elim
+        self._log("{} metrics for budget {}: {}".format(len(metrics), budget, metrics))
 
         return metrics
 

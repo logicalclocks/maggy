@@ -116,36 +116,12 @@ class SimpleAsyncBO(BaseAsyncBO):
         # precision errors.
         next_x = np.clip(next_x, 0.0, 1.0)
 
-        # calculate liar for imputing metric in `busy_locations`
-        if self.impute_strategy == "cl_min":
-            liar = self.ybest(budget)
-        elif self.impute_strategy == "cl_max":
-            liar = self.yworst(budget)
-        elif self.impute_strategy == "cl_mean":
-            liar = self.ymean(budget)
-        elif self.impute_strategy == "kb":
-            liar = self.models[budget].predict(np.array(next_x).reshape(1, -1))[0]
-        else:
-            raise NotImplementedError(
-                "cl_strategy {} is not implemented, please choose from ('cl_min', 'cl_max', "
-                "'cl_mean')"
-            )
-
-        # if the optimization direction is max the above strategies yield the negated value of the metric,
-        # in `busy_locations` the original metric values are stored
-        if self.direction == "max":
-            liar = -liar
-
         # transform back to original representation
         next_x = self.searchspace.inverse_transform(
             next_x, normalize_categorical=True
         )  # is array [-3,3,"blue"]
 
-        # add next_x to busy locations and impute metric with liar
-        self.busy_locations.append({"params": next_x, "metric": liar, "budget": budget})
-
         self._log("Next config to evaluate: {}".format(next_x))
-        self._log("busy_locations: {}".format(self.busy_locations))
 
         # convert list to dict representation
         hparam_dict = self.searchspace.list_to_dict(next_x)
@@ -186,7 +162,6 @@ class SimpleAsyncBO(BaseAsyncBO):
         Only build model when there are at least as many observations as hyperparameters
         """
         self._log("Start updateing model with budget {} \n".format(budget))
-        self._log("Busy Locations: {} \n".format(self.busy_locations))
         self._log("Trial Store:")
         for key, val in self.trial_store.items():
             self._log("{}: {} \n".format(key, val.params))
@@ -225,3 +200,44 @@ class SimpleAsyncBO(BaseAsyncBO):
 
         # update model of budget
         self.models[budget] = model
+
+    def impute_metric(self, hparams, budget=0):
+        """calculates the value of the imputed metric for hparams of a currently evaluating trial.
+
+        This is the core of the async strategy of `constant_liar` and `kriging believer`, i.e. currently evaluating
+        trial are given a imputed metric and the model is updated with the hparam config and imputed metric so it does
+        not yield the same hparam conig again when maximizing the acquisition function, hence encourages diversity when
+        choosing the next hparam config to evaluate.
+
+        :param hparams: hparams dict of a currently evaluating trial (Trial.params)
+        :type hparams: dict
+        :param budget: budget of the model that sampled the hparam config
+        :param budget: int
+        :return: imputed metric
+        :rtype: float
+        """
+
+        if self.impute_strategy == "cl_min":
+            imputed_metric = self.ybest(budget)
+        elif self.impute_strategy == "cl_max":
+            imputed_metric = self.yworst(budget)
+        elif self.impute_strategy == "cl_mean":
+            imputed_metric = self.ymean(budget)
+        elif self.impute_strategy == "kb":
+            x = self.searchspace.transform(
+                hparams=self.searchspace.dict_to_list(hparams),
+                normalize_categorical=True,
+            )
+            imputed_metric = self.models[budget].predict(np.array(x).reshape(1, -1))[0]
+        else:
+            raise NotImplementedError(
+                "cl_strategy {} is not implemented, please choose from ('cl_min', 'cl_max', "
+                "'cl_mean')"
+            )
+
+        # if the optimization direction is max the above strategies yield the negated value of the metric,
+        # return the original metric value
+        if self.direction == "max":
+            imputed_metric = -imputed_metric
+
+        return imputed_metric
