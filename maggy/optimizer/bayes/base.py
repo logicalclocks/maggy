@@ -229,8 +229,11 @@ class BaseAsyncBO(AbstractOptimizer):
                             parent_trial_id
                         ]
                     )
+                    # update trial info dict and create new trial object
                     next_trial = self.create_trial(
-                        hparams=parent_trial_hparams, budget=next_trial_info["budget"]
+                        hparams=parent_trial_hparams,
+                        sample_type="promoted",
+                        run_budget=next_trial_info["budget"],
                     )
                     # report new trial id to pruner
                     self.pruner.report_trial(
@@ -242,7 +245,6 @@ class BaseAsyncBO(AbstractOptimizer):
                             parent_trial_id, next_trial.trial_id, next_trial.params
                         )
                     )
-                    # todo add to busy locations
                     return next_trial
                 else:
                     # start sampling procedure with given budget
@@ -254,7 +256,9 @@ class BaseAsyncBO(AbstractOptimizer):
             if self.warmup_configs:
                 self._log("take sample from warmup buffer")
                 next_trial_params = self.warmup_configs.pop()
-                next_trial = self.create_trial(hparams=next_trial_params, budget=budget)
+                next_trial = self.create_trial(
+                    hparams=next_trial_params, sample_type="random", run_budget=budget
+                )
                 # report new trial id to pruner
                 if self.pruner:
                     self.pruner.report_trial(
@@ -276,29 +280,41 @@ class BaseAsyncBO(AbstractOptimizer):
             # in case there is no model yet or random fraction applies, sample randomly
             if not self.models or np.random.rand() < self.random_fraction:
                 hparams = self.searchspace.get_random_parameter_values(1)[0]
+                next_trial = self.create_trial(
+                    hparams=hparams, sample_type="random", run_budget=budget
+                )
                 self._log("sampled randomly: {}".format(hparams))
             else:
                 # sample from largest model
                 max_budget = max(self.models.keys())
                 hparams = self.sampling_routine(max_budget)
+                next_trial = self.create_trial(
+                    hparams=hparams,
+                    sample_type="model",
+                    run_budget=budget,
+                    model_budget=max_budget,
+                )
                 self._log(
                     "sampled from model with budget {}: {}".format(max_budget, hparams)
                 )
 
             # check if Trial with same hparams has already been created
-            if self.hparams_exist(hparams, budget=budget):
+            if self.hparams_exist(trial=next_trial):
                 self._log("Sample randomly to encourage exploration")
                 hparams = self.searchspace.get_random_parameter_values(1)[0]
+                next_trial = self.create_trial(
+                    hparams=hparams, sample_type="random", run_budget=budget
+                )
 
-            # create Trial object
-            next_trial = self.create_trial(hparams, budget=budget)
             # report new trial id to pruner
             if self.pruner:
                 self.pruner.report_trial(
                     original_trial_id=None, new_trial_id=next_trial.trial_id
                 )
             self._log(
-                "Start Trial {}: {} \n".format(next_trial.trial_id, next_trial.params)
+                "Start Trial {}: {}, {} \n".format(
+                    next_trial.trial_id, next_trial.params, next_trial.info_dict
+                )
             )
             return next_trial
 
@@ -401,54 +417,73 @@ class BaseAsyncBO(AbstractOptimizer):
         self._log("warmup configs: {}".format(self.warmup_configs))
 
     # todo, evtl. outsource to helpers or abstract optimizer or trial. possibly obsolete when trial has param budget
-    def create_trial(self, hparams, budget=0):
-        """helper function to create trial with budget
+    def create_trial(self, hparams, sample_type, run_budget=0, model_budget=None):
+        """helper function to create trial with budget and trial_dict
 
-        `budget == 0` means that it is a single fidelity optimization and budget does not need to be passed to Trial
+        `run_budget == 0` means that it is a single fidelity optimization and budget does not need to be passed to Trial
         and hence training function
 
         :param hparams: hparam dict
         :type hparams: dict
-        :param budget: budget for trial. implemented first version of Hyperband
-        :type budget: int
+        :param sample_type: specifies how the hapram config was sampled. can be "random", "promoted", "model"
+        :type sample_type: str
+        :param run_budget: budget for trial or 0 if there is no budget, i.e. single fidelity optimization
+        :type run_budget: int
+        :param model_budget: If `sampled` == `model`, specifies from which model the sample was generated
+        :type model_budget: int
         :return: Trial object with specified params
         :rtype: Trial
         """
-        if budget > 0:
-            hparams["budget"] = budget
-        return Trial(hparams, trial_type="optimization")
+        # validations
+        allowed_sample_type_values = ["random", "model", "promoted"]
+        if sample_type not in allowed_sample_type_values:
+            raise ValueError(
+                "expected sample_type to be in {}, got {}".format(
+                    allowed_sample_type_values, sample_type
+                )
+            )
+        if sample_type == "model" and model_budget is None:
+            raise ValueError(
+                "expected `model_budget` because sample_type==`model`, got None"
+            )
 
-    def hparams_exist(self, hparams, budget=0):
+        # init trial info dict
+        trial_info_dict = {"run_budget": run_budget, "sampled": sample_type}
+        if model_budget:
+            trial_info_dict["model_budget"] = model_budget
+
+        # todo legacy → in the long run have budget as explicit attr of trial object
+        if run_budget > 0:
+            hparams["budget"] = run_budget
+
+        return Trial(hparams, trial_type="optimization", info_dict=trial_info_dict)
+
+    def hparams_exist(self, trial):
         """Checks if Trial with hparams and budget has already been started
 
-        :param hparams: hparam dict
-        :type hparams: dict
-        :param budget: budget for trial. implemented first version of Hyperband
-        :type budget: int
+        :param trial: trial instance to validate
+        :type trial: Trial
         :return: True, if trial with same params already exists
         :rtype: bool
 
         """
-        x = deepcopy(hparams)
-        if budget > 0:
-            x["budget"] = budget
-
         # check in finished trials
-        for idx, trial in enumerate(self.final_store):
-            if x == trial.params:
+        # todo when budget becomes attr of Trial object ( and not part of params anymore ), adapt the comparison
+        for idx, finished_trial in enumerate(self.final_store):
+            if trial.params == finished_trial.params:
                 self._log(
                     "WARNING: Hparams {} are equal to params of finished trial no. {}: {}".format(
-                        x, idx, trial.to_dict()
+                        trial.params, idx, finished_trial.to_dict()
                     )
                 )
                 return True
 
         # check in currently evaluating trials
-        for trial_id, trial in self.trial_store.items():
-            if x == trial.params:
+        for trial_id, busy_trial in self.trial_store.items():
+            if trial.params == busy_trial.params:
                 self._log(
                     "WARNING: Hparams {} are equal to currently evaluating Trial: {}".format(
-                        x, trial.to_dict()
+                        trial.params, busy_trial.to_dict()
                     )
                 )
                 self._log("Busy Locations: {}".format(self.busy_locations))
