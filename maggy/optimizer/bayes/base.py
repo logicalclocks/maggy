@@ -40,7 +40,8 @@ class BaseAsyncBO(AbstractOptimizer):
 
     The surrogate models for different budgets are saved in the `models` dict with the budgets as key. In case of
     a single fidelity optimization without a pruner. The only model has the key `0`.
-    Sample new hparam configs always from the biggest model available (i.e. biggest budget)
+    Sample new hparam configs always from the largest model available (i.e. biggest budget) or in case of async bo with
+    imputing strategy + multi-fidelity pruner, sample from the model that has same budget as the trial
 
     **pruner**
 
@@ -91,9 +92,10 @@ class BaseAsyncBO(AbstractOptimizer):
         Attributes
         ----------
 
-        busy_locations (list[dict]): list of currently evaluating trials, each busy location is a dict
-                              {"params": hparams_list, "metric": liar, "budget": 3}. Key "budget" only exists if pruner
-                              exists.
+        max_model (bool): If True, always sample from the largest model available. Else sample from the model that has
+                          same budget as the trial.
+                          It is False in case of async bo algorithms with a imputing strategy - to encourage diversity in
+                          async bo - and a multi fidelity pruner.
         base_model (any): estimator that has not been fit on any data.
         models (dict): The surrogate models for different budgets are saved in the `models` dict with the budgets as key.
                        In case of a single fidelity optimization without a pruner. The only model has the key `0`.
@@ -169,6 +171,10 @@ class BaseAsyncBO(AbstractOptimizer):
         self.base_model = None  # estimator that has not been fit on any data.
         self.models = {}  # fitted model of the estimator
         self.random_fraction = random_fraction
+        if self.pruner and "impute_metric" in dir(self):
+            self.max_model = False
+        else:
+            self.max_model = True
 
         # configure logger
         self.log_file = "hdfs:///Projects/{}/Logs/optimizer_{}_{}.log".format(
@@ -178,6 +184,8 @@ class BaseAsyncBO(AbstractOptimizer):
             hdfs.dump("", self.log_file)
         self.fd = hdfs.open_file(self.log_file, flags="w")
         self._log("Initialized Logger")
+
+        self._log("Initilized Optimizer {}: \n {}".format(self.name(), dir(self)))
 
     def initialize(self):
         self.warmup_routine()
@@ -267,8 +275,11 @@ class BaseAsyncBO(AbstractOptimizer):
                 return next_trial
 
             # update model with latest observations
-            # skip model building if we already have a bigger model
-            if max(list(self.models.keys()) + [-np.inf]) <= budget:
+            if self.max_model:
+                # skip model building if we already have a bigger model
+                if max(list(self.models.keys()) + [-np.inf]) <= budget:
+                    self.update_model(budget)
+            else:
                 self.update_model(budget)
 
             # in case there is no model yet or random fraction applies, sample randomly
@@ -279,17 +290,23 @@ class BaseAsyncBO(AbstractOptimizer):
                 )
                 self._log("sampled randomly: {}".format(hparams))
             else:
-                # sample from largest model
-                max_budget = max(self.models.keys())
-                hparams = self.sampling_routine(max_budget)
+                if self.max_model:
+                    # sample from largest model
+                    model_budget = max(self.models.keys())
+                else:
+                    # sample from model with same budget as trial
+                    model_budget = budget
+                hparams = self.sampling_routine(model_budget)
                 next_trial = self.create_trial(
                     hparams=hparams,
                     sample_type="model",
                     run_budget=budget,
-                    model_budget=max_budget,
+                    model_budget=model_budget,
                 )
                 self._log(
-                    "sampled from model with budget {}: {}".format(max_budget, hparams)
+                    "sampled from model with budget {}: {}".format(
+                        model_budget, hparams
+                    )
                 )
 
             # check if Trial with same hparams has already been created
