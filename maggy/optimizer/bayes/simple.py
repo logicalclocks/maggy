@@ -162,7 +162,6 @@ class SimpleAsyncBO(BaseAsyncBO):
         Only build model when there are at least as many observations as hyperparameters
         """
         self._log("Start updateing model with budget {} \n".format(budget))
-        self._log("Trial Store:")
         for key, val in self.trial_store.items():
             self._log("{}: {} \n".format(key, val.params))
 

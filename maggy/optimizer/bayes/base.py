@@ -12,10 +12,8 @@ from hops import hdfs
 
 # todo which methods should be private
 # todo what about random_state → for reproducability → check skopt for reference
-# todo `trial_store` hold all busy trials, think about replacing the `busy_locations` approach with the
-#   `trial_store` data
 # todo min_delta_x → warn when similar point has been evaluated before → see skopt for reference
-# todo possibly outsource busy locations to simple.py
+# TODO poss. shift `include_busy_locations` logic to simple.py if it is only used ther
 # TODO implement resuming trials
 # TODO when intermediate trial metric per budget is implemented, update models of lower budgets with intermediate
 #  results of trials with larger budget
@@ -42,6 +40,11 @@ class BaseAsyncBO(AbstractOptimizer):
     a single fidelity optimization without a pruner. The only model has the key `0`.
     Sample new hparam configs always from the largest model available (i.e. biggest budget) or in case of async bo with
     imputing strategy + multi-fidelity pruner, sample from the model that has same budget as the trial
+
+    **imputing busy trials** (poss. shift to simple.py)
+
+    the imputed metrics are calculated on the fly in `get_metrics_array(include_busy_locations=True, budget=`budget`)`
+    for currently evaluating trials that were sampled from model with `budget`
 
     **pruner**
 
@@ -185,7 +188,7 @@ class BaseAsyncBO(AbstractOptimizer):
         self.fd = hdfs.open_file(self.log_file, flags="w")
         self._log("Initialized Logger")
 
-        self._log("Initilized Optimizer {}: \n {}".format(self.name(), dir(self)))
+        self._log("Initilized Optimizer {}: \n {}".format(self.name(), self.__dict__))
 
     def initialize(self):
         self.warmup_routine()
@@ -603,8 +606,6 @@ class BaseAsyncBO(AbstractOptimizer):
             if len(hparams_busy) > 0:
                 hparams = np.concatenate((hparams, hparams_busy))
 
-        self._log("{} hparams with budget {}: {}".format(len(hparams), budget, hparams))
-
         return hparams
 
     def get_hparams_dict(self, trial_ids="all"):
@@ -692,9 +693,6 @@ class BaseAsyncBO(AbstractOptimizer):
 
         if self.direction == "max":
             metrics = -metrics
-
-        # todo elim
-        self._log("{} metrics for budget {}: {}".format(len(metrics), budget, metrics))
 
         return metrics
 
