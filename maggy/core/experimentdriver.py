@@ -16,8 +16,8 @@ from hops import util as hopsutil
 from hops.experiment_impl.util import experiment_utils
 
 from maggy import util
-from maggy.optimizer import AbstractOptimizer, RandomSearch, Asha, SingleRun
 from maggy.optimizer.bayes import TPE
+from maggy.optimizer import AbstractOptimizer, RandomSearch, Asha, SingleRun
 from maggy.core import rpc
 from maggy.trial import Trial
 from maggy.earlystop import AbstractEarlyStop, MedianStoppingRule, NoStoppingRule
