@@ -17,7 +17,7 @@ from hops import hdfs as hopshdfs
 from hops.experiment_impl.util import experiment_utils
 
 from maggy import util, tensorboard
-from maggy.core import trialexecutor, ExperimentDriver
+from maggy.core import trialexecutor, experimentdriver
 
 app_id = None
 running = False
@@ -133,7 +133,7 @@ def lagom(
             if num_executors > num_trials:
                 num_executors = num_trials
 
-            exp_driver = ExperimentDriver(
+            exp_driver = experimentdriver.ExperimentDriver(
                 "optimization",
                 searchspace=searchspace,
                 optimizer=optimizer,
@@ -152,7 +152,7 @@ def lagom(
             exp_function = exp_driver.optimizer.name()
 
         elif experiment_type == "ablation":
-            exp_driver = ExperimentDriver(
+            exp_driver = experimentdriver.ExperimentDriver(
                 "ablation",
                 ablation_study=ablation_study,
                 ablator=ablator,
