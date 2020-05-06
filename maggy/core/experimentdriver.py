@@ -16,7 +16,7 @@ from hops import util as hopsutil
 from hops.experiment_impl.util import experiment_utils
 
 from maggy import util
-from maggy.optimizer.bayes import TPE
+from maggy.optimizer import bayes
 from maggy.optimizer import AbstractOptimizer, RandomSearch, Asha, SingleRun
 from maggy.core import rpc
 from maggy.trial import Trial
@@ -95,7 +95,7 @@ class ExperimentDriver(object):
                 elif optimizer.lower() == "asha":
                     self.optimizer = Asha()
                 elif optimizer.lower() == "tpe":
-                    self.optimizer = TPE()
+                    self.optimizer = bayes.TPE()
                 elif optimizer.lower() == "none":
                     if len(self.searchspace.names()) == 0:
                         self.optimizer = SingleRun()
