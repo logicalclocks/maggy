@@ -455,6 +455,18 @@ class ExperimentDriver(object):
                                 msg["partition_id"], None
                             )
                             self.experiment_done = True
+                        elif trial == "IDLE":
+                            idle_time = time.time()
+                            self.add_message(
+                                {
+                                    "type": "IDLE",
+                                    "partition_id": msg["partition_id"],
+                                    "idle_start": time.time(),
+                                }
+                            )
+                            self.server.reservations.assign_trial(
+                                msg["partition_id"], None
+                            )
                         else:
                             with trial.lock:
                                 trial.start = time.time()
@@ -463,6 +475,38 @@ class ExperimentDriver(object):
                                     msg["partition_id"], trial.trial_id
                                 )
                                 self.add_trial(trial)
+
+                    # 4. Let executor be idle
+                    elif msg["type"] == "IDLE":
+                        # execute only every 0.01 seconds but do not block thread
+                        if (
+                            self.experiment_type == "optimization"
+                            and time.time() - msg["idle_start"] > 0.01
+                        ):
+                            self._log(
+                                "time elapsed {} sec".format(time.time() - idle_time)
+                            )
+                            idle_time = time.time()
+                            trial = self.optimizer.get_suggestion()
+                            if trial is None:
+                                self.server.reservations.assign_trial(
+                                    msg["partition_id"], None
+                                )
+                                self.experiment_done = True
+                            elif trial == "IDLE":
+                                # reset timeout
+                                msg["idle_start"] = time.time()
+                                self.add_message(msg)
+                            else:
+                                with trial.lock:
+                                    trial.start = time.time()
+                                    trial.status = Trial.SCHEDULED
+                                    self.server.reservations.assign_trial(
+                                        msg["partition_id"], trial.trial_id
+                                    )
+                                    self.add_trial(trial)
+                        elif self.experiment_type == "optimization":
+                            self.add_message(msg)
 
                     # 4. REG
                     elif msg["type"] == "REG":
