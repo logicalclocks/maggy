@@ -89,6 +89,8 @@ class SimpleAsyncBO(BaseAsyncBO):
             x0 = X[np.argsort(values)[: self.n_restarts_optimizer]]
 
             results = []
+            # todo does it make sense to use ybest of budget only
+            y_best = self.ybest(budget)
             for x in x0:
                 # todo evtl. use Parallel / delayed like skopt
                 # bounds of transformed hparams are always [0.0,1.0] ( if categorical encodings get normalized,
@@ -98,7 +100,7 @@ class SimpleAsyncBO(BaseAsyncBO):
                     x0=x,
                     args=(
                         self.models[budget],
-                        self.ybest(budget),
+                        y_best,
                         self.acq_fun,
                         self.acq_func_kwargs,
                     ),
