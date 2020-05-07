@@ -61,6 +61,9 @@ class SimpleAsyncBO(BaseAsyncBO):
             [self.searchspace.dict_to_list(hparams) for hparams in random_hparams]
         )
 
+        # todo does it make sense to use ybest of budget only
+        y_best = self.ybest(budget)
+
         # transform configs
         X = np.apply_along_axis(
             self.searchspace.transform,
@@ -72,7 +75,7 @@ class SimpleAsyncBO(BaseAsyncBO):
         values = _gaussian_acquisition(
             X=X,
             model=self.models[budget],
-            y_opt=self.ybest(budget),
+            y_opt=y_best,
             acq_func=self.acq_fun,
             acq_func_kwargs=self.acq_func_kwargs,
         )
@@ -89,8 +92,6 @@ class SimpleAsyncBO(BaseAsyncBO):
             x0 = X[np.argsort(values)[: self.n_restarts_optimizer]]
 
             results = []
-            # todo does it make sense to use ybest of budget only
-            y_best = self.ybest(budget)
             for x in x0:
                 # todo evtl. use Parallel / delayed like skopt
                 # bounds of transformed hparams are always [0.0,1.0] ( if categorical encodings get normalized,
