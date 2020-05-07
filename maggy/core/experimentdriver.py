@@ -456,7 +456,6 @@ class ExperimentDriver(object):
                             )
                             self.experiment_done = True
                         elif trial == "IDLE":
-                            idle_time = time.time()
                             self.add_message(
                                 {
                                     "type": "IDLE",
@@ -478,15 +477,11 @@ class ExperimentDriver(object):
 
                     # 4. Let executor be idle
                     elif msg["type"] == "IDLE":
-                        # execute only every 0.01 seconds but do not block thread
+                        # execute only every 0.1 seconds but do not block thread
                         if (
                             self.experiment_type == "optimization"
-                            and time.time() - msg["idle_start"] > 0.01
+                            and time.time() - msg["idle_start"] > 0.1
                         ):
-                            self._log(
-                                "time elapsed {} sec".format(time.time() - idle_time)
-                            )
-                            idle_time = time.time()
                             trial = self.optimizer.get_suggestion()
                             if trial is None:
                                 self.server.reservations.assign_trial(
