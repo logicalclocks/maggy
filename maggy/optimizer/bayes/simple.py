@@ -13,6 +13,7 @@ from maggy.optimizer.bayes.base import BaseAsyncBO
 # todo what about noise in GP
 # todo how and how often do the GP meta hparams get updated
 # todo add documentation of how simple async bo works and what it is
+# todo potentially rename to imputing bo
 
 
 class SimpleAsyncBO(BaseAsyncBO):
@@ -24,7 +25,7 @@ class SimpleAsyncBO(BaseAsyncBO):
         See docstring of `BaseAsyncBO` for more info on parameters of base class
 
         :param impute_strategy: Method to use as imputeing strategy in async bo.
-                                Supported options are `"cl_min"`, `"cl_max"`, `"cl_mean"`.
+                                Supported options are `"cl_min"`, `"cl_max"`, `"cl_mean"`, `"kb"`.
 
                                 - If set to `cl_x`, then constant liar strategy is used
                                   with lie objective value being minimum of observed objective
