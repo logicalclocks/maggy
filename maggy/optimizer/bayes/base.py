@@ -21,6 +21,9 @@ from hops import hdfs
 
 class BaseAsyncBO(AbstractOptimizer):
     """Base class for asynchronous bayesian optimization
+
+    Do not initialize this class! only it's subclasses
+
     **async bo**
 
     todo explain async bo basics
@@ -57,10 +60,6 @@ class BaseAsyncBO(AbstractOptimizer):
         self,
         num_warmup_trials=15,
         random_fraction=0.1,
-        acq_fun="EI",
-        acq_fun_kwargs=None,
-        acq_optimizer="lbfgs",
-        acq_optimizer_kwargs=None,
         pruner=None,
         pruner_kwargs=None,
     ):
@@ -69,10 +68,13 @@ class BaseAsyncBO(AbstractOptimizer):
         :type num_warmup_trials: int
         :param random_fraction: fraction of random samples, between [0,1]
         :type random_fraction: float
+        :param async_strategy: todo
+        :type async_strategy: str
         :param acq_fun: Function to minimize over the posterior distribution. Can be either
                         - `"LCB"` for lower confidence bound.
                         - `"EI"` for negative expected improvement.
                         - `"PI"` for negative probability of improvement.
+                        - todo update possible values
         :type acq_fun: str
         :param acq_fun_kwargs: Additional arguments to be passed to the acquisition function.
         :type acq_fun_kwargs: dict
@@ -95,10 +97,9 @@ class BaseAsyncBO(AbstractOptimizer):
         Attributes
         ----------
 
-        max_model (bool): If True, always sample from the largest model available. Else sample from the model that has
-                          same budget as the trial.
-                          It is False in case of async bo algorithms with a imputing strategy - to encourage diversity in
-                          async bo - and a multi fidelity pruner.
+        max_model (bool): If True, always sample from the largest model available in multi fidelity optimization.
+                          Else, sample from the model that has same budget as the trial.
+                          False, if async bo algorithm with a async_strategy == `impute` and bandit based pruner is used
         base_model (any): estimator that has not been fit on any data.
         models (dict): The surrogate models for different budgets are saved in the `models` dict with the budgets as key.
                        In case of a single fidelity optimization without a pruner. The only model has the key `0`.
@@ -126,58 +127,22 @@ class BaseAsyncBO(AbstractOptimizer):
             )  # todo does not work yet, progress bar uses num_trials from kwarg of optimizer
 
         # configure warmup routine
-
         self.num_warmup_trials = num_warmup_trials
         self.warmup_sampling = "random"
         self.warmup_configs = []  # keeps track of warmup warmup configs
 
-        allowed_sampling_methods = ["random"]
-        if self.warmup_sampling not in allowed_sampling_methods:
+        allowed_warmup_sampling_methods = ["random"]
+        if self.warmup_sampling not in allowed_warmup_sampling_methods:
             raise ValueError(
                 "expected warmup_sampling to be in {}, got {}".format(
-                    allowed_sampling_methods, self.warmup_sampling
+                    allowed_warmup_sampling_methods, self.warmup_sampling
                 )
             )
-
-        # configure acquisition function
-
-        allowed_acq_funcs = ["EI"]  # todo so far only EI implemented
-        if acq_fun not in allowed_acq_funcs:
-            raise ValueError(
-                "expected acq_fun to be in {}, got {}".format(
-                    allowed_acq_funcs, acq_fun
-                )
-            )
-        self.acq_fun = acq_fun  # calculates the utility for given point and surrogate
-        self.acq_func_kwargs = acq_fun_kwargs
-
-        # configure optimizer
-
-        allowed_acq_opt = ["sampling", "lbfgs"]
-        if acq_optimizer not in allowed_acq_opt:
-            raise ValueError(
-                "expected acq_optimizer to be in {}, got {}".format(
-                    allowed_acq_opt, acq_optimizer
-                )
-            )
-        self.acq_optimizer = acq_optimizer
-
-        # configure other arguments
-        if acq_optimizer_kwargs is None:
-            acq_optimizer_kwargs = dict()
-
-        self.n_points = acq_optimizer_kwargs.get("n_points", 10000)
-        self.n_restarts_optimizer = acq_optimizer_kwargs.get("n_restarts_optimizer", 5)
-        self.acq_optimizer_kwargs = acq_optimizer_kwargs
 
         # surrogate model related aruments
-        self.base_model = None  # estimator that has not been fit on any data.
         self.models = {}  # fitted model of the estimator
         self.random_fraction = random_fraction
-        if self.pruner and "impute_metric" in dir(self):
-            self.max_model = False
-        else:
-            self.max_model = True
+        self.max_model = True
 
         # configure logger
         self.log_file = "hdfs:///Projects/{}/Logs/optimizer_{}_{}.log".format(
@@ -587,11 +552,12 @@ class BaseAsyncBO(AbstractOptimizer):
         )
 
         if include_busy_locations:
-            # validate that optimizer has `impute_metric` method
-            if "impute_metric" not in dir(self):
+            # validate that optimizer is useing correct async_strategy
+            if self.name() == "GP" and self.async_strategy == "impute":
                 raise ValueError(
-                    "Optimizer wants to include busy locations, but does not have a `impute_metric()`"
-                    "method"
+                    "Optimizer GP wants to include busy locations, expected async_strategy == `impute`. Got {}".format(
+                        self.async_strategy
+                    )
                 )
 
             hparams_busy = np.array(
@@ -659,13 +625,14 @@ class BaseAsyncBO(AbstractOptimizer):
         )
 
         if include_busy_locations:
-            # validate that optimizer has `impute_metric` method
-            if "impute_metric" not in dir(self):
-                # impute_metric() has to be defined in sub class
+            # validate that optimizer is useing correct async_strategy
+            if self.name() == "GP" and self.async_strategy == "impute":
                 raise ValueError(
-                    "Optimizer wants to include busy locations, but does not have a `impute_metric()`"
-                    "method"
+                    "Optimizer GP wants to include busy locations, expected async_strategy == `impute`. Got {}".format(
+                        self.async_strategy
+                    )
                 )
+
             metrics_busy = np.empty(0, dtype=float)
             for trial_id, trial in self.trial_store.items():
                 if (
@@ -680,14 +647,6 @@ class BaseAsyncBO(AbstractOptimizer):
                     else:
                         trial.info_dict["imputed_metrics"] = [imputed_metric]
 
-            # todo elim
-            # metrics_busy = np.array(
-            #     [
-            #         self.impute_metric(trial.params, budget)
-            #         for trial_id, trial in self.trial_store.items()
-            #         if trial.info_dict["sample_type"] == "model" and trial.info_dict["model_budget"] == budget
-            #     ]
-            # )
             if len(metrics_busy) > 0:
                 metrics = np.concatenate((metrics, metrics_busy))
 

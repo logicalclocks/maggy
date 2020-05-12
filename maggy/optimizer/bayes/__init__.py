@@ -1,11 +1,11 @@
 from maggy.optimizer.bayes import base, simple, tpe
 
 BaseAsyncBO = base.BaseAsyncBO
-SimpleAsyncBO = simple.SimpleAsyncBO
+GP = simple.GP
 TPE = tpe.TPE
 
 __all__ = [
     "TPE",
     "BaseAsyncBO",
-    "SimpleAsyncBO",
+    "GP",
 ]

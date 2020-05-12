@@ -24,6 +24,8 @@ class TPE(BaseAsyncBO):
         """
         See docstring of `BaseAsyncBO` for more info on parameters of base class
 
+        todo explain why we do not need arguments for acq_fun or acq_optimizer
+
         :param gamma: Determines the percentile of configurations that will be used as training data
                 for the kernel density estimator, e.g if set to 10 the 10% best configurations will be considered
                 for training.
