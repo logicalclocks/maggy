@@ -13,7 +13,7 @@ from hops import hdfs
 # todo which methods should be private
 # todo what about random_state → for reproducability → check skopt for reference
 # todo min_delta_x → warn when similar point has been evaluated before → see skopt for reference
-# TODO poss. shift `include_busy_locations` logic to simple.py if it is only used ther
+# TODO poss. shift `include_busy_locations` logic to gp.py if it is only used ther
 # TODO implement resuming trials
 # TODO when intermediate trial metric per budget is implemented, update models of lower budgets with intermediate
 #  results of trials with larger budget

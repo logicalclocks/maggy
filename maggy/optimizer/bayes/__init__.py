@@ -1,7 +1,7 @@
-from maggy.optimizer.bayes import base, simple, tpe
+from maggy.optimizer.bayes import base, gp, tpe
 
 BaseAsyncBO = base.BaseAsyncBO
-GP = simple.GP
+GP = gp.GP
 TPE = tpe.TPE
 
 __all__ = [
