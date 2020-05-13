@@ -4,8 +4,6 @@ from scipy.optimize import fmin_l_bfgs_b
 from skopt.learning.gaussian_process import GaussianProcessRegressor
 from skopt.learning.gaussian_process.kernels import ConstantKernel
 from skopt.learning.gaussian_process.kernels import Matern
-from skopt.acquisition import _gaussian_acquisition
-from skopt.acquisition import gaussian_acquisition_1D
 from sklearn.base import clone
 
 from maggy.optimizer.bayes.base import BaseAsyncBO
@@ -169,7 +167,7 @@ class GP(BaseAsyncBO):
         )
 
         # todo does it make sense to use ybest of budget only
-        y_best = self.ybest(budget)
+        y_opt = self.ybest(budget)
 
         # transform configs
         X = np.apply_along_axis(
@@ -179,11 +177,10 @@ class GP(BaseAsyncBO):
             normalize_categorical=True,
         )
 
-        values = _gaussian_acquisition(
+        values = self.acq_fun.evaluate(
             X=X,
-            model=self.models[budget],
-            y_opt=y_best,
-            acq_func=self.acq_fun,
+            surrogate_model=self.models[budget],
+            y_opt=y_opt,
             acq_func_kwargs=self.acq_func_kwargs,
         )
 
@@ -204,14 +201,9 @@ class GP(BaseAsyncBO):
                 # bounds of transformed hparams are always [0.0,1.0] ( if categorical encodings get normalized,
                 # which is the case here )
                 result = fmin_l_bfgs_b(
-                    func=gaussian_acquisition_1D,
+                    func=self.acq_fun.evaluate_1_d,
                     x0=x,
-                    args=(
-                        self.models[budget],
-                        y_best,
-                        self.acq_fun,
-                        self.acq_func_kwargs,
-                    ),
+                    args=(self.models[budget], y_opt, self.acq_func_kwargs,),
                     bounds=[(0.0, 1.0) for _ in self.searchspace.values()],
                     approx_grad=False,
                     maxiter=20,
