@@ -118,9 +118,12 @@ class GP(BaseAsyncBO):
 
         if acq_fun is None:
             # default acq_fun is the first in the dict
-            acq_fun = list(allowed_combinations[async_strategy].values())[0]()
+            acq_fun = list(allowed_combinations[async_strategy].values())[0]
 
-        if acq_fun not in allowed_combinations[async_strategy] or (
+        if (
+            isinstance(acq_fun, str)
+            and acq_fun not in allowed_combinations[async_strategy]
+        ) or (
             isclass(acq_fun) and not issubclass(acq_fun, AbstractAcquisitionFunction)
         ):
             raise ValueError(
