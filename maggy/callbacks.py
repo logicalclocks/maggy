@@ -37,10 +37,6 @@ class KerasBatchEnd(tf.keras.callbacks.Callback):
         super().__init__()
         self.metric_name = metric
         self.reporter = reporter
-        self.metric = []
-        self.loss = False
-        if "loss" == metric:
-            self.loss = True
 
     def on_train_begin(self, logs=None):
         # if self.metric_name not in self.model.metrics_names:
@@ -52,16 +48,7 @@ class KerasBatchEnd(tf.keras.callbacks.Callback):
         pass
 
     def on_batch_end(self, batch, logs={}):
-        self.metric.append(logs.get(self.metric_name, 0))
-        if self.loss:
-            # loss is on per-batch basis and has to be averaged
-            # step attribute is not set to batch since batch gets reset after epoch
-            self.reporter.broadcast(sum(self.metric) / float(len(self.metric)))
-        else:
-            self.reporter.broadcast(logs.get(self.metric_name, 0))
-
-    def on_epoch_end(self, epoch, logs={}):
-        self.metric = []
+        self.reporter.broadcast(logs.get(self.metric_name, 0))
 
 
 class KerasEpochEnd(tf.keras.callbacks.Callback):
