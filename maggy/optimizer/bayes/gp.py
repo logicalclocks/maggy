@@ -14,6 +14,7 @@ from maggy.optimizer.bayes.acquisitions import (
     GaussianProcess_PI,
     AsyTS,
     HLP,
+    AbstractAcquisitionFunction,
 )
 
 # todo what about noise in GP
@@ -117,7 +118,9 @@ class GP(BaseAsyncBO):
             # default acq_fun is the first in the dict
             acq_fun = list(allowed_combinations[async_strategy].values())[0]
 
-        if acq_fun not in allowed_combinations[async_strategy]:
+        if acq_fun not in allowed_combinations[async_strategy] or not isinstance(
+            acq_fun, AbstractAcquisitionFunction
+        ):
             raise ValueError(
                 "Expected acq_fun to be in {} with GP as surrogate and {} as async_strategy, got {}".format(
                     list(allowed_combinations[async_strategy].keys()),
