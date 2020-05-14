@@ -19,7 +19,6 @@ from maggy.optimizer.bayes.acquisitions import (
 # todo what about noise in GP
 # todo how and how often do the GP meta hparams get updated
 # todo add documentation of how simple async bo works and what it is
-# todo potentially rename to imputing bo
 # todo explain gp
 
 
@@ -161,6 +160,14 @@ class GP(BaseAsyncBO):
         # estimator that has not been fit on any data.
         self.base_model = None
 
+        self._log(
+            "Acquisition Function: {}, Async Strategy: {}".format(
+                self.acq_fun.name(), self.async_strategy
+            )
+        )
+        if self.async_strategy == "impute":
+            self._log("Impute Strategy: {}".format(self.impute_strategy))
+
     def sampling_routine(self, budget=0):
         self._log("Start sampling routine from model with budget {}".format(budget))
 
@@ -286,10 +293,14 @@ class GP(BaseAsyncBO):
         # create model without any data
         model = clone(self.base_model)
 
-        # get hparams and final metrics of finished trials combined with busy locations
-        # todo abstract include_busy_locations
-        Xi = self.get_hparams_array(include_busy_locations=True, budget=budget)
-        yi = self.get_metrics_array(include_busy_locations=True, budget=budget)
+        # get hparams and final metrics of finished trials combined with busy locations if imputeing stratgey
+        include_busy_locations = True if self.async_strategy == "impute" else False
+        Xi = self.get_hparams_array(
+            include_busy_locations=include_busy_locations, budget=budget
+        )
+        yi = self.get_metrics_array(
+            include_busy_locations=include_busy_locations, budget=budget
+        )
 
         # transform hparam values
         Xi_transform = np.apply_along_axis(

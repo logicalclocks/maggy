@@ -16,6 +16,9 @@ class AbstractAcquisitionFunction(ABC):
     def evaluate_1_d(x, surrogate_model, y_opt, acq_func_kwargs):
         pass
 
+    def name(self):
+        return str(self.__class__.__name__)
+
 
 class GaussianProcess_EI(AbstractAcquisitionFunction):
     """xi in acq_func_kwargs"""
