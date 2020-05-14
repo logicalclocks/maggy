@@ -1,3 +1,5 @@
+from inspect import isclass
+
 import numpy as np
 from scipy.optimize import fmin_l_bfgs_b
 
@@ -116,10 +118,10 @@ class GP(BaseAsyncBO):
 
         if acq_fun is None:
             # default acq_fun is the first in the dict
-            acq_fun = list(allowed_combinations[async_strategy].values())[0]
+            acq_fun = list(allowed_combinations[async_strategy].values())[0]()
 
-        if acq_fun not in allowed_combinations[async_strategy] or not isinstance(
-            acq_fun, AbstractAcquisitionFunction
+        if acq_fun not in allowed_combinations[async_strategy] or (
+            isclass(acq_fun) and not issubclass(acq_fun, AbstractAcquisitionFunction)
         ):
             raise ValueError(
                 "Expected acq_fun to be in {} with GP as surrogate and {} as async_strategy, got {}".format(
