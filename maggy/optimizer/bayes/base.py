@@ -553,7 +553,7 @@ class BaseAsyncBO(AbstractOptimizer):
 
         if include_busy_locations:
             # validate that optimizer is useing correct async_strategy
-            if self.name() == "GP" and self.async_strategy == "impute":
+            if not (self.name() == "GP" and self.async_strategy == "impute"):
                 raise ValueError(
                     "Optimizer GP wants to include busy locations, expected async_strategy == `impute`. Got {}".format(
                         self.async_strategy
