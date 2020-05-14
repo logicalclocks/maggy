@@ -117,11 +117,11 @@ class TPE_EI(AbstractAcquisitionFunction):
 class AsyTS(AbstractAcquisitionFunction):
     @staticmethod
     def evaluate(X, surrogate_model, y_opt, acq_func_kwargs):
-        surrogate_model.sample_y(X)
+        return surrogate_model.sample_y(X)
 
     @staticmethod
     def evaluate_1_d(x, surrogate_model, y_opt, acq_func_kwargs):
-        surrogate_model.sample_y(np.expand_dims(x, axis=0))
+        return surrogate_model.sample_y(np.expand_dims(x, axis=0))
 
 
 class HLP(AbstractAcquisitionFunction):
