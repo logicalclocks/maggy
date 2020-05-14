@@ -17,7 +17,7 @@ from maggy.optimizer.bayes.acquisitions import (
 )
 
 # todo what about noise in GP
-# todo how and how often do the GP meta hparams get updated
+# todo how and how often do the GP meta hparams get updated (lenght_scale etc.) so far length scale is set to 1
 # todo add documentation of how simple async bo works and what it is
 # todo explain gp
 
@@ -61,19 +61,19 @@ class GP(BaseAsyncBO):
                                 https://www.cs.ubc.ca/labs/beta/EARG/stack/2010_CI_Ginsbourger-ParallelKriging.pdf
         :type impute_strategy: str|None
         :param acq_fun: Function to minimize over the posterior distribution. Can take different values depending on
-                        chosen `async_strategy`
+                        chosen `async_strategy`. If None, the correct default is chosen
                         - impute
-                            - `"LCB"` for lower confidence bound.
                             - `"EI"` for negative expected improvement.
+                            - `"LCB"` for lower confidence bound.
                             - `"PI"` for negative probability of improvement.
                         - asy_ts
                             - `"AsyTS"` in async thompson sampling, the acquisition function is replaced by thompson sampling
                         - playbook
                             - `"UCB"` for upper confidence bound
                             - todo EI possible as well ?
-        :type acq_fun: str
+        :type acq_fun: str|None
         :param acq_fun_kwargs: Additional arguments to be passed to the acquisition function.
-        :type acq_fun_kwargs: dict
+        :type acq_fun_kwargs: dict|None
         :param acq_optimizer: Method to minimize the acquisition function. The fitted model
                               is updated with the optimal value obtained by optimizing `acq_func`
                               with `acq_optimizer`.
@@ -112,6 +112,11 @@ class GP(BaseAsyncBO):
                     list(allowed_combinations.keys()), async_strategy
                 )
             )
+
+        if acq_fun is None:
+            # default acq_fun is the first in the dict
+            acq_fun = list(allowed_combinations[async_strategy].values())[0]
+
         if acq_fun not in allowed_combinations[async_strategy]:
             raise ValueError(
                 "Expected acq_fun to be in {} with GP as surrogate and {} as async_strategy, got {}".format(
@@ -139,7 +144,13 @@ class GP(BaseAsyncBO):
         self.acq_optimizer = acq_optimizer
         if acq_optimizer_kwargs is None:
             acq_optimizer_kwargs = dict()
-        self.n_points = acq_optimizer_kwargs.get("n_points", 10000)
+
+        # todo evtl verallgemeinern und oben via dict klären, vgl. acq functions
+        if self.async_strategy == "asy_ts":
+            # default value is 100 and max value is 1000 for asy ts
+            self.n_points = np.clip(acq_optimizer_kwargs.get("n_points", 100), 10, 1000)
+        else:
+            self.n_points = acq_optimizer_kwargs.get("n_points", 10000)
         self.n_restarts_optimizer = acq_optimizer_kwargs.get("n_restarts_optimizer", 5)
         self.acq_optimizer_kwargs = acq_optimizer_kwargs
 

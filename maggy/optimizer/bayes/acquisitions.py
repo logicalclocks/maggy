@@ -9,14 +9,35 @@ from skopt.acquisition import gaussian_acquisition_1D
 class AbstractAcquisitionFunction(ABC):
     @staticmethod
     @abstractmethod
-    def evaluate(X, surogate_model, y_opt, acq_func_kwargs):
+    def evaluate(X, surogate_model, y_opt, acq_func_kwargs=None):
+        """evaluates acquisition function at given points
+
+        :param X: Values where the acquisition function should be computed. shape = (n_locations, n_hparams)
+        :type X: np.ndarray
+        :param surogate_model: todo
+        :type surogate_model
+        :param y_opt:
+        :param acq_func_kwargs:
+        :type acq_func_kwargs: dict|None
+        :return: Acquisition function values computed at X. shape = (n_locations,)
+        :rtype: np.ndarray
+        """
         pass
 
     @staticmethod
     @abstractmethod
-    def evaluate_1_d(x, surrogate_model, y_opt, acq_func_kwargs):
+    def evaluate_1_d(x, surrogate_model, y_opt, acq_func_kwargs=None):
         """A wrapper around the acquisition function that is called by fmin_l_bfgs_b.
            This is because lbfgs allows only 1-D input.
+
+        :param x: value where acquisition function should be evaluated. shape=(n_hparams, )
+        :type x: np.ndarray
+        :param surrogate_model:
+        :param y_opt:
+        :param acq_func_kwargs:
+        :return: tuple containing two arrays. the first holds the evaluated values of the acquisition function at value
+                 x; shape = (1,) . the second holds the gradients; shape = (n_hparams,).
+        :rtype: tuple
         """
         pass
 
@@ -28,7 +49,7 @@ class GaussianProcess_EI(AbstractAcquisitionFunction):
     """xi in acq_func_kwargs"""
 
     @staticmethod
-    def evaluate(X, surrogate_model, y_opt, acq_func_kwargs):
+    def evaluate(X, surrogate_model, y_opt, acq_func_kwargs=None):
         return _gaussian_acquisition(
             X=X,
             model=surrogate_model,
@@ -38,7 +59,7 @@ class GaussianProcess_EI(AbstractAcquisitionFunction):
         )
 
     @staticmethod
-    def evaluate_1_d(x, surrogate_model, y_opt, acq_func_kwargs):
+    def evaluate_1_d(x, surrogate_model, y_opt, acq_func_kwargs=None):
         return gaussian_acquisition_1D(
             X=x,
             model=surrogate_model,
@@ -50,7 +71,7 @@ class GaussianProcess_EI(AbstractAcquisitionFunction):
 
 class GaussianProcess_PI(AbstractAcquisitionFunction):
     @staticmethod
-    def evaluate(X, surrogate_model, y_opt, acq_func_kwargs):
+    def evaluate(X, surrogate_model, y_opt, acq_func_kwargs=None):
         return _gaussian_acquisition(
             X=X,
             model=surrogate_model,
@@ -60,7 +81,7 @@ class GaussianProcess_PI(AbstractAcquisitionFunction):
         )
 
     @staticmethod
-    def evaluate_1_d(X, surrogate_model, y_opt, acq_func_kwargs):
+    def evaluate_1_d(X, surrogate_model, y_opt, acq_func_kwargs=None):
         return gaussian_acquisition_1D(
             X=X,
             model=surrogate_model,
@@ -74,7 +95,7 @@ class GaussianProcess_LCB(AbstractAcquisitionFunction):
     """kappa in acq_func_kwargs"""
 
     @staticmethod
-    def evaluate(X, surrogate_model, y_opt, acq_func_kwargs):
+    def evaluate(X, surrogate_model, y_opt, acq_func_kwargs=None):
         return _gaussian_acquisition(
             X=X,
             model=surrogate_model,
@@ -84,7 +105,7 @@ class GaussianProcess_LCB(AbstractAcquisitionFunction):
         )
 
     @staticmethod
-    def evaluate_1_d(x, surrogate_model, y_opt, acq_func_kwargs):
+    def evaluate_1_d(x, surrogate_model, y_opt, acq_func_kwargs=None):
         return gaussian_acquisition_1D(
             X=x,
             model=surrogate_model,
@@ -96,39 +117,50 @@ class GaussianProcess_LCB(AbstractAcquisitionFunction):
 
 class GaussianProcess_UCB(AbstractAcquisitionFunction):
     @staticmethod
-    def evaluate(X, surrogate_model, y_opt, acq_func_kwargs):
+    def evaluate(X, surrogate_model, y_opt, acq_func_kwargs=None):
         raise NotImplementedError
 
     @staticmethod
-    def evaluate_1_d(x, surrogate_model, y_opt, acq_func_kwargs):
+    def evaluate_1_d(x, surrogate_model, y_opt, acq_func_kwargs=None):
         raise NotImplementedError
 
 
 class TPE_EI(AbstractAcquisitionFunction):
     @staticmethod
-    def evaluate(X, surrogate_model, y_opt, acq_func_kwargs):
+    def evaluate(X, surrogate_model, y_opt, acq_func_kwargs=None):
         raise NotImplementedError
 
     @staticmethod
-    def evaluate_1_d(x, surrogate_model, y_opt, acq_func_kwargs):
+    def evaluate_1_d(x, surrogate_model, y_opt, acq_func_kwargs=None):
         raise NotImplementedError
 
 
 class AsyTS(AbstractAcquisitionFunction):
     @staticmethod
-    def evaluate(X, surrogate_model, y_opt, acq_func_kwargs):
-        return surrogate_model.sample_y(X)
+    def evaluate(X, surrogate_model, y_opt, acq_func_kwargs=None):
+        return surrogate_model.sample_y(X).reshape(X.shape[0],)
 
     @staticmethod
-    def evaluate_1_d(x, surrogate_model, y_opt, acq_func_kwargs):
-        return surrogate_model.sample_y(np.expand_dims(x, axis=0))
+    def evaluate_1_d(x, surrogate_model, y_opt, acq_func_kwargs=None):
+        """A wrapper around the acquisition function that is called by fmin_l_bfgs_b.
+           This is because lbfgs allows only 1-D input.
+
+        :param x: value where acquisition function should be evaluated. shape=(n_hparams, )
+        :type x: np.ndarray
+        :param surrogate_model: todo
+        :param y_opt:
+        :param acq_func_kwargs:
+        :return: values of the acquisition function at value x. shape = (1,)
+        :rtype: np.ndarray
+        """
+        return surrogate_model.sample_y(np.expand_dims(x, axis=0)).reshape(1,)
 
 
 class HLP(AbstractAcquisitionFunction):
     @staticmethod
-    def evaluate(X, surrogate_model, y_opt, acq_func_kwargs):
+    def evaluate(X, surrogate_model, y_opt, acq_func_kwargs=None):
         raise NotImplementedError
 
     @staticmethod
-    def evaluate_1_d(x, surrogate_model, y_opt, acq_func_kwargs):
+    def evaluate_1_d(x, surrogate_model, y_opt, acq_func_kwargs=None):
         raise NotImplementedError
