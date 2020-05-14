@@ -1,6 +1,7 @@
 from abc import ABC
 from abc import abstractmethod
 
+import numpy as np
 from skopt.acquisition import _gaussian_acquisition
 from skopt.acquisition import gaussian_acquisition_1D
 
@@ -14,6 +15,9 @@ class AbstractAcquisitionFunction(ABC):
     @staticmethod
     @abstractmethod
     def evaluate_1_d(x, surrogate_model, y_opt, acq_func_kwargs):
+        """A wrapper around the acquisition function that is called by fmin_l_bfgs_b.
+           This is because lbfgs allows only 1-D input.
+        """
         pass
 
     def name(self):
@@ -113,11 +117,11 @@ class TPE_EI(AbstractAcquisitionFunction):
 class AsyTS(AbstractAcquisitionFunction):
     @staticmethod
     def evaluate(X, surrogate_model, y_opt, acq_func_kwargs):
-        raise NotImplementedError
+        surrogate_model.sample_y(X)
 
     @staticmethod
     def evaluate_1_d(x, surrogate_model, y_opt, acq_func_kwargs):
-        raise NotImplementedError
+        surrogate_model.sample_y(np.expand_dims(x, axis=0))
 
 
 class HLP(AbstractAcquisitionFunction):
