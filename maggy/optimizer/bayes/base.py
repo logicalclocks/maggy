@@ -68,29 +68,6 @@ class BaseAsyncBO(AbstractOptimizer):
         :type num_warmup_trials: int
         :param random_fraction: fraction of random samples, between [0,1]
         :type random_fraction: float
-        :param async_strategy: todo
-        :type async_strategy: str
-        :param acq_fun: Function to minimize over the posterior distribution. Can be either
-                        - `"LCB"` for lower confidence bound.
-                        - `"EI"` for negative expected improvement.
-                        - `"PI"` for negative probability of improvement.
-                        - todo update possible values
-        :type acq_fun: str
-        :param acq_fun_kwargs: Additional arguments to be passed to the acquisition function.
-        :type acq_fun_kwargs: dict
-        :param acq_optimizer: Method to minimize the acquisition function. The fitted model
-                              is updated with the optimal value obtained by optimizing `acq_func`
-                              with `acq_optimizer`.
-
-                              - If set to `"sampling"`, then `acq_func` is optimized by computing
-                                  `acq_func` at `n_points` randomly sampled points.
-                              - If set to `"lbfgs"`, then `acq_func` is optimized by
-                                - Sampling `n_restarts_optimizer` points randomly.
-                                - `"lbfgs"` is run for 20 iterations with these points as initial
-                                   points to find local minima.
-                                - The optimal of these local minima is used to update the prior.
-        :param acq_optimizer_kwargs: Additional arguments to be passed to the acquisition optimizer.
-        :type acq_optimizer_kwargs: dict
         :param pruner: # todo
         :param pruner_kwargs:
 
@@ -100,7 +77,6 @@ class BaseAsyncBO(AbstractOptimizer):
         max_model (bool): If True, always sample from the largest model available in multi fidelity optimization.
                           Else, sample from the model that has same budget as the trial.
                           False, if async bo algorithm with a async_strategy == `impute` and bandit based pruner is used
-        base_model (any): estimator that has not been fit on any data.
         models (dict): The surrogate models for different budgets are saved in the `models` dict with the budgets as key.
                        In case of a single fidelity optimization without a pruner. The only model has the key `0`.
         warm_up_configs(list[dict]): list of hparam configs used for warming up
@@ -626,7 +602,7 @@ class BaseAsyncBO(AbstractOptimizer):
 
         if include_busy_locations:
             # validate that optimizer is useing correct async_strategy
-            if self.name() == "GP" and self.async_strategy == "impute":
+            if not (self.name() == "GP" and self.async_strategy == "impute"):
                 raise ValueError(
                     "Optimizer GP wants to include busy locations, expected async_strategy == `impute`. Got {}".format(
                         self.async_strategy

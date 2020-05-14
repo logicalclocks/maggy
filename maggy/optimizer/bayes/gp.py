@@ -88,6 +88,11 @@ class GP(BaseAsyncBO):
                                 - The optimal of these local minima is used to update the prior.
         :param acq_optimizer_kwargs: Additional arguments to be passed to the acquisition optimizer.
         :type acq_optimizer_kwargs: dict
+
+        Attributes
+        ----------
+
+        base_model (any): estimator that has not been fit on any data.
         """
         super().__init__(**kwargs)
 
