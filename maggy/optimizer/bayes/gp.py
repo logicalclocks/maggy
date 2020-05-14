@@ -1,5 +1,3 @@
-from inspect import isclass
-
 import numpy as np
 from scipy.optimize import fmin_l_bfgs_b
 
@@ -16,7 +14,6 @@ from maggy.optimizer.bayes.acquisitions import (
     GaussianProcess_PI,
     AsyTS,
     HLP,
-    AbstractAcquisitionFunction,
 )
 
 # todo what about noise in GP
@@ -116,16 +113,7 @@ class GP(BaseAsyncBO):
                 )
             )
 
-        if acq_fun is None:
-            # default acq_fun is the first in the dict
-            acq_fun = list(allowed_combinations[async_strategy].values())[0]
-
-        if (
-            isinstance(acq_fun, str)
-            and acq_fun not in allowed_combinations[async_strategy]
-        ) or (
-            isclass(acq_fun) and not issubclass(acq_fun, AbstractAcquisitionFunction)
-        ):
+        if acq_fun not in allowed_combinations[async_strategy] and acq_fun is not None:
             raise ValueError(
                 "Expected acq_fun to be in {} with GP as surrogate and {} as async_strategy, got {}".format(
                     list(allowed_combinations[async_strategy].keys()),
@@ -138,6 +126,9 @@ class GP(BaseAsyncBO):
         self.async_strategy = async_strategy
 
         # configure acquisition function
+        if acq_fun is None:
+            # default acq_fun is the first in the dict
+            acq_fun = list(allowed_combinations[async_strategy].keys())[0]
         self.acq_fun = allowed_combinations[self.async_strategy][acq_fun]()
         self.acq_func_kwargs = acq_fun_kwargs
 
