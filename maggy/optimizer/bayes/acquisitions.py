@@ -9,15 +9,16 @@ from skopt.acquisition import gaussian_acquisition_1D
 class AbstractAcquisitionFunction(ABC):
     @staticmethod
     @abstractmethod
-    def evaluate(X, surogate_model, y_opt, acq_func_kwargs=None):
+    def evaluate(X, surrogate_model, y_opt, acq_func_kwargs=None):
         """evaluates acquisition function at given points
 
         :param X: Values where the acquisition function should be computed. shape = (n_locations, n_hparams)
         :type X: np.ndarray
-        :param surogate_model: todo
-        :type surogate_model
-        :param y_opt:
-        :param acq_func_kwargs:
+        :param surrogate_model: the surrogate model of the bayesian optimizer.
+        :type surrogate_model: GaussianProcessRegressor
+        :param y_opt: currently best observed value
+        :type y_opt: float
+        :param acq_func_kwargs: additional arguments for the acquisition function
         :type acq_func_kwargs: dict|None
         :return: Acquisition function values computed at X. shape = (n_locations,)
         :rtype: np.ndarray
@@ -32,9 +33,12 @@ class AbstractAcquisitionFunction(ABC):
 
         :param x: value where acquisition function should be evaluated. shape=(n_hparams, )
         :type x: np.ndarray
-        :param surrogate_model:
-        :param y_opt:
-        :param acq_func_kwargs:
+        :param surrogate_model: the surrogate model of the bayesian optimizer.
+        :type surrogate_model: GaussianProcessRegressor
+        :param y_opt: currently best observed value
+        :type y_opt: float
+        :param acq_func_kwargs: additional arguments for the acquisition function
+        :type acq_func_kwargs: dict|None
         :return: tuple containing two arrays. the first holds the evaluated values of the acquisition function at value
                  x; shape = (1,) . the second holds the gradients; shape = (n_hparams,).
         :rtype: tuple
@@ -147,9 +151,12 @@ class AsyTS(AbstractAcquisitionFunction):
 
         :param x: value where acquisition function should be evaluated. shape=(n_hparams, )
         :type x: np.ndarray
-        :param surrogate_model: todo
-        :param y_opt:
-        :param acq_func_kwargs:
+        :param surogate_model: the surrogate model of the bayesian optimizer.
+        :type surogate_model: GaussianProcessRegressor
+        :param y_opt: currently best observed value
+        :type y_opt: float
+        :param acq_func_kwargs: additional arguments for the acquisition function
+        :type acq_func_kwargs: dict|None
         :return: values of the acquisition function at value x. shape = (1,)
         :rtype: np.ndarray
         """

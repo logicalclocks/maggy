@@ -29,7 +29,7 @@ class GP(BaseAsyncBO):
         self,
         async_strategy="impute",
         impute_strategy="cl_min",
-        acq_fun="EI",
+        acq_fun=None,
         acq_fun_kwargs=None,
         acq_optimizer="lbfgs",
         acq_optimizer_kwargs=None,
