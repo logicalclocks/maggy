@@ -125,7 +125,7 @@ class GP(BaseAsyncBO):
         self.async_strategy = async_strategy
 
         # configure acquisition function
-        self.acq_fun = allowed_combinations[self.async_strategy][acq_fun]
+        self.acq_fun = allowed_combinations[self.async_strategy][acq_fun]()
         self.acq_func_kwargs = acq_fun_kwargs
 
         # configure acquisiton function optimizer
@@ -160,6 +160,7 @@ class GP(BaseAsyncBO):
         # estimator that has not been fit on any data.
         self.base_model = None
 
+        # write logs
         self._log(
             "Acquisition Function: {}, Async Strategy: {}".format(
                 self.acq_fun.name(), self.async_strategy
