@@ -24,7 +24,7 @@ from tensorboard.plugins.hparams import summary_v2 as hp
 from tensorboard.plugins.hparams import api_pb2
 from tensorboard.plugins.hparams import summary
 
-__import__("tensorflow").compat.v1.enable_eager_execution()
+# __import__("tensorflow").compat.v1.enable_eager_execution()
 
 _tensorboard_dir = None
 _writer = None
@@ -82,9 +82,11 @@ def _create_hparams_config(searchspace):
 def _write_hparams_config(log_dir, searchspace):
     HPARAMS = _create_hparams_config(searchspace)
     METRICS = [
-        hp.Metric("epoch_acc", group="validation", display_name="accuracy (val.)",),
+        hp.Metric(
+            "epoch_accuracy", group="validation", display_name="accuracy (val.)",
+        ),
         hp.Metric("epoch_loss", group="validation", display_name="loss (val.)",),
-        hp.Metric("epoch_acc", group="train", display_name="accuracy (train)",),
+        hp.Metric("epoch_accuracy", group="train", display_name="accuracy (train)",),
         hp.Metric("epoch_loss", group="train", display_name="loss (train)",),
     ]
 
