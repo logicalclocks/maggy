@@ -134,6 +134,7 @@ class TPE(BaseAsyncBO):
         """
         # split good and bad trials
         good_hparams, bad_hparams = self._split_trials(budget)
+
         # todo check calculation of n_good and n_bad according to BOHB (see Notebook (local))
         n_hparams = len(self.searchspace.keys())
         if n_hparams >= len(good_hparams) or n_hparams >= len(bad_hparams):
@@ -144,7 +145,11 @@ class TPE(BaseAsyncBO):
             )
             return
 
-        self._log("Update Model with budget {}".format(budget))
+        self._log(
+            "Update Model with budget {}. n_good_hparams: {}, n_bad_hparams: {}".format(
+                budget, len(good_hparams), len(bad_hparams)
+            )
+        )
 
         transformed_good_hparams = np.apply_along_axis(
             self.searchspace.transform, 1, good_hparams
@@ -170,7 +175,13 @@ class TPE(BaseAsyncBO):
         self.models[budget] = {"good": good_kde, "bad": bad_kde}
 
     def _split_trials(self, budget=0):
-        """splits trials in good and bad according to tpe algo for observation with given budget
+        """splits trials in good and bad according to tpe algo, for given budget
+
+        We use the logic from the BOHB paper to calculate the best and worst observations.
+        This ensures that both models have enough datapoints and have the least overlap when only a limited
+        number of observations is available.
+
+        for more details see: https://ml.informatik.uni-freiburg.de/papers/18-ICML-BOHB.pdf
 
         :param budget: the budget for which observations shoul be split
         :type budget: int
@@ -180,15 +191,20 @@ class TPE(BaseAsyncBO):
 
         metric_history = self.get_metrics_array(budget=budget)
         metric_idx_ascending = np.argsort(metric_history)
-        n_good = int(np.ceil(self.gamma * len(metric_history)))
-        # ToDo double check calculation of n_good with HpBandSter
-
         hparam_history = self.get_hparams_array(budget=budget)
 
-        good_trails = hparam_history[np.sort(metric_idx_ascending[:n_good])]
-        bad_trials = hparam_history[np.sort(metric_idx_ascending[n_good:])]
+        n_good = max(
+            len(self.searchspace.keys()) + 1, int(self.gamma * metric_history.shape[0])
+        )
+        n_bad = max(
+            len(self.searchspace.keys()) + 1,
+            int((1 - self.gamma) * metric_history.shape[0]),
+        )
 
-        return good_trails, bad_trials
+        good_trials = hparam_history[metric_idx_ascending[:n_good]]
+        bad_trials = hparam_history[metric_idx_ascending[n_good : n_good + n_bad]]
+
+        return good_trials, bad_trials
 
     def _get_statsmodel_vartype(self):
         """Returns *statsmodel* type specifier string consisting of the types for each hparam of the searchspace , so for example 'ccuo'.
