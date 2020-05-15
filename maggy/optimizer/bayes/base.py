@@ -1,4 +1,5 @@
 import traceback
+import time
 from copy import deepcopy
 
 import numpy as np
@@ -80,6 +81,9 @@ class BaseAsyncBO(AbstractOptimizer):
         models (dict): The surrogate models for different budgets are saved in the `models` dict with the budgets as key.
                        In case of a single fidelity optimization without a pruner. The only model has the key `0`.
         warm_up_configs(list[dict]): list of hparam configs used for warming up
+        sampling_time_start (float): helper variable to calculate time needed for calculating next suggestion, i.e
+                                       when sampling from model (`sample_type`=="model"). Calulating the time happens
+                                       in `create_trial()`
 
         """
         super().__init__()
@@ -128,8 +132,10 @@ class BaseAsyncBO(AbstractOptimizer):
             hdfs.dump("", self.log_file)
         self.fd = hdfs.open_file(self.log_file, flags="w")
         self._log("Initialized Logger")
-
         self._log("Initilized Optimizer {}: \n {}".format(self.name(), self.__dict__))
+
+        # helper variable to calculate time needed for calculating next suggestion
+        self.sampling_time_start = 0.0
 
     def initialize(self):
         self.warmup_routine()
@@ -137,6 +143,7 @@ class BaseAsyncBO(AbstractOptimizer):
 
     def get_suggestion(self, trial=None):
         try:
+            self.sampling_time_start = time.time()
             if trial:
                 self._log(
                     "Last finished Trial: {} with params {}".format(
@@ -402,8 +409,16 @@ class BaseAsyncBO(AbstractOptimizer):
                 "expected `model_budget` because sample_type==`model`, got None"
             )
 
+        # calculate time needed for sampling
+        sampling_time = time.time() - self.sampling_time_start
+        self.sampling_time_start = 0.0
+
         # init trial info dict
-        trial_info_dict = {"run_budget": run_budget, "sample_type": sample_type}
+        trial_info_dict = {
+            "run_budget": run_budget,
+            "sample_type": sample_type,
+            "sampling_time": sampling_time,
+        }
         if model_budget is not None:
             trial_info_dict["model_budget"] = model_budget
 
