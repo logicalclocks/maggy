@@ -18,6 +18,7 @@ from hops import hdfs
 # TODO implement resuming trials
 # TODO when intermediate trial metric per budget is implemented, update models of lower budgets with intermediate
 #  results of trials with larger budget
+# TODO check that hparams have valid type,
 
 
 class BaseAsyncBO(AbstractOptimizer):
@@ -94,6 +95,15 @@ class BaseAsyncBO(AbstractOptimizer):
         # self.direction
         # self.num_trials
         # self.searchspace
+
+        # validate hparam types
+        for hparam in self.searchspace.items():
+            if hparam["type"] == self.searchspace.DISCRETE:
+                raise ValueError(
+                    "This version of Bayesian Optimization does not support DISCRETE Hyperparameters yet, please encode {} as INTEGER".format(
+                        hparam["name"]
+                    )
+                )
 
         # configure pruner
         self.pruner = None

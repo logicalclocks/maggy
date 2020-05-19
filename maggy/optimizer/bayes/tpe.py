@@ -66,7 +66,10 @@ class TPE(BaseAsyncBO):
                 obs, kde_good.bw, self.searchspace.items()
             ):
 
-                if hparam_spec["type"] in ["DOUBLE", "INTEGER"]:
+                if hparam_spec["type"] in [
+                    self.searchspace.DOUBLE,
+                    self.searchspace.INTEGER,
+                ]:
                     # sample for cont. hparams
                     # clip by min bw and multiply by factor to favor more exploration
                     bw = max(bw, self.min_bw) * self.bw_factor
