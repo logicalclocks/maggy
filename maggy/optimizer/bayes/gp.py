@@ -97,17 +97,6 @@ class GP(BaseAsyncBO):
 
         # validations
 
-        # at least one hparam needs to be continuous
-        cont = False
-        for hparam in self.searchspace.items():
-            if hparam["type"] in [self.searchspace.DOUBLE, self.searchspace.INTEGER]:
-                cont = True
-                break
-        if not cont:
-            raise ValueError(
-                "In this version of Gaussian Process Bayesian Optimization at least one hparam has to be continuous (DOUBLE or INTEGER)"
-            )
-
         # allowed combinations of async strategies and acquisition functions
         allowed_combinations = {
             "impute": {

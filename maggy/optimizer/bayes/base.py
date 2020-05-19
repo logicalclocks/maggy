@@ -96,15 +96,6 @@ class BaseAsyncBO(AbstractOptimizer):
         # self.num_trials
         # self.searchspace
 
-        # validate hparam types
-        for hparam in self.searchspace.items():
-            if hparam["type"] == self.searchspace.DISCRETE:
-                raise ValueError(
-                    "This version of Bayesian Optimization does not support DISCRETE Hyperparameters yet, please encode {} as INTEGER".format(
-                        hparam["name"]
-                    )
-                )
-
         # configure pruner
         self.pruner = None
         if pruner:
@@ -148,6 +139,23 @@ class BaseAsyncBO(AbstractOptimizer):
         self.sampling_time_start = 0.0
 
     def initialize(self):
+        # validate hparam types
+        # at least one hparam needs to be continuous & no DISCRETE hparams
+        cont = False
+        for hparam in self.searchspace.items():
+            if hparam["type"] == self.searchspace.DISCRETE:
+                raise ValueError(
+                    "This version of Bayesian Optimization does not support DISCRETE Hyperparameters yet, please encode {} as INTEGER".format(
+                        hparam["name"]
+                    )
+                )
+            if hparam["type"] in [self.searchspace.DOUBLE, self.searchspace.INTEGER]:
+                cont = True
+        if not cont:
+            raise ValueError(
+                "In this version of Bayesian Optimization at least one hparam has to be continuous (DOUBLE or INTEGER)"
+            )
+
         self.warmup_routine()
         self.init_model()
 
