@@ -128,7 +128,7 @@ def _prepare_func(
 
                     sig = inspect.signature(map_fun)
                     if sig.parameters.get("reporter", None):
-                        retval = map_fun(**parameters, reporter=reporter)
+                        retval = map_fun(reporter=reporter, **parameters)
                     else:
                         retval = map_fun(**parameters)
 
