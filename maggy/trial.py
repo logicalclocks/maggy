@@ -63,6 +63,8 @@ class Trial(object):
         self.early_stop = False
         self.final_metric = None
         self.metric_history = []
+        self.step_history = []
+        self.metric_dict = {}
         self.start = None
         self.duration = None
         self.lock = threading.RLock()
@@ -77,10 +79,15 @@ class Trial(object):
         with self.lock:
             self.early_stop = True
 
-    def append_metric(self, metric):
+    def append_metric(self, metric_data):
         """Append a metric from the heartbeats to the history."""
         with self.lock:
-            self.metric_history.append(metric)
+            # from python 3.7 dicts are insertion ordered,
+            # so two of these data structures can be removed
+            if metric_data["step"] not in self.metric_dict:
+                self.metric_dict[metric_data["step"]] = metric_data["value"]
+                self.metric_history.append(metric_data["value"])
+                self.step_history.append(metric_data["step"])
 
     @classmethod
     def _generate_id(cls, params):

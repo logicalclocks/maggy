@@ -525,10 +525,11 @@ class Client(MessageSocket):
 
             while not self.done:
 
-                metric, logs = report.get_data()
+                metric, step, logs = report.get_data()
+                data = {"value": metric, "step": step}
 
                 resp = self._request(
-                    self.hb_sock, "METRIC", metric, report.get_trial_id(), logs
+                    self.hb_sock, "METRIC", data, report.get_trial_id(), logs
                 )
                 _ = self._handle_message(resp, report)
 
