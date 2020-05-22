@@ -586,7 +586,7 @@ class Client(MessageSocket):
         # make sure heartbeat thread can't send between sending final metric
         # and resetting the reporter
         with reporter.lock:
-            _, logs = reporter.get_data()
+            _, _, logs = reporter.get_data()
             resp = self._request(
                 self.sock, "FINAL", metric, reporter.get_trial_id(), logs
             )
