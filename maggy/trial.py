@@ -84,7 +84,10 @@ class Trial(object):
         with self.lock:
             # from python 3.7 dicts are insertion ordered,
             # so two of these data structures can be removed
-            if metric_data["step"] not in self.metric_dict:
+            if (
+                metric_data["step"] not in self.metric_dict
+                and metric_data["value"] is not None
+            ):
                 self.metric_dict[metric_data["step"]] = metric_data["value"]
                 self.metric_history.append(metric_data["value"])
                 self.step_history.append(metric_data["step"])
