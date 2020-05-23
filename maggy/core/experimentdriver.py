@@ -249,6 +249,9 @@ class ExperimentDriver(object):
         self.log_dir = kwargs.get("log_dir")
         self.exception = None
 
+        self.total_time = kwargs.get("total_time")
+        self.log_interval = kwargs.get("log_interval")
+
         # Open File desc for HDFS to log
         if not hopshdfs.exists(self.log_file):
             hopshdfs.dump("", self.log_file)
@@ -373,6 +376,14 @@ class ExperimentDriver(object):
         def _target_function(self):
 
             try:
+                time_start = time.time()
+                time_last_best = time.time()
+                header = "time;best_id;best_val;worst_id;worst_val;avg;num_trials_fin;early_stopped;fin_id;fin_metric;fin_time\n"
+                hopshdfs.dump(header, self.log_dir + "/experiment")
+
+                header = "time;best_id;best_val;worst_id;worst_val;avg;num_trials_fin;early_stopped\n"
+                hopshdfs.dump(header, self.log_dir + "/experiment_time")
+
                 time_earlystop_check = (
                     time.time()
                 )  # only used by earlystop-supporting experiments
@@ -384,6 +395,141 @@ class ExperimentDriver(object):
                         msg = self._message_q.get_nowait()
                     except queue.Empty:
                         msg = {"type": None}
+
+                    if (time.time() - time_start) >= (self.total_time * 60):
+
+                        fd_experiment = hopshdfs.open_file(
+                            self.log_dir + "/experiment_time", flags="a"
+                        )
+                        # "time;best_id;best_val;worst_id;worst_val;avg;num_trials_fin;early_stopped;fin_id;fin_metric;fin_time\n"
+                        if self.result.get("best_id", None):
+                            line = (
+                                str(time.time() - time_start)
+                                + ";"
+                                + self.result["best_id"]
+                                + ";"
+                                + str(self.result["best_val"])
+                                + ";"
+                                + self.result["worst_id"]
+                                + ";"
+                                + str(self.result["worst_val"])
+                                + ";"
+                                + str(self.result["avg"])
+                                + ";"
+                                + str(self.result["num_trials"])
+                                + ";"
+                                + str(self.result["early_stopped"])
+                            )
+                        else:
+                            line = (
+                                str(time.time() - time_start)
+                                + ";;"
+                                + str(1)
+                                + ";;"
+                                + str(1)
+                                + ";"
+                                + str(1)
+                                + ";"
+                                + str(self.result["num_trials"])
+                                + ";"
+                                + str(self.result["early_stopped"])
+                            )
+
+                        fd_experiment.write((line + "\n").encode())
+                        fd_experiment.flush()
+                        fd_experiment.close()
+
+                        _ = self.optimizer.finalize_experiment(
+                            self._final_store, self.app_dir
+                        )
+
+                        self.job_end = time.time()
+
+                        self.duration = experiment_utils._time_diff(
+                            self.job_start, self.job_end
+                        )
+
+                        results = (
+                            "\n------ "
+                            + str(self.optimizer.__class__.__name__)
+                            + " results ------ direction("
+                            + self.direction
+                            + ") \n"
+                            "NUMBER TRIALS evaluated -- "
+                            + str(self.result["num_trials"])
+                            + "\n"
+                            "BEST combination "
+                            + json.dumps(self.result["best_hp"])
+                            + " -- metric "
+                            + str(self.result["best_val"])
+                            + "\n"
+                            "WORST combination "
+                            + json.dumps(self.result["worst_hp"])
+                            + " -- metric "
+                            + str(self.result["worst_val"])
+                            + "\n"
+                            "AVERAGE metric -- " + str(self.result["avg"]) + "\n"
+                            "EARLY STOPPED Trials -- "
+                            + str(self.result["early_stopped"])
+                            + "\n"
+                            "Total job time " + self.duration + "\n"
+                        )
+                        print(results)
+
+                        self._log(results)
+
+                        hopshdfs.dump(
+                            json.dumps(self.result, default=util.json_default_numpy),
+                            self.log_dir + "/result.json",
+                        )
+                        sc = hopsutil._find_spark().sparkContext
+                        hopshdfs.dump(self.json(sc), self.log_dir + "/maggy.json")
+
+                        raise Exception("Time is up")
+
+                    if (time.time() - time_last_best) >= self.log_interval:
+                        time_last_best = datetime.now()
+
+                        fd_experiment = hopshdfs.open_file(
+                            self.log_dir + "/experiment_time", flags="a"
+                        )
+                        # "time;best_id;best_val;worst_id;worst_val;avg;num_trials_fin;early_stopped;fin_id;fin_metric;fin_time\n"
+                        if self.result.get("best_id", None):
+                            line = (
+                                str(time.time() - time_start)
+                                + ";"
+                                + self.result["best_id"]
+                                + ";"
+                                + str(self.result["best_val"])
+                                + ";"
+                                + self.result["worst_id"]
+                                + ";"
+                                + str(self.result["worst_val"])
+                                + ";"
+                                + str(self.result["avg"])
+                                + ";"
+                                + str(self.result["num_trials"])
+                                + ";"
+                                + str(self.result["early_stopped"])
+                            )
+                        else:
+                            line = (
+                                str(time.time() - time_start)
+                                + ";;"
+                                + str(1)
+                                + ";;"
+                                + str(1)
+                                + ";"
+                                + str(1)
+                                + ";"
+                                + str(self.result["num_trials"])
+                                + ";"
+                                + str(self.result["early_stopped"])
+                            )
+
+                        fd_experiment.write((line + "\n").encode())
+                        fd_experiment.flush()
+                        fd_experiment.close()
 
                     if self.earlystop_check != NoStoppingRule.earlystop_check:
                         if (time.time() - time_earlystop_check) >= self.es_interval:
