@@ -66,6 +66,48 @@ class MetricTypeError(TypeError):
         super().__init__(self.message)
 
 
+class BroadcastMetricTypeError(TypeError):
+    """User defined training function broadcasts metric of wrong type."""
+
+    def __init__(self, return_type):
+        self.message = (
+            "The optimization metric broadcast by the training function with "
+            "the reporter is of type: {}. The optimization metric can only "
+            "be numeric".format(type(return_type).__name__)
+        )
+        super().__init__(self.message)
+
+
+class BroadcastStepTypeError(TypeError):
+    """User defined training function broadcasts metric with a non-numeric step
+    type.
+    """
+
+    def __init__(self, value, step):
+        self.message = (
+            "The optimization metric `{}` was broadcast by the training "
+            " function in step {}, which is of type {}. The step value can "
+            "only be numeric.".format(value, step, type(value).__name__)
+        )
+        super().__init__(self.message)
+
+
+class BroadcastStepValueError(ValueError):
+    """User defined training function broadcasts metric with a
+    non-monotonically increasing step attribute.
+    """
+
+    def __init__(self, value, step, prev_step):
+        self.message = (
+            "The optimization metric `{}` was broadcast by the training "
+            " function in step {}, while the previous step was {}. The steps "
+            "should be a monotonically increasing attribute.".format(
+                value, step, prev_step
+            )
+        )
+        super().__init__(self.message)
+
+
 class BadArgumentsError(Exception):
     """Raised when a function or method has been called with incompatible arguments.
     This can be used by developers to prevent bad usage of their functions

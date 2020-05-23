@@ -525,10 +525,11 @@ class Client(MessageSocket):
 
             while not self.done:
 
-                metric, logs = report.get_data()
+                metric, step, logs = report.get_data()
+                data = {"value": metric, "step": step}
 
                 resp = self._request(
-                    self.hb_sock, "METRIC", metric, report.get_trial_id(), logs
+                    self.hb_sock, "METRIC", data, report.get_trial_id(), logs
                 )
                 _ = self._handle_message(resp, report)
 
@@ -585,7 +586,7 @@ class Client(MessageSocket):
         # make sure heartbeat thread can't send between sending final metric
         # and resetting the reporter
         with reporter.lock:
-            _, logs = reporter.get_data()
+            _, _, logs = reporter.get_data()
             resp = self._request(
                 self.sock, "FINAL", metric, reporter.get_trial_id(), logs
             )

@@ -23,6 +23,7 @@ from datetime import datetime
 
 from hops import hdfs as hopshdfs
 
+from maggy import constants
 from maggy.core import exceptions
 
 
@@ -33,6 +34,7 @@ class Reporter(object):
 
     def __init__(self, log_file, partition_id, task_attempt, print_executor):
         self.metric = None
+        self.step = -1
         self.lock = threading.RLock()
         self.stop = False
         self.trial_id = None
@@ -71,16 +73,29 @@ class Reporter(object):
             self.fd.close()
 
     # report
-    def broadcast(self, metric):
+    def broadcast(self, metric, step=None):
         """Broadcast a metric to the experiment driver with the heartbeat.
 
         :param metric: Metric to be broadcasted
         :type metric: int, float
+        :param step: The iteration step which produced the metric, e.g. batch or
+            epoch number, or any other monotonically increasing progress attribute
+        :type step: int
         :raises exception: EarlyStopException if told by the experiment driver
         """
         with self.lock:
             # if stop == True -> raise exception to break training function
-            self.metric = metric
+            if step is None:
+                step = self.step + 1
+            if not isinstance(metric, constants.USER_FCT.NUMERIC_TYPES):
+                raise exceptions.BroadcastMetricTypeError(metric)
+            elif not isinstance(step, constants.USER_FCT.NUMERIC_TYPES):
+                raise exceptions.BroadcastStepTypeError(metric, step)
+            elif step < self.step:
+                raise exceptions.BroadcastStepValueError(metric, step, self.step)
+            else:
+                self.step = step
+                self.metric = metric
             if self.stop:
                 raise exceptions.EarlyStopException(metric)
 
@@ -120,7 +135,7 @@ class Reporter(object):
         with self.lock:
             log_to_send = self.logs
             self.logs = ""
-            return self.metric, log_to_send
+            return self.metric, self.step, log_to_send
 
     def reset(self):
         """
@@ -129,6 +144,7 @@ class Reporter(object):
         """
         with self.lock:
             self.metric = None
+            self.step = -1
             self.stop = False
             self.trial_id = None
             self.fd.flush()
