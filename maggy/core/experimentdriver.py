@@ -488,7 +488,7 @@ class ExperimentDriver(object):
                         raise Exception("Time is up")
 
                     if (time.time() - time_last_best) >= self.log_interval:
-                        time_last_best = datetime.now()
+                        time_last_best = time.time()
 
                         fd_experiment = hopshdfs.open_file(
                             self.log_dir + "/experiment_time", flags="a"
