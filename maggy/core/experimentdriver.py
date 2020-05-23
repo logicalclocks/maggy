@@ -607,6 +607,38 @@ class ExperimentDriver(object):
                             self.log_dir + "/" + trial.trial_id + "/trial.json",
                         )
 
+                        fd_experiment = hopshdfs.open_file(
+                            self.log_dir + "/experiment", flags="a"
+                        )
+                        # "time;best_id;best_val;worst_id;worst_val;avg;num_trials_fin;early_stopped;fin_id;fin_metric;fin_time\n"
+                        line = (
+                            str(time.time() - time_start)
+                            + ";"
+                            + self.result["best_id"]
+                            + ";"
+                            + str(self.result["best_val"])
+                            + ";"
+                            + self.result["worst_id"]
+                            + ";"
+                            + str(self.result["worst_val"])
+                            + ";"
+                            + str(self.result["avg"])
+                            + ";"
+                            + str(self.result["num_trials"])
+                            + ";"
+                            + str(self.result["early_stopped"])
+                            + ";"
+                            + trial.trial_id
+                            + ";"
+                            + str(trial.final_metric)
+                            + ";"
+                            + str(time.time() - trial.start)
+                        )
+
+                        fd_experiment.write((line + "\n").encode())
+                        fd_experiment.flush()
+                        fd_experiment.close()
+
                         # assign new trial
                         if self.experiment_type == "optimization":
                             trial = self.optimizer.get_suggestion(trial)
