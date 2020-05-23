@@ -56,6 +56,8 @@ def lagom(
     es_interval=300,
     es_min=10,
     description="",
+    total_time=180,
+    log_interval=180,
 ):
     """Launches a maggy experiment, which depending on `experiment_type` can
     either be a hyperparameter optimization or an ablation study experiment.
@@ -162,6 +164,8 @@ def lagom(
                 es_min=es_min,
                 description=description,
                 log_dir=experiment_utils._get_logdir(app_id, run_id),
+                total_time=total_time,
+                log_interval=log_interval,
             )
 
             exp_function = exp_driver.optimizer.name()
