@@ -38,7 +38,9 @@ class AbstractOptimizer(ABC):
         Return a `Trial` to be assigned to an executor, or `None` if there are
         no trials remaining in the experiment.
 
-        :rtype: `Trial` or `None`
+        :param trial: last finished trial by an executor
+
+        :rtype: Trial or None
         """
         pass
 
