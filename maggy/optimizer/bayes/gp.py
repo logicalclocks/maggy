@@ -218,7 +218,7 @@ class GP(BaseAsyncBO):
         # minimization starts from `n_restarts_optimizer` different
         # points and the best minimum is
         elif self.acq_optimizer == "lbfgs":
-            # in asynchronous ts the acquisition function is to returning the gradient, hence we need to approximate
+            # in asynchronous ts the acquisition function is not returning the gradient, hence we need to approximate
             approx_grad = True if self.async_strategy == "asy_ts" else False
 
             x0 = X[np.argsort(values)[: self.n_restarts_optimizer]]
