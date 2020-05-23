@@ -17,6 +17,8 @@
 import json
 import random
 
+import numpy as np
+
 
 class Searchspace(object):
     """Create an instance of `Searchspace` from keyword arguments.
@@ -260,3 +262,222 @@ class Searchspace(object):
 
     def json(self):
         return json.dumps(self.to_dict(), sort_keys=True)
+
+    def transform(self, hparams, normalize_categorical=False):
+        """Transforms array of hypeparameters for one trial.
+
+        +--------------+-----------------------------------------------------+
+        | Hparam Type  | Transformation                                      |
+        +==============+=====================================================+
+        | DOUBLE       | Max-Min Normalization                               |
+        +--------------+-----------------------------------------------------+
+        | INTEGER      | Max-Min Normalization                               |
+        +--------------+-----------------------------------------------------+
+        | CATEGORICAL  | Encoding: index in list + opt. Max-Min Normalization|
+        +--------------+-----------------------------------------------------+
+
+        :param hparams: hparams in original representation for one trial
+        :type hparams: 1D np.ndarray
+        :param normalize_categorical: If True, the encoded categorical hparam is also max-min normalized between 0 and 1
+        `inverse_transform()` must use the same value for this parameter
+        :type normalize_categorical: bool
+        :return: transformed hparams
+        :rtype: np.ndarray[np.float]
+        """
+        transformed_hparams = []
+        # loop through hparams
+        for hparam, hparam_spec in zip(hparams, self.items()):
+            # todo implement transformation for DISCRETE type
+            if hparam_spec["type"] == "DOUBLE":
+                normalized_hparam = Searchspace._normalize_scalar(
+                    hparam_spec["values"], hparam
+                )
+                transformed_hparams.append(normalized_hparam)
+            elif hparam_spec["type"] == "INTEGER":
+                normalized_hparam = Searchspace._normalize_integer(
+                    hparam_spec["values"], hparam
+                )
+                transformed_hparams.append(normalized_hparam)
+            elif hparam_spec["type"] == "CATEGORICAL":
+                encoded_hparam = Searchspace._encode_categorical(
+                    hparam_spec["values"], hparam
+                )
+                if normalize_categorical:
+                    encoded_hparam = Searchspace._normalize_integer(
+                        [0, len(hparam_spec["values"]) - 1], encoded_hparam
+                    )
+                transformed_hparams.append(encoded_hparam)
+            else:
+                raise NotImplementedError("Not Implemented other types yet")
+
+        return transformed_hparams
+
+    def inverse_transform(self, transformed_hparams, normalize_categorical=False):
+        """Returns array of hparams in same representation as specified when instantiated
+
+        :param transformed_hparams: hparams in transformed representation for one trial
+        :type transformed_hparams: 1D np.ndarray
+        :param normalize_categorical: If True, the encoded categorical hparam was also max-min normalized between 0 and 1
+        `transform()` must use the same value for this parameter
+        :type normalize_categorical: bool
+        :return: transformed hparams
+        :rtype: np.ndarray
+        """
+        hparams = []
+        for hparam, hparam_spec in zip(transformed_hparams, self.items()):
+            if hparam_spec["type"] == "DOUBLE":
+                value = Searchspace._inverse_normalize_scalar(
+                    hparam_spec["values"], hparam
+                )
+                hparams.append(value)
+            elif hparam_spec["type"] == "INTEGER":
+                value = Searchspace._inverse_normalize_integer(
+                    hparam_spec["values"], hparam
+                )
+                hparams.append(value)
+            elif hparam_spec["type"] == "CATEGORICAL":
+                if normalize_categorical:
+                    value = Searchspace._inverse_normalize_integer(
+                        [0, len(hparam_spec["values"]) - 1], hparam
+                    )
+                    value = Searchspace._decode_categorical(
+                        hparam_spec["values"], value
+                    )
+                else:
+                    value = Searchspace._decode_categorical(
+                        hparam_spec["values"], hparam
+                    )
+                hparams.append(value)
+            else:
+                raise NotImplementedError("Not Implemented other types yet")
+
+        return hparams
+
+    @staticmethod
+    def _encode_categorical(choices, value):
+        """Encodes category to integer. The encoding is the list index of the category
+
+        :param choices: possible values of the categorical hparam
+        :type choices: list
+        :param value: category to encode
+        :type value: str
+        :return: encoded category
+        :rtype: int
+        """
+        return choices.index(value)
+
+    @staticmethod
+    def _decode_categorical(choices, encoded_value):
+        """Decodes integer to corresponding category value
+
+        :param choices: possible values of the categorical hparam
+        :type choices: list
+        :param encoded_value: encoding of category
+        :type encoded_value: int
+        :return: category value
+        :rtype: str
+        """
+        encoded_value = int(
+            encoded_value
+        )  # it is possible that value gets casted to np.float by numpy
+        return choices[encoded_value]
+
+    @staticmethod
+    def _normalize_scalar(bounds, scalar):
+        """Returns max-min normalized scalar
+
+        :param bounds: list containing lower and upper bound, e.g.: [-3,3]
+        :type bounds: list
+        :param scalar: scalar value to be normalized
+        :type scalar: float
+        :return: normalized scalar
+        :rtype: float
+        """
+        # todo check if bounds is valid and scalar is inside bounds
+        scalar = float(scalar)
+        scalar = (scalar - bounds[0]) / (bounds[1] - bounds[0])
+        scalar = np.minimum(1.0, scalar)
+        scalar = np.maximum(0.0, scalar)
+        return scalar
+
+    @staticmethod
+    def _inverse_normalize_scalar(bounds, normalized_scalar):
+        """Returns inverse normalized scalar
+
+        :param bounds: list containing lower and upper bound, e.g.: [-3,3]
+        :type bounds: list
+        :param normalized_scalar: normalized scalar value
+        :type normalized_scalar: float
+        :return: original scalar
+        :rtype: float
+        """
+
+        # todo check if bounds is valid and scalar is inside bounds
+        normalized_scalar = float(normalized_scalar)
+        normalized_scalar = normalized_scalar * (bounds[1] - bounds[0]) + bounds[0]
+        return normalized_scalar
+
+    @staticmethod
+    def _normalize_integer(bounds, integer):
+        """
+        :param bounds: list containing lower and upper bound, e.g.: [-3,3]
+        :type bounds: list
+        :param integer: value to be normalized
+        :type normalized_scalar: int
+        :return: normalized value between 0 and 1
+        :rtype: float
+        """
+
+        integer = int(integer)
+        return Searchspace._normalize_scalar(bounds, integer)
+
+    @staticmethod
+    def _inverse_normalize_integer(bounds, scalar):
+        """Returns inverse normalized scalar
+
+        :param bounds: list containing lower and upper bound, e.g.: [-3,3]
+        :type bounds: list
+        :param normalized_scalar: normalized scalar value
+        :type normalized_scalar: float
+        :return: original integer
+        :rtype: int
+        """
+
+        x = Searchspace._inverse_normalize_scalar(bounds, scalar)
+        return int(np.round(x))
+
+    @staticmethod
+    def dict_to_list(hparams):
+        """Transforms dict of hparams to list representation ( for one hparam config )
+
+        example:
+            {'x': -3.0, 'y': 3.0, 'z': 'green'} to [-3.0, 3.0, 'green']
+
+        :param hparams: hparams in dict representation
+        :type hparams: dict
+        :return: hparams in list representation
+        :rtype: list
+        """
+        return list(hparams.values())
+
+    def list_to_dict(self, hparams):
+        """Transforms list of hparams to dict representation ( for one hparam config )
+
+        example:
+            [-3.0, 3.0, 'green'] to {'x': -3.0, 'y': 3.0, 'z': 'green'}
+
+        :param hparams: hparams in list representation
+        :type hparams: list
+        :return: hparams in dict representation
+        :rtype: dict
+        """
+        hparam_names = self.keys()
+        if len(hparam_names) != len(hparams):
+            raise ValueError(
+                "hparam_names and hparams have to have same length (and order!)"
+            )
+
+        hparam_dict = {
+            hparam_name: hparam for hparam_name, hparam in zip(hparam_names, hparams)
+        }
+        return hparam_dict

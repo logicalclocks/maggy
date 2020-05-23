@@ -36,12 +36,14 @@ class Trial(object):
     ERROR = "ERROR"
     FINALIZED = "FINALIZED"
 
-    def __init__(self, params, trial_type="optimization"):
+    def __init__(self, params, trial_type="optimization", info_dict=None):
         """Create a new trial object from a hyperparameter combination
         ``params``.
 
         :param params: A dictionary of Hyperparameters as key value pairs.
         :type params: dict
+        :param info_dict: dict containing additional information about the trial # todo explain further
+        :type info_dict: dict
         """
         # XXX before merge, we should remove the default value for trial_type
         # and make sure everywhere Trial() is called (e.g. in all optimizers)
@@ -68,6 +70,10 @@ class Trial(object):
         self.start = None
         self.duration = None
         self.lock = threading.RLock()
+        if info_dict is None:
+            self.info_dict = {}
+        else:
+            self.info_dict = info_dict
 
     def get_early_stop(self):
         """Return the early stopping flag of the trial."""

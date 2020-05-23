@@ -260,7 +260,8 @@ def lagom(
 
         util._log("Finished Experiment")
 
-        return result
+        # todo remove exp_driver from return statement, its only for debugging purposes
+        return result, exp_driver
 
     except:  # noqa: E722
         _exception_handler(
@@ -273,7 +274,7 @@ def lagom(
     finally:
         # grace period to send last logs to sparkmagic
         # sparkmagic hb poll intervall is 5 seconds, therefore wait 6 seconds
-        time.sleep(6)
+        time.sleep(16)
         # cleanup spark jobs
         if running and exp_driver is not None:
             exp_driver.stop()
