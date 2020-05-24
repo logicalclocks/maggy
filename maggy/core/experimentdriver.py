@@ -25,6 +25,9 @@ import os
 import secrets
 import time
 from datetime import datetime
+import h5py
+from copy import deepcopy
+import numpy as np
 
 from hops import constants as hopsconstants
 from hops import hdfs as hopshdfs
@@ -379,9 +382,65 @@ class ExperimentDriver(object):
         def _target_function(self):
 
             try:
+                # tabular benchmark stuff start
+                # load tabular benchmark data
+                dataset = "fcnet_protein_structure_data.hdf5"
+                local_dataset_path = os.path.join(os.getcwd(), dataset)
+                if not os.path.exists(local_dataset_path):
+                    hdfs_path = hopshdfs._expand_path(
+                        hopshdfs.project_path()
+                        + "/Resources/fcnet_tabular_benchmarks/{}".format(dataset)
+                    )
+                    local_dataset_path = hopshdfs.copy_to_local(
+                        hdfs_path, overwrite=False
+                    )
+                tabular_data = h5py.File(local_dataset_path, "r")
+
+                # original hpobench config space
+                original_searchspace = {
+                    "n_units_1": [16, 32, 64, 128, 256, 512],
+                    "n_units_2": [16, 32, 64, 128, 256, 512],
+                    "dropout_1": [0.0, 0.3, 0.6],
+                    "dropout_2": [0.0, 0.3, 0.6],
+                    "activation_fn_1": ["tanh", "relu"],
+                    "activation_fn_2": ["tanh", "relu"],
+                    "init_lr": [5 * 1e-4, 1e-3, 5 * 1e-3, 1e-2, 5 * 1e-2, 1e-1],
+                    "lr_schedule": ["cosine", "const"],
+                    "batch_size": [8, 16, 32, 64],
+                }
+
+                def transform_config(
+                    maggy_config, original_searchspace=original_searchspace
+                ):
+                    """transforms maggy config to original config with ordinal hparams"""
+                    original_config = deepcopy(maggy_config)
+
+                    try:
+                        del original_config["budget"]
+                    except KeyError:
+                        pass
+
+                    categorical_hparams = [
+                        "activation_fn_1",
+                        "activation_fn_2",
+                        "lr_schedule",
+                    ]
+                    for hparam, value in original_config.items():
+                        if hparam in categorical_hparams:
+                            continue
+
+                        original_config[hparam] = original_searchspace[hparam][value]
+
+                    return original_config
+
+                sleep_per_epoch = 0.06  # has to be the same as in user defined map fun
+                real_time_add = 0.0  # time that needs to be added to trial time
+
+                # tabular benchmark stuff end
+
                 time_start = time.time()
                 time_last_best = time.time()
-                header = "time;best_id;best_val;worst_id;worst_val;avg;num_trials_fin;early_stopped;fin_id;fin_metric;fin_time\n"
+                header = "time;best_id;best_val;worst_id;worst_val;avg;num_trials_fin;early_stopped;fin_id;fin_metric;fin_time;num_epochs\n"
                 hopshdfs.dump(header, self.log_dir + "/experiment")
 
                 header = "time;best_id;best_val;worst_id;worst_val;avg;num_trials_fin;early_stopped\n"
@@ -580,6 +639,7 @@ class ExperimentDriver(object):
                     elif msg["type"] == "FINAL":
                         # set status
                         # get trial only once
+
                         trial = self.get_trial(msg["trial_id"])
 
                         logs = msg.get("logs", None)
@@ -614,9 +674,18 @@ class ExperimentDriver(object):
                         fd_experiment = hopshdfs.open_file(
                             self.log_dir + "/experiment", flags="a"
                         )
-                        # "time;best_id;best_val;worst_id;worst_val;avg;num_trials_fin;early_stopped;fin_id;fin_metric;fin_time\n"
+                        # for tabular benchmark reporting
+                        num_epochs = len(trial.metric_history)
+                        hparams = deepcopy(trial.params)
+                        original_hparams = transform_config(hparams)
+                        time_per_epoch = (
+                            np.mean(tabular_data[original_hparams]["runtime"]) / 100
+                        )
+                        real_time_add += (time_per_epoch - sleep_per_epoch) * num_epochs
+
+                        # "time;best_id;best_val;worst_id;worst_val;avg;num_trials_fin;early_stopped;fin_id;fin_metric;fin_time;num_epochs\n"
                         line = (
-                            str(time.time() - time_start)
+                            str(time.time() - time_start + real_time_add)
                             + ";"
                             + self.result["best_id"]
                             + ";"
@@ -637,6 +706,8 @@ class ExperimentDriver(object):
                             + str(trial.final_metric)
                             + ";"
                             + str(time.time() - trial.start)
+                            + ";"
+                            + str(num_epochs)
                         )
 
                         fd_experiment.write((line + "\n").encode())
@@ -798,6 +869,7 @@ class ExperimentDriver(object):
         metric = trial.final_metric
         param_string = trial.params
         trial_id = trial.trial_id
+        num_epochs = len(trial.metric_history)
 
         if self.experiment_type == "optimization":
             # First finalized trial
@@ -813,6 +885,8 @@ class ExperimentDriver(object):
                     "metric_list": [metric],
                     "num_trials": 1,
                     "early_stopped": 0,
+                    "num_epochs": num_epochs,
+                    "trial_id": trial_id,
                 }
 
                 if trial.early_stop:
