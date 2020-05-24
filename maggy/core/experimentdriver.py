@@ -434,13 +434,15 @@ class ExperimentDriver(object):
                     return original_config
 
                 sleep_per_epoch = 0.06  # has to be the same as in user defined map fun
-                real_time_add = 0.0  # time that needs to be added to trial time
+                time_add_per_partition = (
+                    {}
+                )  # time that needs to be added to trial time per executor
 
                 # tabular benchmark stuff end
 
                 time_start = time.time()
                 time_last_best = time.time()
-                header = "time;best_id;best_val;worst_id;worst_val;avg;num_trials_fin;early_stopped;fin_id;fin_metric;fin_time;num_epochs\n"
+                header = "time;sim_time;best_id;best_val;worst_id;worst_val;avg;num_trials_fin;early_stopped;fin_id;fin_metric;fin_time;num_epochs\n"
                 hopshdfs.dump(header, self.log_dir + "/experiment")
 
                 header = "time;best_id;best_val;worst_id;worst_val;avg;num_trials_fin;early_stopped\n"
@@ -640,7 +642,6 @@ class ExperimentDriver(object):
                         # set status
                         # get trial only once
                         trial = self.get_trial(msg["trial_id"])
-                        print("{}".format(msg))
                         logs = msg.get("logs", None)
                         if logs is not None:
                             with self.log_lock:
@@ -673,17 +674,41 @@ class ExperimentDriver(object):
                         fd_experiment = hopshdfs.open_file(
                             self.log_dir + "/experiment", flags="a"
                         )
-                        # for tabular benchmark reporting
-                        num_epochs = len(trial.metric_history)
+                        # tabular benchmark stuff start
+
+                        # load data
                         hparams = deepcopy(trial.params)
                         original_hparams = transform_config(hparams)
                         k = json.dumps(original_hparams, sort_keys=True)
-                        time_per_epoch = np.mean(tabular_data[k]["runtime"]) / 100
-                        real_time_add += (time_per_epoch - sleep_per_epoch) * num_epochs
 
-                        # "time;best_id;best_val;worst_id;worst_val;avg;num_trials_fin;early_stopped;fin_id;fin_metric;fin_time;num_epochs\n"
+                        # calculate actual time for the trial
+                        num_epochs = len(trial.metric_history)
+                        time_per_epoch = np.mean(tabular_data[k]["runtime"]) / 100
+                        time_add = (time_per_epoch - sleep_per_epoch) * num_epochs
+
+                        # add time to execution time of executor of the trial
+                        partition_id = msg["partition_id"]
+                        if partition_id in time_add_per_partition:
+                            time_add_per_partition[partition_id] += time_add
+                        else:
+                            time_add_per_partition[partition_id] = time_add
+
+                        print(time_add_per_partition)
+                        # tabular benchmark stuff end
+
+                        # "time;sim_time;best_id;best_val;worst_id;worst_val;avg;num_trials_fin;early_stopped;fin_id;fin_metric;fin_time;num_epochs\n"
                         line = (
-                            str(time.time() - time_start + real_time_add)
+                            str(
+                                time.time()
+                                - time_start
+                                + time_add_per_partition[partition_id]
+                            )
+                            + ";"
+                            + str(
+                                time.time()
+                                - time_start
+                                + time_add_per_partition[partition_id]
+                            )
                             + ";"
                             + self.result["best_id"]
                             + ";"
