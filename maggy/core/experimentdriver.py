@@ -641,7 +641,6 @@ class ExperimentDriver(object):
                         # get trial only once
                         trial = self.get_trial(msg["trial_id"])
                         print(msg)
-                        raise ValueError
                         logs = msg.get("logs", None)
                         if logs is not None:
                             with self.log_lock:
