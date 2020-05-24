@@ -677,9 +677,8 @@ class ExperimentDriver(object):
                         num_epochs = len(trial.metric_history)
                         hparams = deepcopy(trial.params)
                         original_hparams = transform_config(hparams)
-                        time_per_epoch = (
-                            np.mean(tabular_data[original_hparams]["runtime"]) / 100
-                        )
+                        k = json.dumps(original_hparams, sort_keys=True)
+                        time_per_epoch = np.mean(tabular_data[k]["runtime"]) / 100
                         real_time_add += (time_per_epoch - sleep_per_epoch) * num_epochs
 
                         # "time;best_id;best_val;worst_id;worst_val;avg;num_trials_fin;early_stopped;fin_id;fin_metric;fin_time;num_epochs\n"
