@@ -454,7 +454,7 @@ class ExperimentDriver(object):
 
                 time_start = time.time()
                 time_last_best = time.time()
-                header = "time;sim_time;best_id;best_val;worst_id;worst_val;avg;num_trials_fin;early_stopped;fin_id;fin_metric;fin_time;sim_fin_time;num_epochs\n"
+                header = "time;sim_time;best_id;best_val;worst_id;worst_val;avg;num_trials_fin;early_stopped;fin_id;fin_metric;fin_time;sim_fin_time;num_epochs;partition_id\n"
                 hopshdfs.dump(header, self.log_dir + "/experiment")
 
                 header = "time;best_id;best_val;worst_id;worst_val;avg;num_trials_fin;early_stopped\n"
@@ -742,6 +742,8 @@ class ExperimentDriver(object):
                             + str(time.time() - trial.start + time_add)
                             + ";"
                             + str(num_epochs)
+                            + ";"
+                            + partition_id
                         )
 
                         fd_experiment.write((line + "\n").encode())
