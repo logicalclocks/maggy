@@ -700,7 +700,7 @@ class ExperimentDriver(object):
                         time_add = (time_per_epoch - sleep_per_epoch) * num_epochs
 
                         # add time to execution time of executor of the trial
-                        partition_id = msg["partition_id"]
+                        partition_id = str(msg["partition_id"])
                         if partition_id in time_add_per_partition:
                             time_add_per_partition[partition_id] += time_add
                         else:
@@ -743,7 +743,7 @@ class ExperimentDriver(object):
                             + ";"
                             + str(num_epochs)
                             + ";"
-                            + str(partition_id)
+                            + partition_id
                         )
 
                         fd_experiment.write((line + "\n").encode())
