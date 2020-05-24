@@ -698,11 +698,7 @@ class ExperimentDriver(object):
 
                         # "time;sim_time;best_id;best_val;worst_id;worst_val;avg;num_trials_fin;early_stopped;fin_id;fin_metric;fin_time;num_epochs\n"
                         line = (
-                            str(
-                                time.time()
-                                - time_start
-                                + time_add_per_partition[partition_id]
-                            )
+                            str(time.time() - time_start)
                             + ";"
                             + str(
                                 time.time()
