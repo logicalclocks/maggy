@@ -434,7 +434,7 @@ class ExperimentDriver(object):
                     return original_config
 
                 # below values need to be the same as in map fun !!!
-                time_reduction_factor = 25
+                time_reduction_factor = 10
                 min_epoch_duration = 0.06
                 max_epoch_duration = 0.5
 
