@@ -433,7 +433,19 @@ class ExperimentDriver(object):
 
                     return original_config
 
-                sleep_per_epoch = 0.06  # has to be the same as in user defined map fun
+                # below values need to be the same as in map fun !!!
+                time_reduction_factor = 25
+                min_epoch_duration = 0.06
+                max_epoch_duration = 0.5
+
+                def calculate_epoch_duration(actual_epoch_duration):
+                    """calculate sleep time in map func"""
+                    return np.clip(
+                        actual_epoch_duration / time_reduction_factor,
+                        min_epoch_duration,
+                        max_epoch_duration,
+                    )
+
                 time_add_per_partition = (
                     {}
                 )  # time that needs to be added to trial time per executor
@@ -684,6 +696,7 @@ class ExperimentDriver(object):
                         # calculate actual time for the trial
                         num_epochs = len(trial.metric_history)
                         time_per_epoch = np.mean(tabular_data[k]["runtime"]) / 100
+                        sleep_per_epoch = calculate_epoch_duration(time_per_epoch)
                         time_add = (time_per_epoch - sleep_per_epoch) * num_epochs
 
                         # add time to execution time of executor of the trial
@@ -724,9 +737,9 @@ class ExperimentDriver(object):
                             + ";"
                             + str(trial.final_metric)
                             + ";"
-                            + str(trial.duration)
+                            + str(time.time() - trial.start)
                             + ";"
-                            + str(trial.duration + time_add)
+                            + str(time.time() - trial.start + time_add)
                             + ";"
                             + str(num_epochs)
                         )
