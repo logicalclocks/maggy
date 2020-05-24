@@ -640,7 +640,7 @@ class ExperimentDriver(object):
                         # set status
                         # get trial only once
                         trial = self.get_trial(msg["trial_id"])
-                        print(msg)
+                        print("{}".format(msg))
                         logs = msg.get("logs", None)
                         if logs is not None:
                             with self.log_lock:
