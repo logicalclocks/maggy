@@ -743,7 +743,7 @@ class ExperimentDriver(object):
                             + ";"
                             + str(num_epochs)
                             + ";"
-                            + partition_id
+                            + str(partition_id)
                         )
 
                         fd_experiment.write((line + "\n").encode())
