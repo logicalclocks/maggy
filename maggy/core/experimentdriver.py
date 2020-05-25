@@ -638,7 +638,13 @@ class ExperimentDriver(object):
                                 self.executor_logs = self.executor_logs + logs
 
                         if msg["trial_id"] is not None and msg["data"] is not None:
-                            self.get_trial(msg["trial_id"]).append_metric(msg["data"])
+                            try:
+                                self.get_trial(msg["trial_id"]).append_metric(
+                                    msg["data"]
+                                )
+                            except KeyError:
+                                # this happens when heartbeat is faster then appending trial to trial store
+                                pass
 
                     # 2. BLACKLIST the trial
                     elif msg["type"] == "BLACK":
