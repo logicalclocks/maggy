@@ -126,7 +126,7 @@ class BaseAsyncBO(AbstractOptimizer):
         self.max_model = True
 
         # configure logger
-        self.log_file = "hdfs:///Projects/{}/Experiment_Logs/optimizer_{}_{}.log".format(
+        self.log_file = "hdfs:///Projects/{}/Experiments_Logs/optimizer_{}_{}.log".format(
             hdfs.project_name(), self.name(), self.pruner.name() if self.pruner else ""
         )
         if not hdfs.exists(self.log_file):
