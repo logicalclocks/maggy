@@ -261,7 +261,7 @@ def lagom(
         util._log("Finished Experiment")
 
         # todo remove exp_driver from return statement, its only for debugging purposes
-        return result, exp_driver
+        return result, exp_driver.optimizer, exp_driver.log_dir
 
     except:  # noqa: E722
         _exception_handler(
