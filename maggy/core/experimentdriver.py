@@ -435,7 +435,7 @@ class ExperimentDriver(object):
 
                 # below values need to be the same as in map fun !!!
                 time_reduction_factor = 10
-                min_epoch_duration = 0.06
+                min_epoch_duration = 0.15
                 max_epoch_duration = 0.5
 
                 def calculate_epoch_duration(actual_epoch_duration):
