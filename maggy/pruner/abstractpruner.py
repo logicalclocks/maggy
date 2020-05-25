@@ -19,11 +19,11 @@ class AbstractPruner(ABC):
 
         if not LOCAL:
             # configure logger
-            self.log_file = "hdfs:///Projects/{}/Logs/pruner_{}_{}.log".format(
+            self.log_file = "hdfs:///Projects/{}/Experiment_Logs/pruner_{}_{}.log".format(
                 hdfs.project_name(),
                 self.name(),
                 trial_metric_getter.__self__.__class__.__name__ if not LOCAL else "",
-            )  # todo make dynamic
+            )
             if not hdfs.exists(self.log_file):
                 hdfs.dump("", self.log_file)
             self.fd = hdfs.open_file(self.log_file, flags="w")
