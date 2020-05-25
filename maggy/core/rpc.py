@@ -417,6 +417,7 @@ class Server(MessageSocket):
                             sock.close()
                             CONNECTIONS.remove(sock)
 
+            server_sock.shutdown()
             server_sock.close()
 
         t = threading.Thread(target=_listen, args=(self, server_sock, exp_driver))
