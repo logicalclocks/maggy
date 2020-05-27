@@ -525,13 +525,14 @@ class Client(MessageSocket):
 
             while not self.done:
 
-                metric, step, logs = report.get_data()
-                data = {"value": metric, "step": step}
+                with report.lock:
+                    metric, step, logs = report.get_data()
+                    data = {"value": metric, "step": step}
 
-                resp = self._request(
-                    self.hb_sock, "METRIC", data, report.get_trial_id(), logs
-                )
-                _ = self._handle_message(resp, report)
+                    resp = self._request(
+                        self.hb_sock, "METRIC", data, report.get_trial_id(), logs
+                    )
+                    _ = self._handle_message(resp, report)
 
                 # sleep one second
                 time.sleep(self.hb_interval)
