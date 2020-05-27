@@ -29,7 +29,6 @@ import atexit
 import time
 
 from hops import util as hopsutil
-from hops import hdfs as hopshdfs
 from hops.experiment_impl.util import experiment_utils
 
 from maggy import util, tensorboard
@@ -132,7 +131,7 @@ def lagom(
         experiment_utils._set_ml_id(app_id, run_id)
 
         # create experiment dir
-        hopshdfs.mkdir(experiment_utils._get_logdir(app_id, run_id))
+        experiment_utils._create_experiment_dir(app_id, run_id)
 
         tensorboard._register(experiment_utils._get_logdir(app_id, run_id))
 
