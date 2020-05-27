@@ -388,7 +388,7 @@ class Server(MessageSocket):
             CONNECTIONS.append(sock)
 
             while not self.done:
-                read_socks, _, _ = select.select(CONNECTIONS, [], [], 5)
+                read_socks, _, _ = select.select(CONNECTIONS, [], [], 1)
                 for sock in read_socks:
                     if sock == server_sock:
                         client_sock, client_addr = sock.accept()
