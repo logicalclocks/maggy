@@ -135,6 +135,12 @@ class Driver(ABC):
     def add_message(self, msg):
         self._message_q.put(msg)
 
+    @abstractmethod
+    def controller_get_next(self, trial):
+        # TODO this won't be necessary if ablator and optimizer implement same
+        # interface
+        pass
+
     def _start_worker(self):
         def _target_function(self):
 
@@ -228,10 +234,7 @@ class Driver(ABC):
                         )
 
                         # assign new trial
-                        if self.experiment_type == "optimization":
-                            trial = self.optimizer.get_suggestion(trial)
-                        elif self.experiment_type == "ablation":
-                            trial = self.ablator.get_trial(trial)
+                        trial = self.controller_get_next(trial)
                         if trial is None:
                             self.server.reservations.assign_trial(
                                 msg["partition_id"], None
@@ -260,11 +263,8 @@ class Driver(ABC):
                     # 4. Let executor be idle
                     elif msg["type"] == "IDLE":
                         # execute only every 0.1 seconds but do not block thread
-                        if (
-                            self.experiment_type == "optimization"
-                            and time.time() - msg["idle_start"] > 0.1
-                        ):
-                            trial = self.optimizer.get_suggestion()
+                        if time.time() - msg["idle_start"] > 0.1:
+                            trial = self.controller_get_next()
                             if trial is None:
                                 self.server.reservations.assign_trial(
                                     msg["partition_id"], None
@@ -282,15 +282,12 @@ class Driver(ABC):
                                         msg["partition_id"], trial.trial_id
                                     )
                                     self.add_trial(trial)
-                        elif self.experiment_type == "optimization":
+                        else:
                             self.add_message(msg)
 
                     # 4. REG
                     elif msg["type"] == "REG":
-                        if self.experiment_type == "optimization":
-                            trial = self.optimizer.get_suggestion()
-                        elif self.experiment_type == "ablation":
-                            trial = self.ablator.get_trial()
+                        trial = self.controller_get_next()
                         if trial is None:
                             self.experiment_done = True
                         else:
@@ -320,10 +317,6 @@ class Driver(ABC):
         self.fd.close()
 
     @abstractmethod
-    def controller_name(self):
-        pass
-
-    @abstractmethod
     def config_to_dict(self):
         pass
 
@@ -347,10 +340,10 @@ class Driver(ABC):
             "logdir": self.log_dir,
             # 'versioned_resources': versioned_resources,
             "description": self.description,
-            "experiment_type": self.experiment_type,
+            "experiment_type": self.controller.name(),
         }
 
-        experiment_json["controller"] = self.controller_name()
+        experiment_json["controller"] = self.controller.name()
         experiment_json["config"] = json.dumps(self.config_to_dict())
 
         if self.experiment_done:
@@ -359,8 +352,7 @@ class Driver(ABC):
                 "%Y-%m-%dT%H:%M:%S", time.localtime(self.job_end)
             )
             experiment_json["duration"] = self.duration
-            if self.experiment_type == "optimization":
-                experiment_json["hyperparameter"] = json.dumps(self.result["best_hp"])
+            experiment_json["hyperparameter"] = json.dumps(self.result["best_hp"])
             experiment_json["metric"] = self.result["best_val"]
 
         else:
