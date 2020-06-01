@@ -190,7 +190,7 @@ def lagom(
                 "But it is '{0}'".format(str(experiment_type))
             )
 
-        exp_function = exp_driver.controller_name()
+        exp_function = exp_driver.controller.name()
 
         nodeRDD = sc.parallelize(range(num_executors), num_executors)
 

@@ -260,10 +260,8 @@ class Server(MessageSocket):
 
             # lookup executor reservation to find assigned trial
             trialId = msg["trial_id"]
-            # get early stopping flag for hyperparameter optimization trials
-            flag = False
-            if exp_driver.experiment_type == "optimization":
-                flag = exp_driver.get_trial(trialId).get_early_stop()
+            # get early stopping flag, should be False for ablation
+            flag = exp_driver.get_trial(trialId).get_early_stop()
 
             if flag:
                 send["type"] = "STOP"

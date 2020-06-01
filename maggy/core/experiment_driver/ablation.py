@@ -67,7 +67,7 @@ class Driver(base.Driver):
 
         if isinstance(ablator, str):
             if ablator.lower() == "loco":
-                self.ablator = LOCO(ablation_study, self._final_store)
+                self.controller = LOCO(ablation_study, self._final_store)
                 self.num_trials = self.ablator.get_number_of_trials()
                 if self.num_executors > self.num_trials:
                     self.num_executors = self.num_trials
@@ -80,7 +80,7 @@ class Driver(base.Driver):
                     )
                 )
         elif isinstance(ablator, AbstractAblator):
-            self.ablator = ablator
+            self.controller = ablator
             print("Custom Ablator initialized. \n")
         else:
             raise Exception(
@@ -94,13 +94,16 @@ class Driver(base.Driver):
         self.result = {"best_val": "n.a.", "num_trials": 0, "early_stopped": "n.a"}
 
         # Init controller
-        self.ablator.initialize()
+        self.controller.initialize()
+
+    def controller_get_next(self, trial):
+        return self.controller.get_trial(trial)
 
     def prep_results(self):
-        _ = self.ablator.finalize_experiment(self._final_store)
+        _ = self.controller.finalize_experiment(self._final_store)
         results = (
             "\n------ "
-            + self.ablator.name()
+            + self.controller.name()
             + " Results ------ \n"
             + "BEST Config Excludes "
             + json.dumps(self.result["best_config"])
@@ -120,9 +123,6 @@ class Driver(base.Driver):
             + "\n"
         )
         return results
-
-    def controller_name(self):
-        return self.ablator.name()
 
     def config_to_dict(self):
         return self.ablation_study.to_dict()

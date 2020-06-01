@@ -62,19 +62,19 @@ class Driver(base.Driver):
 
         if optimizer is None:
             if len(self.searchspace.names()) == 0:
-                self.optimizer = SingleRun()
+                self.controller = SingleRun()
             else:
                 raise Exception(
                     "Searchspace has to be empty or None to use without optimizer"
                 )
         elif isinstance(optimizer, str):
             if optimizer.lower() == "randomsearch":
-                self.optimizer = RandomSearch()
+                self.controller = RandomSearch()
             elif optimizer.lower() == "asha":
-                self.optimizer = Asha()
+                self.controller = Asha()
             elif optimizer.lower() == "none":
                 if len(self.searchspace.names()) == 0:
-                    self.optimizer = SingleRun()
+                    self.controller = SingleRun()
                 else:
                     raise Exception(
                         "Searchspace has to be empty or None to use without Optimizer."
@@ -84,7 +84,7 @@ class Driver(base.Driver):
                     "Unknown Optimizer. Can't initialize experiment driver."
                 )
         elif isinstance(optimizer, AbstractOptimizer):
-            self.optimizer = optimizer
+            self.controller = optimizer
             print("Custom Optimizer initialized.")
         else:
             raise Exception(
@@ -127,18 +127,21 @@ class Driver(base.Driver):
         self.result = {"best_val": "n.a.", "num_trials": 0, "early_stopped": 0}
 
         # Init controller and set references to data
-        self.optimizer.num_trials = self.num_trials
-        self.optimizer.searchspace = self.searchspace
-        self.optimizer.trial_store = self._trial_store
-        self.optimizer.final_store = self._final_store
-        self.optimizer.direction = self.direction
-        self.optimizer.initialize()
+        self.controller.num_trials = self.num_trials
+        self.controller.searchspace = self.searchspace
+        self.controller.trial_store = self._trial_store
+        self.controller.final_store = self._final_store
+        self.controller.direction = self.direction
+        self.controller.initialize()
+
+    def controller_get_next(self, trial):
+        return self.controller.get_suggestion(trial)
 
     def prep_results(self):
-        _ = self.optimizer.finalize_experiment(self._final_store)
+        _ = self.controller.finalize_experiment(self._final_store)
         results = (
             "\n------ "
-            + self.optimizer.name()
+            + self.controller.name()
             + " Results ------ direction("
             + self.direction
             + ") \n"
@@ -157,9 +160,6 @@ class Driver(base.Driver):
             "Total job time " + self.duration_str + "\n"
         )
         return results
-
-    def controller_name(self):
-        return self.optimizer.name()
 
     def config_to_dict(self):
         return self.searchspace.to_dict()
