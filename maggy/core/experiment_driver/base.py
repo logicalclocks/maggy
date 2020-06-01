@@ -136,7 +136,7 @@ class Driver(ABC):
         self._message_q.put(msg)
 
     @abstractmethod
-    def controller_get_next(self, trial):
+    def controller_get_next(self, trial=None):
         # TODO this won't be necessary if ablator and optimizer implement same
         # interface
         pass
