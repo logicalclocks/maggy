@@ -146,12 +146,12 @@ class Driver(base.Driver):
             + self.direction
             + ") \n"
             "BEST combination "
-            + json.dumps(self.result["best_hp"])
+            + json.dumps(self.result["best_config"])
             + " -- metric "
             + str(self.result["best_val"])
             + "\n"
             "WORST combination "
-            + json.dumps(self.result["worst_hp"])
+            + json.dumps(self.result["worst_config"])
             + " -- metric "
             + str(self.result["worst_val"])
             + "\n"
@@ -175,7 +175,7 @@ class Driver(base.Driver):
             + ") "
             + util._progress_bar(self.result["num_trials"], self.num_trials)
             + " - BEST "
-            + json.dumps(self.result["best_hp"])
+            + json.dumps(self.result["best_config"])
             + " - metric "
             + str(self.result["best_val"])
         )
