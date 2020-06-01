@@ -96,7 +96,7 @@ class Driver(base.Driver):
         # Init controller
         self.controller.initialize()
 
-    def controller_get_next(self, trial):
+    def controller_get_next(self, trial=None):
         return self.controller.get_trial(trial)
 
     def prep_results(self):
