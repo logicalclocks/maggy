@@ -352,7 +352,7 @@ class Driver(ABC):
                 "%Y-%m-%dT%H:%M:%S", time.localtime(self.job_end)
             )
             experiment_json["duration"] = self.duration
-            experiment_json["hyperparameter"] = json.dumps(self.result["best_hp"])
+            experiment_json["config"] = json.dumps(self.result["best_config"])
             experiment_json["metric"] = self.result["best_val"]
 
         else:
@@ -383,10 +383,10 @@ class Driver(ABC):
             self.result = {
                 "best_id": trial_id,
                 "best_val": metric,
-                "best_hp": param_string,
+                "best_config": param_string,
                 "worst_id": trial_id,
                 "worst_val": metric,
-                "worst_hp": param_string,
+                "worst_config": param_string,
                 "avg": metric,
                 "metric_list": [metric],
                 "num_trials": 1,
@@ -400,20 +400,20 @@ class Driver(ABC):
                 if metric > self.result["best_val"]:
                     self.result["best_val"] = metric
                     self.result["best_id"] = trial_id
-                    self.result["best_hp"] = param_string
+                    self.result["best_config"] = param_string
                 if metric < self.result["worst_val"]:
                     self.result["worst_val"] = metric
                     self.result["worst_id"] = trial_id
-                    self.result["worst_hp"] = param_string
+                    self.result["worst_config"] = param_string
             elif self.direction == "min":
                 if metric < self.result["best_val"]:
                     self.result["best_val"] = metric
                     self.result["best_id"] = trial_id
-                    self.result["best_hp"] = param_string
+                    self.result["best_config"] = param_string
                 if metric > self.result["worst_val"]:
                     self.result["worst_val"] = metric
                     self.result["worst_id"] = trial_id
-                    self.result["worst_hp"] = param_string
+                    self.result["worst_config"] = param_string
 
         # update results and average regardless of experiment type
         self.result["metric_list"].append(metric)
