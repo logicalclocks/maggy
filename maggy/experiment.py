@@ -32,7 +32,8 @@ from hops import util as hopsutil
 from hops.experiment_impl.util import experiment_utils
 
 from maggy import util, tensorboard
-from maggy.core import trialexecutor, experiment_driver
+from maggy.core import trialexecutor
+from maggy.core.experiment_driver import optimization, ablation
 
 app_id = None
 running = False
@@ -148,7 +149,7 @@ def lagom(
             if num_executors > num_trials:
                 num_executors = num_trials
 
-            exp_driver = experiment_driver.optimization.Driver(
+            exp_driver = optimization.Driver(
                 searchspace=searchspace,
                 optimizer=optimizer,
                 direction=direction,
@@ -164,7 +165,7 @@ def lagom(
             )
 
         elif experiment_type == "ablation":
-            exp_driver = experiment_driver.ablation.Driver(
+            exp_driver = ablation.Driver(
                 ablation_study=ablation_study,
                 ablator=ablator,
                 searchspace=None,
