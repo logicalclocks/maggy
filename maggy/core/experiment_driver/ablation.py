@@ -68,7 +68,7 @@ class Driver(base.Driver):
         if isinstance(ablator, str):
             if ablator.lower() == "loco":
                 self.controller = LOCO(ablation_study, self._final_store)
-                self.num_trials = self.ablator.get_number_of_trials()
+                self.num_trials = self.controller.get_number_of_trials()
                 if self.num_executors > self.num_trials:
                     self.num_executors = self.num_trials
             else:
