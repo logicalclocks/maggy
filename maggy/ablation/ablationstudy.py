@@ -32,8 +32,9 @@ class AblationStudy(object):
     (for an example, look at `ablator.LOCO.get_dataset_generator()`).
     If you want to provide your own dataset generator function,
     define it before creating the `AblationStudy` instance and pass it to
-    the initializer. In the example below we assume the user has created
-    a function called `create_tf_dataset()` that returns a `TFRecordDataset`:
+    the initializer or use 'set_dataset_generator()'. In the example below 
+    we assume the user has created a function called `create_tf_dataset()` 
+    that returns a `TFRecordDataset`:
 
     >>> ablation_study = AblationStudy('titanic_train_dataset',
             label_name='survived', dataset_generator=create_tf_dataset)
@@ -146,6 +147,14 @@ class AblationStudy(object):
         }
 
         return ablation_dict
+    
+    def set_dataset_generator(self, dataset_generator):
+        """
+        Sets a user-defined function as the dataset generator.
+
+        :param dataset_generator: a function that returns the dataset(s) required for the training loop.
+        """
+        self.custom_dataset_generator = dataset_generator
 
 
 class Features(object):
