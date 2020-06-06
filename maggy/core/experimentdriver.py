@@ -454,7 +454,7 @@ class ExperimentDriver(object):
 
                 time_start = time.time()
                 time_last_best = time.time()
-                header = "id;time;sim_time;best_id;best_val;worst_id;worst_val;avg;num_trials_fin;early_stopped;fin_id;fin_metric;fin_time;sim_fin_time;sample_type;num_epochs;model;sample_time;partition_id\n"
+                header = "id;time;sim_time;best_id;best_val;worst_id;worst_val;avg;num_trials_fin;early_stopped;fin_id;fin_metric;fin_time;sim_fin_time;sample_type;num_epochs;model;sampling_time;partition_id\n"
                 hopshdfs.dump(header, self.log_dir + "/experiment")
 
                 header = "time;best_id;best_val;worst_id;worst_val;avg;num_trials_fin;early_stopped\n"
@@ -708,14 +708,14 @@ class ExperimentDriver(object):
 
                         # sampling info
                         sample_type = trial.info_dict["sample_type"]
-                        sample_time = trial.info_dict["sample_time"]
+                        sampling_time = trial.info_dict["sampling_time"]
                         if sample_type == "model":
                             model_budget = trial.info_dict["model_budget"]
                         else:
                             model_budget = None
                         # tabular benchmark stuff end
 
-                        # "id;time;sim_time;best_id;best_val;worst_id;worst_val;avg;num_trials_fin;early_stopped;fin_id;fin_metric;fin_time;sim_fin_time;sample_type;num_epochs;model;sample_time;partition_id\n"
+                        # "id;time;sim_time;best_id;best_val;worst_id;worst_val;avg;num_trials_fin;early_stopped;fin_id;fin_metric;fin_time;sim_fin_time;sample_type;num_epochs;model;sampling_time;partition_id\n"
                         line = (
                             str(trial.trial_id)
                             + ";"
@@ -755,7 +755,7 @@ class ExperimentDriver(object):
                             + ";"
                             + str(model_budget)
                             + ";"
-                            + str(sample_time)
+                            + str(sampling_time)
                             + ";"
                             + partition_id
                         )
