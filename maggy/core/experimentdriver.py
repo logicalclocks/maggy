@@ -454,7 +454,7 @@ class ExperimentDriver(object):
 
                 time_start = time.time()
                 time_last_best = time.time()
-                header = "time;sim_time;best_id;best_val;worst_id;worst_val;avg;num_trials_fin;early_stopped;fin_id;fin_metric;fin_time;sim_fin_time;sample_type;num_epochs;model;sample_time;partition_id\n"
+                header = "id;time;sim_time;best_id;best_val;worst_id;worst_val;avg;num_trials_fin;early_stopped;fin_id;fin_metric;fin_time;sim_fin_time;sample_type;num_epochs;model;sample_time;partition_id\n"
                 hopshdfs.dump(header, self.log_dir + "/experiment")
 
                 header = "time;best_id;best_val;worst_id;worst_val;avg;num_trials_fin;early_stopped\n"
@@ -715,9 +715,11 @@ class ExperimentDriver(object):
                             model_budget = None
                         # tabular benchmark stuff end
 
-                        # "time;sim_time;best_id;best_val;worst_id;worst_val;avg;num_trials_fin;early_stopped;fin_id;fin_metric;fin_time;sim_fin_time;sample_type;num_epochs;model;sample_time;partition_id\n"
+                        # "id;time;sim_time;best_id;best_val;worst_id;worst_val;avg;num_trials_fin;early_stopped;fin_id;fin_metric;fin_time;sim_fin_time;sample_type;num_epochs;model;sample_time;partition_id\n"
                         line = (
-                            str(time.time() - time_start)
+                            str(trial.trial_id)
+                            + ";"
+                            + str(time.time() - time_start)
                             + ";"
                             + str(
                                 time.time()
