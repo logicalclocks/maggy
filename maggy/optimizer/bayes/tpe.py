@@ -39,6 +39,12 @@ class TPE(BaseAsyncBO):
         """
         super().__init__(**kwargs)
 
+        if self.interim_results:
+            raise ValueError(
+                "Using interim results to update surrogate model is only supported for GP for now, got TPE"
+                "Set `interim_results`=False when intitializing the optimizer or use GP"
+            )
+
         # configure tpe specific meta hyperparameters
         self.gamma = gamma
         self.n_samples = n_samples

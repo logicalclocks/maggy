@@ -202,6 +202,11 @@ class GP(BaseAsyncBO):
             normalize_categorical=True,
         )
 
+        if self.interim_results:
+            # Always sample with max budget: xt ← argmax acq([x, N])
+            # normalized max budget is 1 → add 1 to hparam configs
+            X = np.append(X, np.ones(X.shape[0]).reshape(-1, 1), 1)
+
         values = self.acq_fun.evaluate(
             X=X,
             surrogate_model=self.models[budget],
@@ -224,15 +229,18 @@ class GP(BaseAsyncBO):
             x0 = X[np.argsort(values)[: self.n_restarts_optimizer]]
 
             results = []
+            # bounds of transformed hparams are always [0.0,1.0] ( if categorical encodings get normalized,
+            # which is the case here )
+            bounds = [(0.0, 1.0) for _ in self.searchspace.values()]
+            if self.interim_results:
+                bounds.append((0.0, 1.0))
             for x in x0:
                 # todo evtl. use Parallel / delayed like skopt
-                # bounds of transformed hparams are always [0.0,1.0] ( if categorical encodings get normalized,
-                # which is the case here )
                 result = fmin_l_bfgs_b(
                     func=self.acq_fun.evaluate_1_d,
                     x0=x,
                     args=(self.models[budget], y_opt, self.acq_func_kwargs,),
-                    bounds=[(0.0, 1.0) for _ in self.searchspace.values()],
+                    bounds=bounds,
                     approx_grad=approx_grad,
                     maxiter=20,
                 )
@@ -246,7 +254,7 @@ class GP(BaseAsyncBO):
         # precision errors.
         next_x = np.clip(next_x, 0.0, 1.0)
 
-        # transform back to original representation
+        # transform back to original representation. (also removes augumented budget if interim_results)
         next_x = self.searchspace.inverse_transform(
             next_x, normalize_categorical=True
         )  # is array [-3,3,"blue"]
@@ -264,8 +272,11 @@ class GP(BaseAsyncBO):
         the model gets created with the right parameters, but is not fit with any data yet. the `base_model` will be
         cloned in `update_model` and fit with observation data
         """
-
+        # n_dims == n_hparams
         n_dims = len(self.searchspace.keys())
+
+        if self.interim_results:
+            n_dims += 1  # add one dim for augumented budget
 
         # ToDo, find out why I need this → skopt/utils.py line 377
         cov_amplitude = ConstantKernel(1.0, (0.01, 1000.0))
@@ -309,26 +320,17 @@ class GP(BaseAsyncBO):
         # create model without any data
         model = clone(self.base_model)
 
-        # get hparams and final metrics of finished trials combined with busy locations if imputeing stratgey
-        include_busy_locations = True if self.async_strategy == "impute" else False
-        Xi = self.get_hparams_array(
-            include_busy_locations=include_busy_locations, budget=budget
-        )
-        yi = self.get_metrics_array(
-            include_busy_locations=include_busy_locations, budget=budget
+        Xi, yi = self.get_XY(
+            budget=budget,
+            interim_results=self.interim_results,
+            interim_results_interval=self.interim_results_interval,
         )
 
-        # transform hparam values
-        Xi_transform = np.apply_along_axis(
-            self.searchspace.transform, 1, Xi, normalize_categorical=True
-        )
-
-        # self._log("Xi: {}".format(Xi))
-        # self._log("Xi_transform: {}".format(Xi_transform))
-        # self._log("yi: {}".format(yi))
+        self._log("Xi: {}".format(Xi))
+        self._log("yi: {}".format(yi))
 
         # fit model with data
-        model.fit(Xi_transform, yi)
+        model.fit(Xi, yi)
 
         self._log("Fitted Model with data")
 
@@ -362,6 +364,11 @@ class GP(BaseAsyncBO):
                 hparams=self.searchspace.dict_to_list(hparams),
                 normalize_categorical=True,
             )
+
+            if self.interim_results:
+                # augument with full budget
+                x = np.append(x, 1)
+
             imputed_metric = self.models[budget].predict(np.array(x).reshape(1, -1))[0]
         else:
             raise NotImplementedError(
