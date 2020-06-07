@@ -327,7 +327,7 @@ class BaseAsyncBO(AbstractOptimizer):
                 self._log("Sample randomly to encourage exploration")
                 hparams = self.searchspace.get_random_parameter_values(1)[0]
                 next_trial = self.create_trial(
-                    hparams=hparams, sample_type="random", run_budget=budget
+                    hparams=hparams, sample_type="random_forced", run_budget=budget
                 )
 
             # report new trial id to pruner
@@ -449,7 +449,13 @@ class BaseAsyncBO(AbstractOptimizer):
 
         :param hparams: hparam dict
         :type hparams: dict
-        :param sample_type: specifies how the hapram config was sampled. can be "random", "promoted", "model"
+        :param sample_type: specifies how the hapram config was sampled.
+                            can take values:
+                                - "random": config was sampled randomly
+                                - "random_forced": config was sampled randomly because model sampling returned a config that
+                                             already exists
+                                - "promoted": config was promoted in multi fidelity bandit based setting
+                                - "model": config was sampled from surrogate by optimizing acquisiton function
         :type sample_type: str
         :param run_budget: budget for trial or 0 if there is no budget, i.e. single fidelity optimization
         :type run_budget: int
@@ -459,7 +465,7 @@ class BaseAsyncBO(AbstractOptimizer):
         :rtype: Trial
         """
         # validations
-        allowed_sample_type_values = ["random", "model", "promoted"]
+        allowed_sample_type_values = ["random", "random_forced", "model", "promoted"]
         if sample_type not in allowed_sample_type_values:
             raise ValueError(
                 "expected sample_type to be in {}, got {}".format(
