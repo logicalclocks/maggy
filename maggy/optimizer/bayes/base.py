@@ -195,10 +195,11 @@ class BaseAsyncBO(AbstractOptimizer):
 
     def get_suggestion(self, trial=None):
         try:
+            self._log("### start get_suggestion ###")
             self.sampling_time_start = time.time()
             if trial:
                 self._log(
-                    "Last finished Trial: {} with params {}".format(
+                    "last finished trial: {} with params {}".format(
                         trial.trial_id, trial.params
                     )
                 )
@@ -206,9 +207,9 @@ class BaseAsyncBO(AbstractOptimizer):
                 self._log("no previous finished trial")
 
             # todo eliminate
-            self._log("Trial Store:")
-            for key, val in self.trial_store.items():
-                self._log("{}: {} \n".format(key, val.params))
+            self._log(
+                "currently evaluating trials: {}".format(list(self.trial_store.keys()))
+            )
 
             # check if experiment has finished
             if self._experiment_finished():
@@ -219,7 +220,7 @@ class BaseAsyncBO(AbstractOptimizer):
                 next_trial_info = self.pruner.pruning_routine()
                 if next_trial_info == "IDLE":
                     self._log(
-                        "Worker is IDLE and has to wait until a new trial can be scheduled \n"
+                        "Worker is IDLE and has to wait until a new trial can be scheduled"
                     )
                     return "IDLE"
                 elif next_trial_info is None:
@@ -246,7 +247,7 @@ class BaseAsyncBO(AbstractOptimizer):
                         new_trial_id=next_trial.trial_id,
                     )
                     self._log(
-                        "Use hparams from promoted Trial {}. \n Start Trial {}: {} \n".format(
+                        "use hparams from promoted trial {}. \n start trial {}: {} \n".format(
                             parent_trial_id, next_trial.trial_id, next_trial.params
                         )
                     )
@@ -278,7 +279,7 @@ class BaseAsyncBO(AbstractOptimizer):
                     )
                 # todo evtl auch erst unten returnen und somit report call sparen
                 self._log(
-                    "Start Trial {}: {} \n".format(
+                    "start trial {}: {} \n".format(
                         next_trial.trial_id, next_trial.params
                     )
                 )
@@ -304,6 +305,11 @@ class BaseAsyncBO(AbstractOptimizer):
                     # sample from largest model available
                     model_budget = max(self.models.keys())
                 # sample from model with model budget
+                self._log(
+                    "start sampling routine from model with budget {}".format(
+                        model_budget
+                    )
+                )
                 hparams = self.sampling_routine(model_budget)
                 next_trial = self.create_trial(
                     hparams=hparams,
@@ -319,7 +325,7 @@ class BaseAsyncBO(AbstractOptimizer):
 
             # check if Trial with same hparams has already been created
             if self.hparams_exist(trial=next_trial):
-                self._log("Sample randomly to encourage exploration")
+                self._log("sample randomly to encourage exploration")
                 hparams = self.searchspace.get_random_parameter_values(1)[0]
                 next_trial = self.create_trial(
                     hparams=hparams, sample_type="random_forced", run_budget=run_budget
@@ -331,7 +337,7 @@ class BaseAsyncBO(AbstractOptimizer):
                     original_trial_id=None, new_trial_id=next_trial.trial_id
                 )
             self._log(
-                "Start Trial {}: {}, {} \n".format(
+                "start trial {}: {}, {} \n".format(
                     next_trial.trial_id, next_trial.params, next_trial.info_dict
                 )
             )
@@ -433,8 +439,6 @@ class BaseAsyncBO(AbstractOptimizer):
                 )
             )
 
-        self._log("warmup configs: {}".format(self.warmup_configs))
-
     # todo, evtl. outsource to helpers or abstract optimizer or trial. possibly obsolete when trial has param budget
     def create_trial(self, hparams, sample_type, run_budget=0, model_budget=None):
         """helper function to create trial with budget and trial_dict
@@ -505,8 +509,8 @@ class BaseAsyncBO(AbstractOptimizer):
         for idx, finished_trial in enumerate(self.final_store):
             if trial.params == finished_trial.params:
                 self._log(
-                    "WARNING: Hparams {} are equal to params of finished trial no. {}: {}".format(
-                        trial.params, idx, finished_trial.to_dict()
+                    "WARNING Duplicate Config: Hparams {} are equal to params of finished trial no. {}: {}".format(
+                        trial.params, idx, finished_trial.trial_id
                     )
                 )
                 return True
@@ -515,8 +519,8 @@ class BaseAsyncBO(AbstractOptimizer):
         for trial_id, busy_trial in self.trial_store.items():
             if trial.params == busy_trial.params:
                 self._log(
-                    "WARNING: Hparams {} are equal to currently evaluating Trial: {}".format(
-                        trial.params, busy_trial.to_dict()
+                    "WARNING Duplicate Config: Hparams {} are equal to currently evaluating Trial: {}".format(
+                        trial.params, busy_trial.trial_id
                     )
                 )
                 return True

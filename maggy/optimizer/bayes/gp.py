@@ -187,8 +187,6 @@ class GP(BaseAsyncBO):
             self._log("Impute Strategy: {}".format(self.impute_strategy))
 
     def sampling_routine(self, budget=0):
-        self._log("Start sampling routine from model with budget {}".format(budget))
-
         # even with BFGS as optimizer we want to sample a large number
         # of points and then pick the best ones as starting points
         random_hparams = self.searchspace.get_random_parameter_values(self.n_points)
@@ -264,7 +262,7 @@ class GP(BaseAsyncBO):
             next_x, normalize_categorical=True
         )  # is array [-3,3,"blue"]
 
-        self._log("Next config to evaluate: {}".format(next_x))
+        # self._log("Next config to evaluate: {}".format(next_x))
 
         # convert list to dict representation
         hparam_dict = self.searchspace.list_to_dict(next_x)
@@ -307,14 +305,12 @@ class GP(BaseAsyncBO):
         Use observations of finished trials + liars from busy trials to build model.
         Only build model when there are at least as many observations as hyperparameters
         """
-        self._log("Start updateing model with budget {} \n".format(budget))
-        for key, val in self.trial_store.items():
-            self._log("{}: {} \n".format(key, val.params))
+        self._log("start updateing model with budget {} \n".format(budget))
 
         # check if enough observations available for model building
         if len(self.searchspace.keys()) > len(self.get_metrics_array(budget=budget)):
             self._log(
-                "Not enough observations available to build with budget {} yet. At least {} needed, got {}".format(
+                "not enough observations available to build with budget {} yet. At least {} needed, got {}".format(
                     budget,
                     len(self.searchspace.keys()),
                     len(self.get_metrics_array(budget=budget)),
@@ -331,13 +327,13 @@ class GP(BaseAsyncBO):
             interim_results_interval=self.interim_results_interval,
         )
 
-        self._log("Xi: {}".format(Xi))
-        self._log("yi: {}".format(yi))
+        # self._log("Xi: {}".format(Xi))
+        # self._log("yi: {}".format(yi))
 
         # fit model with data
         model.fit(Xi, yi)
 
-        self._log("Fitted Model with data")
+        self._log("fitted model with data")
 
         # update model of budget
         self.models[budget] = model
