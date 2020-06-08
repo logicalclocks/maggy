@@ -234,6 +234,11 @@ class Model(object):
         # One (extra) trial will be generated per each item in the list.
         self.custom_model_generators = []
 
+        # the list holding the identifiers of modules, in form of tuples of (starting layer, ending_layer)
+        # examples of modules can be found in the Inception network, where each
+        # module is usually wrapped between to concatenation (mixed) layers.
+        self.modules = []
+
     def set_base_model_generator(self, base_model_generator):
         self.base_model_generator = base_model_generator
 
@@ -248,6 +253,11 @@ class Model(object):
         :type model_identifier: str
         """
         self.custom_model_generators.append((custom_model_generator, model_identifier))
+
+    def add_module(starting_layer, ending_layer):
+        """
+        """
+        self.modules.append((starting_layer, ending_layer))
 
 
 class Layers(object):
