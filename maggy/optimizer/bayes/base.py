@@ -155,7 +155,7 @@ class BaseAsyncBO(AbstractOptimizer):
         self.interim_results_interval = interim_results_interval
 
         # configure logger
-        self.log_file = "hdfs:///Projects/{}/Experiments_Logs/optimizer_{}_{}.log".format(
+        self.log_file = "hdfs:///Projects/{}/Experiments_Data/optimizer_{}_{}.log".format(
             hdfs.project_name(), self.name(), self.pruner.name() if self.pruner else ""
         )
         if not hdfs.exists(self.log_file):
