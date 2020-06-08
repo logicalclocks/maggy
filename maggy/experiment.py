@@ -242,21 +242,23 @@ def lagom(
         job_end = time.time()
 
         result = exp_driver.finalize(job_end)
-        best_logdir = (
-            experiment_utils._get_logdir(app_id, run_id) + "/" + result["best_id"]
-        )
 
-        util._finalize_experiment(
-            experiment_json,
-            float(result["best_val"]),
-            app_id,
-            run_id,
-            "FINISHED",
-            exp_driver.duration,
-            experiment_utils._get_logdir(app_id, run_id),
-            best_logdir,
-            optimization_key,
-        )
+        # todo remove comments
+        # best_logdir = (
+        #     experiment_utils._get_logdir(app_id, run_id) + "/" + result["best_id"]
+        # )
+
+        # util._finalize_experiment(
+        #     experiment_json,
+        #     float(result["best_val"]),
+        #     app_id,
+        #     run_id,
+        #     "FINISHED",
+        #     exp_driver.duration,
+        #     experiment_utils._get_logdir(app_id, run_id),
+        #     best_logdir,
+        #     optimization_key,
+        # )
 
         util._log("Finished Experiment")
 
