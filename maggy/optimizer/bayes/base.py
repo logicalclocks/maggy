@@ -42,9 +42,8 @@ class BaseAsyncBO(AbstractOptimizer):
     **models**
 
     The surrogate models for different budgets are saved in the `models` dict with the budgets as key. In case of
-    a single fidelity optimization without a pruner. The only model has the key `0`.
-    Sample new hparam configs always from the largest model available (i.e. biggest budget) or in case of async bo with
-    imputing strategy + multi-fidelity pruner, sample from the model that has same budget as the trial
+    a single fidelity optimization without a pruner or pruner with interim_results, The only model has the key `0`.
+    If we fit multiple models, sample new hparam configs always from the largest model available (i.e. biggest budget)
 
     **imputing busy trials** (poss. shift to simple.py)
 
@@ -105,9 +104,6 @@ class BaseAsyncBO(AbstractOptimizer):
         Attributes
         ----------
 
-        max_model (bool): If True, always sample from the largest model available in multi fidelity optimization.
-                          Else, sample from the model that has same budget as the trial.
-                          False, if async bo algorithm with a async_strategy == `impute` and bandit based pruner is used
         models (dict): The surrogate models for different budgets are saved in the `models` dict with the budgets as key.
                        In case of a single fidelity optimization without a pruner. The only model has the key `0`.
         warm_up_configs(list[dict]): list of hparam configs used for warming up
@@ -157,10 +153,6 @@ class BaseAsyncBO(AbstractOptimizer):
             interim_results  # todo do I maybe need to init this before init pruner
         )
         self.interim_results_interval = interim_results_interval
-        if self.pruner and not self.interim_results:
-            self.max_model = True
-        else:
-            self.max_model = False
 
         # configure logger
         self.log_file = "hdfs:///Projects/{}/Experiments_Logs/optimizer_{}_{}.log".format(
@@ -293,7 +285,7 @@ class BaseAsyncBO(AbstractOptimizer):
                 return next_trial
 
             # update model
-            if self.max_model:
+            if self.pruner and not self.interim_results:
                 # skip model building if we already have a bigger model
                 if max(list(self.models.keys()) + [-np.inf]) <= model_budget:
                     self.update_model(model_budget)
@@ -308,7 +300,7 @@ class BaseAsyncBO(AbstractOptimizer):
                 )
                 self._log("sampled randomly: {}".format(hparams))
             else:
-                if self.max_model:
+                if self.pruner and not self.interim_results:
                     # sample from largest model available
                     model_budget = max(self.models.keys())
                 # sample from model with model budget

@@ -115,6 +115,12 @@ class GP(BaseAsyncBO):
                 )
             )
 
+        if async_strategy == "impute" and self.pruner:
+            if not self.interim_results:
+                raise ValueError(
+                    "Optimizer GP with async strategy only supports Pruner with interim_results==True"
+                )
+
         if acq_fun not in allowed_combinations[async_strategy] and acq_fun is not None:
             raise ValueError(
                 "Expected acq_fun to be in {} with GP as surrogate and {} as async_strategy, got {}".format(
@@ -165,8 +171,6 @@ class GP(BaseAsyncBO):
                     )
                 )
             self.impute_strategy = impute_strategy
-            # sample from the model that has same budget as the trial and not always from largest model available
-            self.max_model = False
 
         # estimator that has not been fit on any data.
         self.base_model = None
