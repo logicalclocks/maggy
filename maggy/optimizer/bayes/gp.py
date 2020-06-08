@@ -166,8 +166,7 @@ class GP(BaseAsyncBO):
                 )
             self.impute_strategy = impute_strategy
             # sample from the model that has same budget as the trial and not always from largest model available
-            if self.pruner:
-                self.max_model = False
+            self.max_model = False
 
         # estimator that has not been fit on any data.
         self.base_model = None

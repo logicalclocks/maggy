@@ -157,7 +157,10 @@ class BaseAsyncBO(AbstractOptimizer):
             interim_results  # todo do I maybe need to init this before init pruner
         )
         self.interim_results_interval = interim_results_interval
-        self.max_model = True
+        if self.pruner and not self.interim_results:
+            self.max_model = True
+        else:
+            self.max_model = False
 
         # configure logger
         self.log_file = "hdfs:///Projects/{}/Experiments_Logs/optimizer_{}_{}.log".format(
@@ -258,16 +261,23 @@ class BaseAsyncBO(AbstractOptimizer):
                     return next_trial
                 else:
                     # start sampling procedure with given budget
-                    budget = next_trial_info["budget"]
+                    run_budget = next_trial_info["budget"]
+                    if self.interim_results:
+                        model_budget = 0
+                    else:
+                        model_budget = run_budget
             else:
-                budget = 0
+                run_budget = 0
+                model_budget = 0
 
             # check if there are still trials in the warmup buffer
             if self.warmup_configs:
                 self._log("take sample from warmup buffer")
                 next_trial_params = self.warmup_configs.pop()
                 next_trial = self.create_trial(
-                    hparams=next_trial_params, sample_type="random", run_budget=budget
+                    hparams=next_trial_params,
+                    sample_type="random",
+                    run_budget=run_budget,
                 )
                 # report new trial id to pruner
                 if self.pruner:
@@ -282,20 +292,10 @@ class BaseAsyncBO(AbstractOptimizer):
                 )
                 return next_trial
 
-            if self.interim_results:
-                # there is only one model. i.e. also in multi fidelity setting
-                model_budget = 0
-            elif self.max_model:
-                # always sample from largest model avaliable. i.e. in multi fidelity setting
-                model_budget = max(list(self.models.keys()) + [budget])
-            else:
-                # sample from model with same budget as run budget of trial
-                model_budget = budget
-
             # update model
             if self.max_model:
                 # skip model building if we already have a bigger model
-                if max(list(self.models.keys()) + [-np.inf]) <= budget:
+                if max(list(self.models.keys()) + [-np.inf]) <= model_budget:
                     self.update_model(model_budget)
             else:
                 self.update_model(model_budget)
@@ -304,16 +304,19 @@ class BaseAsyncBO(AbstractOptimizer):
                 # in case there is no model yet or random fraction applies, sample randomly
                 hparams = self.searchspace.get_random_parameter_values(1)[0]
                 next_trial = self.create_trial(
-                    hparams=hparams, sample_type="random", run_budget=budget
+                    hparams=hparams, sample_type="random", run_budget=run_budget
                 )
                 self._log("sampled randomly: {}".format(hparams))
             else:
+                if self.max_model:
+                    # sample from largest model available
+                    model_budget = max(self.models.keys())
                 # sample from model with model budget
                 hparams = self.sampling_routine(model_budget)
                 next_trial = self.create_trial(
                     hparams=hparams,
                     sample_type="model",
-                    run_budget=budget,
+                    run_budget=run_budget,
                     model_budget=model_budget,
                 )
                 self._log(
@@ -327,7 +330,7 @@ class BaseAsyncBO(AbstractOptimizer):
                 self._log("Sample randomly to encourage exploration")
                 hparams = self.searchspace.get_random_parameter_values(1)[0]
                 next_trial = self.create_trial(
-                    hparams=hparams, sample_type="random_forced", run_budget=budget
+                    hparams=hparams, sample_type="random_forced", run_budget=run_budget
                 )
 
             # report new trial id to pruner
