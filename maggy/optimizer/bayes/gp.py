@@ -118,7 +118,9 @@ class GP(BaseAsyncBO):
         if async_strategy == "impute" and self.pruner:
             if not self.interim_results:
                 raise ValueError(
-                    "Optimizer GP with async strategy only supports Pruner with interim_results==True"
+                    "Optimizer GP with async strategy `impute` only supports Pruner with interim_results==True, got {}".format(
+                        self.interim_results
+                    )
                 )
 
         if acq_fun not in allowed_combinations[async_strategy] and acq_fun is not None:
