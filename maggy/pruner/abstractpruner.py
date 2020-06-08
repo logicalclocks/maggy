@@ -69,7 +69,8 @@ class AbstractPruner(ABC):
         if not LOCAL:
             if not self.fd.closed:
                 self.fd.write((msg + "\n").encode())
-        print(msg, "\n")
+        else:
+            print(msg, "\n")
 
     def _close_log(self):
         if not LOCAL:
