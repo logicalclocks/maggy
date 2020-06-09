@@ -441,9 +441,7 @@ class ExperimentDriver(object):
                                         to_stop = None
                                     if to_stop is not None:
                                         self._log("Trials to stop: {}".format(to_stop))
-                                        self.get_trial(
-                                            to_stop.trial_id
-                                        ).set_early_stop()
+                                        self.get_trial(to_stop).set_early_stop()
 
                         # 2. BLACKLIST the trial
                     elif msg["type"] == "BLACK":
