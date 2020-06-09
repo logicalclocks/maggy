@@ -373,10 +373,6 @@ class ExperimentDriver(object):
         def _target_function(self):
 
             try:
-                # time_earlystop_check = (
-                #     time.time()
-                # )  # only used by earlystop-supporting experiments
-
                 while not self.worker_done:
                     trial = None
                     # get a message
@@ -384,27 +380,6 @@ class ExperimentDriver(object):
                         msg = self._message_q.get_nowait()
                     except queue.Empty:
                         msg = {"type": None}
-
-                    # if self.earlystop_check != NoStoppingRule.earlystop_check:
-                    #     if (time.time() - time_earlystop_check) >= self.es_interval:
-                    #         time_earlystop_check = time.time()
-
-                    #         # pass currently running trials to early stop component
-                    #         if len(self._final_store) > self.es_min:
-                    #             self._log("Check for early stopping.")
-                    #             try:
-                    #                 to_stop = self.earlystop_check(
-                    #                     self._trial_store,
-                    #                     self._final_store,
-                    #                     self.direction,
-                    #                 )
-                    #             except Exception as e:
-                    #                 self._log(e)
-                    #                 to_stop = []
-                    #             if len(to_stop) > 0:
-                    #                 self._log("Trials to stop: {}".format(to_stop))
-                    #             for trial_id in to_stop:
-                    #                 self.get_trial(trial_id).set_early_stop()
 
                     # depending on message do the work
                     # 1. METRIC
