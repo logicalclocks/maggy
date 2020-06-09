@@ -291,7 +291,7 @@ class LOCO(AbstractAblator):
             )
         
         # 5 - generate module ablation trials
-        for module in self.ablation_study.modules:
+        for module in self.ablation_study.model.modules:
             starting_layer, ending_layer = module
             self.trial_buffer.append(
                 Trial(
