@@ -172,7 +172,7 @@ class LOCO(AbstractAblator):
 
         return model_generator
     
-    def ablate_module(starting_layer, ending_layer):
+    def ablate_module(self, starting_layer, ending_layer):
         import tensorflow as tf
         base_model = self.ablation_study.model.base_model_generator()
         config_dict = base_model.get_config()
@@ -204,13 +204,13 @@ class LOCO(AbstractAblator):
         new_model = tf.keras.models.model_from_json(json.dumps(base_model_dict))
         return new_model
 
-    def get_list_of_layer_names(config_dict):
+    def get_list_of_layer_names(self, config_dict):
         list_of_names = []
         for layer in config_dict['layers']:
             list_of_names.append(layer['name'])
         return list_of_names
 
-    def get_dict_of_inbound_layers_mapping(config_dict):
+    def get_dict_of_inbound_layers_mapping(self, config_dict):
         dict_of_inbound_layers = {}
         for layer in config_dict['layers']:
             list_of_inbound_layers = []
@@ -221,7 +221,7 @@ class LOCO(AbstractAblator):
             dict_of_inbound_layers[name] = list_of_inbound_layers
         return dict_of_inbound_layers
 
-    def get_layers_for_removal(starting_layer, ending_layer, layers_mapping_dict, layers_for_removal):
+    def get_layers_for_removal(self, starting_layer, ending_layer, layers_mapping_dict, layers_for_removal):
         if ending_layer == starting_layer:
             return
         for inbound_layer in layers_mapping_dict[ending_layer]:
@@ -315,7 +315,8 @@ class LOCO(AbstractAblator):
         return
 
     def create_trial_dict(
-        self, type=None, ablated_feature=None, layer_identifier=None, custom_model_generator=None
+        self, type=None, ablated_feature=None, layer_identifier=None, custom_model_generator=None, 
+        starting_layer=None, ending_layer=None,
     ):
         """
         Creates a trial dictionary that can be used for creating a Trial instance.
