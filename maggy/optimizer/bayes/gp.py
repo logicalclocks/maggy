@@ -305,7 +305,7 @@ class GP(BaseAsyncBO):
         Use observations of finished trials + liars from busy trials to build model.
         Only build model when there are at least as many observations as hyperparameters
         """
-        self._log("start updateing model with budget {} \n".format(budget))
+        self._log("start updateing model with budget {}".format(budget))
 
         # check if enough observations available for model building
         if len(self.searchspace.keys()) > len(self.get_metrics_array(budget=budget)):
