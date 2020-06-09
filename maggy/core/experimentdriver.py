@@ -426,15 +426,9 @@ class ExperimentDriver(object):
                         # i.e. step nr is added to the queue as message which will
                         # then later be checked for early stopping, just to not
                         # block for too long for other messages
-                        if step is not None and step != 0:
-                            if len(self._final_store) > self.es_min:
-                                # this can later be parametrized to check only every N steps
-                                if step % 1 == 0:
-                                    self._log(
-                                        "Check for early stopping. Trial {}, step {}".format(
-                                            msg["trial_id"], step
-                                        )
-                                    )
+                        if len(self._final_store) > self.es_min:
+                            if step is not None and step != 0:
+                                if step % self.es_interval == 0:
                                     try:
                                         to_stop = self.earlystop_check(
                                             self.get_trial(msg["trial_id"]),

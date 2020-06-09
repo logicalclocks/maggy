@@ -53,7 +53,7 @@ def lagom(
     optimization_key="metric",
     hb_interval=1,
     es_policy="median",
-    es_interval=300,
+    es_interval=1,
     es_min=10,
     description="",
 ):
@@ -97,8 +97,8 @@ def lagom(
     :type hb_interval: int, optional
     :param es_policy: The earlystopping policy, defaults to 'median'
     :type es_policy: str, optional
-    :param es_interval: Frequency interval in seconds to check currently
-        running trials for early stopping, defaults to 300
+    :param es_interval: Frequency interval in number of steps to check currently
+        running trials for early stopping, defaults to 1.
     :type es_interval: int, optional
     :param es_min: Minimum number of trials finalized before checking for
         early stopping, defaults to 10
