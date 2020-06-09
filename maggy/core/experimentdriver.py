@@ -415,6 +415,7 @@ class ExperimentDriver(object):
                             with self.log_lock:
                                 self.executor_logs = self.executor_logs + logs
 
+                        step = None
                         if msg["trial_id"] is not None and msg["data"] is not None:
                             step = self.get_trial(msg["trial_id"]).append_metric(
                                 msg["data"]
