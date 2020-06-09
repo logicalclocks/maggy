@@ -430,6 +430,11 @@ class ExperimentDriver(object):
                             if len(self._final_store) > self.es_min:
                                 # this can later be parametrized to check only every N steps
                                 if step % 1 == 0:
+                                    self._log(
+                                        "Check for early stopping. Trial {}, step {}".format(
+                                            msg["trial_id"], step
+                                        )
+                                    )
                                     try:
                                         to_stop = self.earlystop_check(
                                             self.get_trial(msg["trial_id"]),
