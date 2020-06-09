@@ -1053,7 +1053,8 @@ class BaseAsyncBO(AbstractOptimizer):
 
     def _log(self, msg):
         if not self.fd.closed:
-            self.fd.write((msg + "\n").encode())
+            pass
+            # self.fd.write((msg + "\n").encode())
 
     def _close_log(self):
         if not self.fd.closed:
