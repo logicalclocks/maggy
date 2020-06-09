@@ -376,8 +376,6 @@ class LOCO(AbstractAblator):
         elif type=='module':
             trial_dict['model_function'] = self.get_model_generator(type='module', 
             starting_layer=starting_layer, ending_layer=ending_layer)
-            trial_dict['ablated_layer'] = "All layers between {0} and {1}"
-            .format(starting_layer, ending_layer)
-
+            trial_dict['ablated_layer'] = "All layers between {0} and {1}".format(starting_layer, ending_layer)
 
         return trial_dict
