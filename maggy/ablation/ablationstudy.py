@@ -254,7 +254,7 @@ class Model(object):
         """
         self.custom_model_generators.append((custom_model_generator, model_identifier))
 
-    def add_module(starting_layer, ending_layer):
+    def add_module(self, starting_layer, ending_layer):
         """
         """
         self.modules.append((starting_layer, ending_layer))
