@@ -515,9 +515,7 @@ class ExperimentDriver(object):
                         fd_experiment.flush()
                         fd_experiment.close()
 
-                        _ = self.optimizer.finalize_experiment(
-                            self._final_store, self.app_dir
-                        )
+                        _ = self.optimizer.finalize_experiment(self._final_store)
 
                         self.job_end = time.time()
 
