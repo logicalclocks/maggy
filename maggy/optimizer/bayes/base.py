@@ -1,4 +1,4 @@
-# import traceback
+import traceback
 import time
 from copy import deepcopy
 
@@ -8,7 +8,7 @@ from maggy.optimizer.abstractoptimizer import AbstractOptimizer
 from maggy.pruner import Hyperband
 from maggy.trial import Trial
 
-# from hops import hdfs
+from hops import hdfs
 
 
 # todo which methods should be private
@@ -155,14 +155,14 @@ class BaseAsyncBO(AbstractOptimizer):
         self.interim_results_interval = interim_results_interval
 
         # configure logger
-        # self.log_file = "hdfs:///Projects/{}/Experiments_Data/optimizer_{}_{}.log".format(
-        #     hdfs.project_name(), self.name(), self.pruner.name() if self.pruner else ""
-        # )
-        # if not hdfs.exists(self.log_file):
-        #     hdfs.dump("", self.log_file)
-        # self.fd = hdfs.open_file(self.log_file, flags="w")
-        # self._log("Initialized Logger")
-        # self._log("Initilized Optimizer {}: \n {}".format(self.name(), self.__dict__))
+        self.log_file = "hdfs:///Projects/{}/Experiments_Data/optimizer_{}_{}.log".format(
+            hdfs.project_name(), self.name(), self.pruner.name() if self.pruner else ""
+        )
+        if not hdfs.exists(self.log_file):
+            hdfs.dump("", self.log_file)
+        self.fd = hdfs.open_file(self.log_file, flags="w")
+        self._log("Initialized Logger")
+        self._log("Initilized Optimizer {}: \n {}".format(self.name(), self.__dict__))
 
         # helper variable to calculate time needed for calculating next suggestion
         self.sampling_time_start = 0.0
@@ -344,20 +344,19 @@ class BaseAsyncBO(AbstractOptimizer):
             return next_trial
 
         except BaseException:
-            pass
-            # self._log(traceback.format_exc())
-            # self._close_log()
-            #
-            # if self.pruner:
-            #     self.pruner._close_log()
+            self._log(traceback.format_exc())
+            self._close_log()
+
+            if self.pruner:
+                self.pruner._close_log()
 
     def finalize_experiment(self, trials):
-        # self._log("Experiment finished")
-        # self._close_log()
-        #
-        # # todo eliminiate
-        # if self.pruner:
-        #     self.pruner._close_log()
+        self._log("Experiment finished")
+        self._close_log()
+
+        # todo eliminiate
+        if self.pruner:
+            self.pruner._close_log()
 
         return
 
@@ -1053,13 +1052,11 @@ class BaseAsyncBO(AbstractOptimizer):
         return np.mean(metric_history)
 
     def _log(self, msg):
-        pass
-        # if not self.fd.closed:
-        #     pass
-        #     # self.fd.write((msg + "\n").encode())
+        if not self.fd.closed:
+            pass
+            # self.fd.write((msg + "\n").encode())
 
     def _close_log(self):
-        pass
-        # if not self.fd.closed:
-        #     self.fd.flush()
-        #     self.fd.close()
+        if not self.fd.closed:
+            self.fd.flush()
+            self.fd.close()

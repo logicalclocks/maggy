@@ -3,8 +3,8 @@ from abc import ABC, abstractmethod
 LOCAL = False  # if set to true, can be run locally without maggy integration
 # todo all the `if not LOCAL:` clause can be removed after tested locally
 
-# if not LOCAL:
-#     from hops import hdfs
+if not LOCAL:
+    from hops import hdfs
 
 
 class AbstractPruner(ABC):
@@ -17,17 +17,17 @@ class AbstractPruner(ABC):
         :type trial_metric_getter: function
         """
 
-        # if not LOCAL:
-        #     # configure logger
-        #     self.log_file = "hdfs:///Projects/{}/Experiments_Data/pruner_{}_{}.log".format(
-        #         hdfs.project_name(),
-        #         self.name(),
-        #         trial_metric_getter.__self__.__class__.__name__ if not LOCAL else "",
-        #     )
-        #     if not hdfs.exists(self.log_file):
-        #         hdfs.dump("", self.log_file)
-        #     self.fd = hdfs.open_file(self.log_file, flags="w")
-        #     self._log("Initialized Logger")
+        if not LOCAL:
+            # configure logger
+            self.log_file = "hdfs:///Projects/{}/Experiments_Data/pruner_{}_{}.log".format(
+                hdfs.project_name(),
+                self.name(),
+                trial_metric_getter.__self__.__class__.__name__ if not LOCAL else "",
+            )
+            if not hdfs.exists(self.log_file):
+                hdfs.dump("", self.log_file)
+            self.fd = hdfs.open_file(self.log_file, flags="w")
+            self._log("Initialized Logger")
 
         self.trial_metric_getter = trial_metric_getter
 
@@ -66,17 +66,15 @@ class AbstractPruner(ABC):
         return str(self.__class__.__name__)
 
     def _log(self, msg):
-        pass
-        # if not LOCAL:
-        #     if not self.fd.closed:
-        #         pass
-        #         # self.fd.write((msg + "\n").encode())
-        # else:
-        #     print(msg, "\n")
+        if not LOCAL:
+            if not self.fd.closed:
+                pass
+                # self.fd.write((msg + "\n").encode())
+        else:
+            print(msg, "\n")
 
     def _close_log(self):
-        pass
-        # if not LOCAL:
-        #     if not self.fd.closed:
-        #         self.fd.flush()
-        #         self.fd.close()
+        if not LOCAL:
+            if not self.fd.closed:
+                self.fd.flush()
+                self.fd.close()

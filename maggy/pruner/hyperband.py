@@ -176,8 +176,8 @@ class Hyperband(AbstractPruner):
                     return self.pruning_routine()
                 elif self.finished():
                     # All SH iterations in HB are finished
-                    # self._log("All Iterations have finished")
-                    # self._close_log()
+                    self._log("All Iterations have finished")
+                    self._close_log()
                     return None
                 else:
                     # no immediate run can be scheduled, because all iterations are busy.
@@ -187,8 +187,8 @@ class Hyperband(AbstractPruner):
                     )
                     return "IDLE"
         except BaseException:
-            # self._log(traceback.format_exc())
-            # self._close_log()
+            self._log(traceback.format_exc())
+            self._close_log()
             raise Exception("Exception in Hyperband. {}".format(traceback.format_exc()))
 
     def init_iterations(self):
