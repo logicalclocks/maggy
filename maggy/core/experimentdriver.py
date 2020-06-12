@@ -845,6 +845,12 @@ class ExperimentDriver(object):
             except Exception as exc:
                 # Exception can't be propagated to parent thread
                 # therefore log the exception and fail experiment
+
+                # todo remove this, for logging purposes only
+                self.optimizer._close_log()
+                if self.optimizer.pruner:
+                    self.pruner._close_log()
+
                 self._log(exc)
                 self.exception = exc
                 self.server.stop()
