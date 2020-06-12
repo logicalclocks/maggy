@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 
+import uuid
+
 LOCAL = False  # if set to true, can be run locally without maggy integration
 # todo all the `if not LOCAL:` clause can be removed after tested locally
 
@@ -19,10 +21,11 @@ class AbstractPruner(ABC):
 
         if not LOCAL:
             # configure logger
-            self.log_file = "hdfs:///Projects/{}/Experiments_Data/pruner_{}_{}.log".format(
+            self.log_file = "hdfs:///Projects/{}/Experiments_Data/pruner_{}_{}_{}.log".format(
                 hdfs.project_name(),
                 self.name(),
                 trial_metric_getter.__self__.__class__.__name__ if not LOCAL else "",
+                str(uuid.uuid4()),
             )
             if not hdfs.exists(self.log_file):
                 hdfs.dump("", self.log_file)
