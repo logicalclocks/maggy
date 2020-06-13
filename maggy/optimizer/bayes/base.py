@@ -276,56 +276,45 @@ class BaseAsyncBO(AbstractOptimizer):
                     sample_type="random",
                     run_budget=run_budget,
                 )
-                # report new trial id to pruner
-                if self.pruner:
-                    self.pruner.report_trial(
-                        original_trial_id=None, new_trial_id=next_trial.trial_id
-                    )
-                # todo evtl auch erst unten returnen und somit report call sparen
-                self._log(
-                    "start trial {}: {} \n".format(
-                        next_trial.trial_id, next_trial.params
-                    )
-                )
-                return next_trial
 
-            # update model
-            if self.pruner and not self.interim_results:
-                # skip model building if we already have a bigger model
-                if max(list(self.models.keys()) + [-np.inf]) <= model_budget:
-                    self.update_model(model_budget)
             else:
-                self.update_model(model_budget)
-
-            if not self.models or np.random.rand() < self.random_fraction:
-                # in case there is no model yet or random fraction applies, sample randomly
-                hparams = self.searchspace.get_random_parameter_values(1)[0]
-                next_trial = self.create_trial(
-                    hparams=hparams, sample_type="random", run_budget=run_budget
-                )
-                self._log("sampled randomly: {}".format(hparams))
-            else:
+                # update model
                 if self.pruner and not self.interim_results:
-                    # sample from largest model available
-                    model_budget = max(self.models.keys())
-                # sample from model with model budget
-                self._log(
-                    "start sampling routine from model with budget {}".format(
-                        model_budget
+                    # skip model building if we already have a bigger model
+                    if max(list(self.models.keys()) + [-np.inf]) <= model_budget:
+                        self.update_model(model_budget)
+                else:
+                    self.update_model(model_budget)
+
+                if not self.models or np.random.rand() < self.random_fraction:
+                    # in case there is no model yet or random fraction applies, sample randomly
+                    hparams = self.searchspace.get_random_parameter_values(1)[0]
+                    next_trial = self.create_trial(
+                        hparams=hparams, sample_type="random", run_budget=run_budget
                     )
-                )
-                hparams = self.sampling_routine(model_budget)
-                next_trial = self.create_trial(
-                    hparams=hparams,
-                    sample_type="model",
-                    run_budget=run_budget,
-                    model_budget=model_budget,
-                )
-                self._log(
-                    "sampled from model with budget {}: {}".format(
-                        model_budget, hparams
+                    self._log("sampled randomly: {}".format(hparams))
+                else:
+                    if self.pruner and not self.interim_results:
+                        # sample from largest model available
+                        model_budget = max(self.models.keys())
+                    # sample from model with model budget
+                    self._log(
+                        "start sampling routine from model with budget {}".format(
+                            model_budget
+                        )
                     )
-                )
+                    hparams = self.sampling_routine(model_budget)
+                    next_trial = self.create_trial(
+                        hparams=hparams,
+                        sample_type="model",
+                        run_budget=run_budget,
+                        model_budget=model_budget,
+                    )
+                    self._log(
+                        "sampled from model with budget {}: {}".format(
+                            model_budget, hparams
+                        )
+                    )
 
             # check if Trial with same hparams has already been created
             if self.hparams_exist(trial=next_trial):
