@@ -317,12 +317,19 @@ class BaseAsyncBO(AbstractOptimizer):
                     )
 
             # check if Trial with same hparams has already been created
-            if self.hparams_exist(trial=next_trial):
+            i = 0
+            while self.hparams_exist(trial=next_trial):
                 self._log("sample randomly to encourage exploration")
                 hparams = self.searchspace.get_random_parameter_values(1)[0]
                 next_trial = self.create_trial(
                     hparams=hparams, sample_type="random_forced", run_budget=run_budget
                 )
+                i += 1
+                if i >= 3:
+                    self._log(
+                        "not possible to sample new config. Stop Experiment (most/all configs have already been used)"
+                    )
+                    return None
 
             # report new trial id to pruner
             if self.pruner:
