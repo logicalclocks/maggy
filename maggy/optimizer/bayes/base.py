@@ -508,10 +508,21 @@ class BaseAsyncBO(AbstractOptimizer):
         :rtype: bool
 
         """
+
+        def remove_budget(trial_params):
+            """In multi fidelity setting budget is added as key to trial.params.
+            Needs to be removed here to compare actual params defined in search space
+            """
+            return dict(
+                (k, trial_params[k])
+                for k in self.searchspace.keys()
+                if k in trial_params
+            )
+
         # check in finished trials
         # todo when budget becomes attr of Trial object ( and not part of params anymore ), adapt the comparison
         for idx, finished_trial in enumerate(self.final_store):
-            if trial.params == finished_trial.params:
+            if remove_budget(trial.params) == remove_budget(finished_trial.params):
                 self._log(
                     "WARNING Duplicate Config: Hparams {} are equal to params of finished trial no. {}: {}".format(
                         trial.params, idx, finished_trial.trial_id
@@ -521,7 +532,7 @@ class BaseAsyncBO(AbstractOptimizer):
 
         # check in currently evaluating trials
         for trial_id, busy_trial in self.trial_store.items():
-            if trial.params == busy_trial.params:
+            if remove_budget(trial.params) == remove_budget(busy_trial.params):
                 self._log(
                     "WARNING Duplicate Config: Hparams {} are equal to currently evaluating Trial: {}".format(
                         trial.params, busy_trial.trial_id
