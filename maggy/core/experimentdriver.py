@@ -849,7 +849,7 @@ class ExperimentDriver(object):
                 # todo remove this, for logging purposes only
                 self.optimizer._close_log()
                 if self.optimizer.pruner:
-                    self.pruner._close_log()
+                    self.optimizer.pruner._close_log()
 
                 self._log(exc)
                 self.exception = exc
