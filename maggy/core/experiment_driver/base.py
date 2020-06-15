@@ -289,7 +289,14 @@ class Driver(ABC):
                     elif msg["type"] == "REG":
                         trial = self.controller_get_next()
                         if trial is None:
+                            self.server.reservations.assign_trial(
+                                msg["partition_id"], None
+                            )
                             self.experiment_done = True
+                        elif trial == "IDLE":
+                            # reset timeout
+                            msg["idle_start"] = time.time()
+                            self.add_message(msg)
                         else:
                             with trial.lock:
                                 trial.start = time.time()
