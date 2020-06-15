@@ -1,6 +1,7 @@
 import traceback
 import time
 import uuid
+from datetime import datetime
 from copy import deepcopy
 
 import numpy as np
@@ -325,7 +326,7 @@ class BaseAsyncBO(AbstractOptimizer):
                     hparams=hparams, sample_type="random_forced", run_budget=run_budget
                 )
                 i += 1
-                if i >= 3:
+                if i > 3:
                     self._log(
                         "not possible to sample new config. Stop Experiment (most/all configs have already been used)"
                     )
@@ -1064,6 +1065,7 @@ class BaseAsyncBO(AbstractOptimizer):
 
     def _log(self, msg):
         if not self.fd.closed:
+            msg = datetime.now().isoformat() + ": " + str(msg)
             self.fd.write((msg + "\n").encode())
 
     def _close_log(self):

@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from datetime import datetime
 
 import uuid
 
@@ -71,6 +72,7 @@ class AbstractPruner(ABC):
     def _log(self, msg):
         if not LOCAL:
             if not self.fd.closed:
+                msg = datetime.now().isoformat() + ": " + str(msg)
                 self.fd.write((msg + "\n").encode())
         else:
             print(msg, "\n")
