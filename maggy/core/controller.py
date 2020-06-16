@@ -18,6 +18,9 @@ from abc import ABC, abstractmethod
 
 
 # TODO: Discuss naming, this is a draft
+# this call doesn't add much functionality, imo it's only there for the sake of
+# completeness and to show the interface. however, one could also keep just the
+# abstract classes and manually make sure they implement the same interface.
 class Controller(ABC):
     @abstractmethod
     def initialize(self):
