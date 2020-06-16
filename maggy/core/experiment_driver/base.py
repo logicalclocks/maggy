@@ -99,23 +99,30 @@ class Driver(ABC):
         self.job_start = job_start
         self._start_worker()
 
-    @abstractmethod
-    def prep_results(self):
-        pass
-
     def finalize(self, job_end):
         self.job_end = job_end
 
-        self.duration = experiment_utils._seconds_to_milliseconds(
+        self.result["duration"] = experiment_utils._seconds_to_milliseconds(
             self.job_end - self.job_start
         )
 
-        self.duration_str = experiment_utils._time_diff(self.job_start, self.job_end)
+        self.result["duration_str"] = experiment_utils._time_diff(
+            self.job_start, self.job_end
+        )
 
-        results = self.prep_results()
+        controller_results, result_str = self.controller.finalize(
+            self.result, self._final_store
+        )
+        if not (isinstance(controller_results, dict) and isinstance(result_str, str)):
+            raise TypeError(
+                "The `finalize` method of the used controller returns a tuple with element types ({}, {}) instead of the required (dict, str) tuple.".format(
+                    type(controller_results), type(result_str)
+                )
+            )
+        self.result.update(controller_results)
 
-        print(results)
-        self._log(results)
+        print(result_str)
+        self._log(result_str)
 
         hopshdfs.dump(
             json.dumps(self.result, default=util.json_default_numpy),
@@ -352,7 +359,7 @@ class Driver(ABC):
             experiment_json["finished"] = time.strftime(
                 "%Y-%m-%dT%H:%M:%S", time.localtime(self.job_end)
             )
-            experiment_json["duration"] = self.duration
+            experiment_json["duration"] = self.result["duration"]
             experiment_json["config"] = json.dumps(self.result["best_config"])
             experiment_json["metric"] = self.result["best_val"]
 

@@ -14,6 +14,7 @@
 #   limitations under the License.
 #
 
+import json
 from abc import abstractmethod
 
 from maggy.core import controller
@@ -44,10 +45,43 @@ class AbstractOptimizer(controller.Controller):
         """
         pass
 
-    @abstractmethod
-    def finalize(self, trials):
+    def finalize(self, result, trials):
         """
         This method will be called before finishing the experiment. Developers
-        can implement this method e.g. for cleanup or extra logging.
+        can override or extend this method e.g. for cleanup or extra logging.
+        Maggy expects two values to be returned, a dictionary and a string
+        to be printed. The dictionary will be merged with the `result` dict of
+        Maggy, persisted and returned to the user. The finalized `trials` can
+        be used to compute additional statistics to return.
+        The returned string representation of the result should be human readable
+        and will be printed and written to the logs.
+
+        :param result: Results of the experiment as dictionary.
+        :type result: dict
+        :param trials: The finalized trial objects as a list.
+        :type trials: list
+        :return: result metrics, result string representation
+        :rtype: dict, str
         """
-        pass
+        result_dict = {}
+        result_str = (
+            "\n------ "
+            + self.name()
+            + " Results ------ direction("
+            + self.direction
+            + ") \n"
+            "BEST configuration "
+            + json.dumps(result["best_config"])
+            + " -- metric "
+            + str(result["best_val"])
+            + "\n"
+            "WORST combination "
+            + json.dumps(result["worst_config"])
+            + " -- metric "
+            + str(result["worst_val"])
+            + "\n"
+            "AVERAGE metric -- " + str(result["avg"]) + "\n"
+            "EARLY STOPPED Trials -- " + str(result["early_stopped"]) + "\n"
+            "Total job time " + result["duration_str"] + "\n"
+        )
+        return result_dict, result_str

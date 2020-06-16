@@ -134,30 +134,6 @@ class Driver(base.Driver):
         self.controller.direction = self.direction
         self.controller.initialize()
 
-    def prep_results(self):
-        _ = self.controller.finalize_experiment(self._final_store)
-        results = (
-            "\n------ "
-            + self.controller.name()
-            + " Results ------ direction("
-            + self.direction
-            + ") \n"
-            "BEST combination "
-            + json.dumps(self.result["best_config"])
-            + " -- metric "
-            + str(self.result["best_val"])
-            + "\n"
-            "WORST combination "
-            + json.dumps(self.result["worst_config"])
-            + " -- metric "
-            + str(self.result["worst_val"])
-            + "\n"
-            "AVERAGE metric -- " + str(self.result["avg"]) + "\n"
-            "EARLY STOPPED Trials -- " + str(self.result["early_stopped"]) + "\n"
-            "Total job time " + self.duration_str + "\n"
-        )
-        return results
-
     def config_to_dict(self):
         return self.searchspace.to_dict()
 

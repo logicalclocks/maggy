@@ -96,31 +96,6 @@ class Driver(base.Driver):
         # Init controller
         self.controller.initialize()
 
-    def prep_results(self):
-        _ = self.controller.finalize_experiment(self._final_store)
-        results = (
-            "\n------ "
-            + self.controller.name()
-            + " Results ------ \n"
-            + "BEST Config Excludes "
-            + json.dumps(self.result["best_config"])
-            + " -- metric "
-            + str(self.result["best_val"])
-            + "\n"
-            + "WORST Config Excludes "
-            + json.dumps(self.result["worst_config"])
-            + " -- metric "
-            + str(self.result["worst_val"])
-            + "\n"
-            + "AVERAGE metric -- "
-            + str(self.result["avg"])
-            + "\n"
-            + "Total Job Time "
-            + self.duration_str
-            + "\n"
-        )
-        return results
-
     def config_to_dict(self):
         return self.ablation_study.to_dict()
 
