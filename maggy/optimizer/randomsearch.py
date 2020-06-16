@@ -40,11 +40,8 @@ class RandomSearch(AbstractOptimizer):
         for parameters_dict in list_of_random_trials:
             self.trial_buffer.append(Trial(parameters_dict, trial_type="optimization"))
 
-    def get_suggestion(self, trial=None):
+    def get_next_trial(self, trial=None):
         if self.trial_buffer:
             return self.trial_buffer.pop()
         else:
             return None
-
-    def finalize_experiment(self, trials):
-        return

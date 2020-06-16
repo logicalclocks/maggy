@@ -226,14 +226,11 @@ class LOCO(AbstractAblator):
                 )
             )
 
-    def get_trial(self, trial=None):
+    def get_next_trial(self, trial=None):
         if self.trial_buffer:
             return self.trial_buffer.pop()
         else:
             return None
-
-    def finalize_experiment(self, trials):
-        return
 
     def create_trial_dict(
         self, ablated_feature=None, layer_identifier=None, custom_model_generator=None

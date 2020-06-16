@@ -83,7 +83,7 @@ class Asha(AbstractOptimizer):
 
         assert self.num_trials >= self.reduction_factor ** (self.max_rung + 1)
 
-    def get_suggestion(self, trial=None):
+    def get_next_trial(self, trial=None):
 
         if trial is not None:
             # stopping criterium: one trial in max rung
@@ -154,9 +154,6 @@ class Asha(AbstractOptimizer):
         # add to bottom rung
         self.rungs[0].append(to_return)
         return to_return
-
-    def finalize_experiment(self, trials):
-        return
 
     def _top_k(self, rung_k, number):
         """Find top-`number` trials in `rung_k`.

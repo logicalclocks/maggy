@@ -115,9 +115,9 @@ class Driver(ABC):
         )
         if not (isinstance(controller_results, dict) and isinstance(result_str, str)):
             raise TypeError(
-                "The `finalize` method of the used controller returns a tuple with element types ({}, {}) instead of the required (dict, str) tuple.".format(
-                    type(controller_results), type(result_str)
-                )
+                "The `finalize` method of the used controller returns a tuple "
+                "with element types ({}, {}) instead of the required (dict, "
+                "str) tuple.".format(type(controller_results), type(result_str))
             )
         self.result.update(controller_results)
 
