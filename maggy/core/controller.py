@@ -14,40 +14,28 @@
 #   limitations under the License.
 #
 
-from abc import abstractmethod
-
-from maggy.core import controller
+from abc import ABC, abstractmethod
 
 
-class AbstractOptimizer(controller.Controller):
-    def __init__(self):
-        self.searchspace = None
-        self.num_trials = None
-        self.trial_store = None
-        self.final_store = None
-        self.direction = None
-
+# TODO: Discuss naming, this is a draft
+class Controller(ABC):
     @abstractmethod
     def initialize(self):
-        """
-        A hook for the developer to initialize the optimizer.
-        """
+        # TODO: potentially add argument "controller_kwargs" to lagom to allow user
+        # to pass through arguments to this method
         pass
 
     @abstractmethod
     def get_next_trial(self, trial=None):
-        """
-        Return a `Trial` to be assigned to an executor, or `None` if there are
-        no trials remaining in the experiment.
-
-        :rtype: `Trial` or `None`
-        """
+        # TODO: decide on name, also exp driver has 'get_trial', shorter maybe 'next_trial'
         pass
 
     @abstractmethod
     def finalize(self, trials):
-        """
-        This method will be called before finishing the experiment. Developers
-        can implement this method e.g. for cleanup or extra logging.
-        """
+        # TODO: allow developer to return random dict, e.g. maybe move logic
+        # to generate result dict here (but then it will be duplicated)
+        # or provide base implementation, that user can overwrite
         pass
+
+    def name(self):
+        return str(self.__class__.__name__)

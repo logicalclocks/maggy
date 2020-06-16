@@ -135,12 +135,6 @@ class Driver(ABC):
     def add_message(self, msg):
         self._message_q.put(msg)
 
-    @abstractmethod
-    def controller_get_next(self, trial=None):
-        # TODO this won't be necessary if ablator and optimizer implement same
-        # interface
-        pass
-
     def _start_worker(self):
         def _target_function(self):
 
@@ -234,7 +228,7 @@ class Driver(ABC):
                         )
 
                         # assign new trial
-                        trial = self.controller_get_next(trial)
+                        trial = self.controller.get_next_trial(trial)
                         if trial is None:
                             self.server.reservations.assign_trial(
                                 msg["partition_id"], None
@@ -264,7 +258,7 @@ class Driver(ABC):
                     elif msg["type"] == "IDLE":
                         # execute only every 0.1 seconds but do not block thread
                         if time.time() - msg["idle_start"] > 0.1:
-                            trial = self.controller_get_next()
+                            trial = self.controller.get_next_trial()
                             if trial is None:
                                 self.server.reservations.assign_trial(
                                     msg["partition_id"], None
@@ -287,7 +281,7 @@ class Driver(ABC):
 
                     # 4. REG
                     elif msg["type"] == "REG":
-                        trial = self.controller_get_next()
+                        trial = self.controller.get_next_trial()
                         if trial is None:
                             self.server.reservations.assign_trial(
                                 msg["partition_id"], None

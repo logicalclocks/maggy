@@ -14,10 +14,12 @@
 #   limitations under the License.
 #
 
-from abc import ABC, abstractmethod
+from abc import abstractmethod
+
+from maggy.core import controller
 
 
-class AbstractAblator(ABC):
+class AbstractAblator(controller.Controller):
     def __init__(self, ablation_study, final_store):
         self.ablation_study = ablation_study
         self.final_store = final_store
@@ -63,7 +65,7 @@ class AbstractAblator(ABC):
         pass
 
     @abstractmethod
-    def get_trial(self, ablation_trial=None):
+    def get_next_trial(self, trial=None):
         """
         Return a `Trial` to be assigned to an executor, or `None` if there are no trials remaining in the experiment.
         The trial should contain a dataset generator and a model generator.
@@ -75,12 +77,9 @@ class AbstractAblator(ABC):
         pass
 
     @abstractmethod
-    def finalize_experiment(self, trials):
+    def finalize(self, trials):
         """
         This method will be called before finishing the experiment. Developers can implement this method
         e.g. for cleanup or extra logging.
         """
         pass
-
-    def name(self):
-        return str(self.__class__.__name__)

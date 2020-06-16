@@ -134,9 +134,6 @@ class Driver(base.Driver):
         self.controller.direction = self.direction
         self.controller.initialize()
 
-    def controller_get_next(self, trial=None):
-        return self.controller.get_suggestion(trial)
-
     def prep_results(self):
         _ = self.controller.finalize_experiment(self._final_store)
         results = (
