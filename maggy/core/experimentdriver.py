@@ -269,6 +269,9 @@ class ExperimentDriver(object):
             self.optimizer.direction = self.direction
             self.optimizer.initialize()
         elif self.experiment_type == "ablation":
+            # set references to data in ablator
+            self.ablator.ablation_study = self.ablation_study
+            self.ablator.final_store = self._final_store
             self.ablator.initialize()
 
         self._start_worker()
