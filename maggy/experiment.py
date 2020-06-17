@@ -248,7 +248,7 @@ def lagom(
             app_id,
             run_id,
             "FINISHED",
-            exp_driver.duration,
+            result["duration"],
             experiment_utils._get_logdir(app_id, run_id),
             best_logdir,
             optimization_key,
