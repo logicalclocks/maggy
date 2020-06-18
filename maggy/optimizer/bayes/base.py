@@ -959,7 +959,7 @@ class BaseAsyncBO(AbstractOptimizer):
 
         get indices of interim results of one trial metric history that will be used for fitting surrogate.
 
-        Note: first and final metric are always used
+        Note: final metric is always used
 
         :param metric_history: metric history of one trial
         :param interval: interval of interim metrics to be used. e.g. 10 means every nth metric is used.
@@ -973,11 +973,7 @@ class BaseAsyncBO(AbstractOptimizer):
 
         # if not enough data points exist for interval use first and final result of metric history
         if not interim_results_idx:
-            interim_results_idx = [0, max_budget - 1]
-
-        # first result is always added
-        if interim_results_idx[0] != 0:
-            interim_results_idx.insert(0, 0)
+            interim_results_idx = [max_budget - 1]
 
         # final result is always added
         if interim_results_idx[-1] != (max_budget - 1):
