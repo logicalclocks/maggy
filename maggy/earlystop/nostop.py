@@ -23,5 +23,4 @@ class NoStoppingRule(AbstractEarlyStop):
 
     @staticmethod
     def earlystop_check(to_check, finalized_trials, direction):
-        stop = []
-        return stop
+        return None
