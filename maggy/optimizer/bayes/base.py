@@ -278,6 +278,13 @@ class BaseAsyncBO(AbstractOptimizer):
                     run_budget=run_budget,
                 )
 
+            elif np.random.rand() < self.random_fraction:
+                # random fraction applies, sample randomly
+                hparams = self.searchspace.get_random_parameter_values(1)[0]
+                next_trial = self.create_trial(
+                    hparams=hparams, sample_type="random", run_budget=run_budget
+                )
+                self._log("sampled randomly: {}".format(hparams))
             else:
                 # update model
                 if self.pruner and not self.interim_results:
@@ -287,8 +294,8 @@ class BaseAsyncBO(AbstractOptimizer):
                 else:
                     self.update_model(model_budget)
 
-                if not self.models or np.random.rand() < self.random_fraction:
-                    # in case there is no model yet or random fraction applies, sample randomly
+                if not self.models:
+                    # in case there is no model yet, sample randomly
                     hparams = self.searchspace.get_random_parameter_values(1)[0]
                     next_trial = self.create_trial(
                         hparams=hparams, sample_type="random", run_budget=run_budget
