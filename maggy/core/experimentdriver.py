@@ -434,9 +434,9 @@ class ExperimentDriver(object):
                     return original_config
 
                 # below values need to be the same as in map fun !!!
-                time_reduction_factor = 10
-                min_epoch_duration = 0.15
-                max_epoch_duration = 0.5
+                time_reduction_factor = 1
+                min_epoch_duration = 0.60
+                max_epoch_duration = 22.09
 
                 def calculate_epoch_duration(actual_epoch_duration):
                     """calculate sleep time in map func"""
