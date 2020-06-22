@@ -276,7 +276,8 @@ class ExperimentDriver(object):
             self.optimizer.trial_store = self._trial_store
             self.optimizer.final_store = self._final_store
             self.optimizer.direction = self.direction
-            self.optimizer.start_time = time.time()
+            # following two lines for experiments use only
+            self.optimizer.time_start = time.time()
             self.optimizer.total_time = self.total_time
             self.optimizer.initialize()
         elif self.experiment_type == "ablation":
