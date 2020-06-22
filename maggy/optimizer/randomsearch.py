@@ -74,6 +74,11 @@ class RandomSearch(AbstractOptimizer):
 
     def get_suggestion(self, trial=None):
         try:
+
+            # stop_experiment after time for experiments
+            if (time.time() - self.time_start) >= (self.total_time * 60):
+                return None
+
             self._log("### start get_suggestion ###")
             self.sampling_time_start = time.time()
 

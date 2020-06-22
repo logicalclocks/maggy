@@ -276,6 +276,8 @@ class ExperimentDriver(object):
             self.optimizer.trial_store = self._trial_store
             self.optimizer.final_store = self._final_store
             self.optimizer.direction = self.direction
+            self.optimizer.start_time = time.time()
+            self.optimizer.total_time = self.total_time
             self.optimizer.initialize()
         elif self.experiment_type == "ablation":
             self.ablator.initialize()
@@ -468,94 +470,94 @@ class ExperimentDriver(object):
                     except queue.Empty:
                         msg = {"type": None}
 
-                    if (time.time() - time_start) >= (self.total_time * 60):
-
-                        fd_experiment = hopshdfs.open_file(
-                            self.log_dir + "/experiment_time", flags="a"
-                        )
-                        # "time;best_id;best_val;worst_id;worst_val;avg;num_trials_fin;early_stopped;fin_id;fin_metric;fin_time\n"
-                        if self.result.get("best_id", None):
-                            line = (
-                                str(time.time() - time_start)
-                                + ";"
-                                + self.result["best_id"]
-                                + ";"
-                                + str(self.result["best_val"])
-                                + ";"
-                                + self.result["worst_id"]
-                                + ";"
-                                + str(self.result["worst_val"])
-                                + ";"
-                                + str(self.result["avg"])
-                                + ";"
-                                + str(self.result["num_trials"])
-                                + ";"
-                                + str(self.result["early_stopped"])
-                            )
-                        else:
-                            line = (
-                                str(time.time() - time_start)
-                                + ";;"
-                                + str(1)
-                                + ";;"
-                                + str(1)
-                                + ";"
-                                + str(1)
-                                + ";"
-                                + str(self.result["num_trials"])
-                                + ";"
-                                + str(self.result["early_stopped"])
-                            )
-
-                        fd_experiment.write((line + "\n").encode())
-                        fd_experiment.flush()
-                        fd_experiment.close()
-
-                        _ = self.optimizer.finalize_experiment(self._final_store)
-
-                        self.job_end = time.time()
-
-                        self.duration = experiment_utils._time_diff(
-                            self.job_start, self.job_end
-                        )
-
-                        results = (
-                            "\n------ "
-                            + str(self.optimizer.__class__.__name__)
-                            + " results ------ direction("
-                            + self.direction
-                            + ") \n"
-                            "NUMBER TRIALS evaluated -- "
-                            + str(self.result["num_trials"])
-                            + "\n"
-                            "BEST combination "
-                            + json.dumps(self.result["best_hp"])
-                            + " -- metric "
-                            + str(self.result["best_val"])
-                            + "\n"
-                            "WORST combination "
-                            + json.dumps(self.result["worst_hp"])
-                            + " -- metric "
-                            + str(self.result["worst_val"])
-                            + "\n"
-                            "AVERAGE metric -- " + str(self.result["avg"]) + "\n"
-                            "EARLY STOPPED Trials -- "
-                            + str(self.result["early_stopped"])
-                            + "\n"
-                            "Total job time " + self.duration + "\n"
-                        )
-                        print(results)
-
-                        self._log(results)
-
-                        hopshdfs.dump(
-                            json.dumps(self.result, default=util.json_default_numpy),
-                            self.log_dir + "/result.json",
-                        )
-                        sc = hopsutil._find_spark().sparkContext
-                        hopshdfs.dump(self.json(sc), self.log_dir + "/maggy.json")
-
-                        raise Exception("Time is up")
+                    # if (time.time() - time_start) >= (self.total_time * 60):
+                    #
+                    #     fd_experiment = hopshdfs.open_file(
+                    #         self.log_dir + "/experiment_time", flags="a"
+                    #     )
+                    #     # "time;best_id;best_val;worst_id;worst_val;avg;num_trials_fin;early_stopped;fin_id;fin_metric;fin_time\n"
+                    #     if self.result.get("best_id", None):
+                    #         line = (
+                    #             str(time.time() - time_start)
+                    #             + ";"
+                    #             + self.result["best_id"]
+                    #             + ";"
+                    #             + str(self.result["best_val"])
+                    #             + ";"
+                    #             + self.result["worst_id"]
+                    #             + ";"
+                    #             + str(self.result["worst_val"])
+                    #             + ";"
+                    #             + str(self.result["avg"])
+                    #             + ";"
+                    #             + str(self.result["num_trials"])
+                    #             + ";"
+                    #             + str(self.result["early_stopped"])
+                    #         )
+                    #     else:
+                    #         line = (
+                    #             str(time.time() - time_start)
+                    #             + ";;"
+                    #             + str(1)
+                    #             + ";;"
+                    #             + str(1)
+                    #             + ";"
+                    #             + str(1)
+                    #             + ";"
+                    #             + str(self.result["num_trials"])
+                    #             + ";"
+                    #             + str(self.result["early_stopped"])
+                    #         )
+                    #
+                    #     fd_experiment.write((line + "\n").encode())
+                    #     fd_experiment.flush()
+                    #     fd_experiment.close()
+                    #
+                    #     _ = self.optimizer.finalize_experiment(self._final_store)
+                    #
+                    #     self.job_end = time.time()
+                    #
+                    #     self.duration = experiment_utils._time_diff(
+                    #         self.job_start, self.job_end
+                    #     )
+                    #
+                    #     results = (
+                    #         "\n------ "
+                    #         + str(self.optimizer.__class__.__name__)
+                    #         + " results ------ direction("
+                    #         + self.direction
+                    #         + ") \n"
+                    #         "NUMBER TRIALS evaluated -- "
+                    #         + str(self.result["num_trials"])
+                    #         + "\n"
+                    #         "BEST combination "
+                    #         + json.dumps(self.result["best_hp"])
+                    #         + " -- metric "
+                    #         + str(self.result["best_val"])
+                    #         + "\n"
+                    #         "WORST combination "
+                    #         + json.dumps(self.result["worst_hp"])
+                    #         + " -- metric "
+                    #         + str(self.result["worst_val"])
+                    #         + "\n"
+                    #         "AVERAGE metric -- " + str(self.result["avg"]) + "\n"
+                    #         "EARLY STOPPED Trials -- "
+                    #         + str(self.result["early_stopped"])
+                    #         + "\n"
+                    #         "Total job time " + self.duration + "\n"
+                    #     )
+                    #     print(results)
+                    #
+                    #     self._log(results)
+                    #
+                    #     hopshdfs.dump(
+                    #         json.dumps(self.result, default=util.json_default_numpy),
+                    #         self.log_dir + "/result.json",
+                    #     )
+                    #     sc = hopsutil._find_spark().sparkContext
+                    #     hopshdfs.dump(self.json(sc), self.log_dir + "/maggy.json")
+                    #
+                    #     raise Exception("Time is up")
 
                     if (time.time() - time_last_best) >= self.log_interval:
                         time_last_best = time.time()
