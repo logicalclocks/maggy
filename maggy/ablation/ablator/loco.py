@@ -249,7 +249,7 @@ class LOCO(AbstractAblator):
 
         # 0 - add first trial with all the components (base/reference trial)
         self.trial_buffer.append(
-            Trial(self.create_trial_dict(None, None), trial_type="ablation")
+            Trial(self.create_trial_dict(type='base'), trial_type="ablation")
         )
 
         # generate remaining trials based on the ablation study configuration:
@@ -359,7 +359,8 @@ class LOCO(AbstractAblator):
         # 2 - determine the model generation logic
         # 2.1 - no model ablation
 
-        if layer_identifier is None and custom_model_generator is None and type!='module':
+        #if layer_identifier is None and custom_model_generator is None and type!='module':
+        if type=='base':
             trial_dict[
                 "model_function"
             ] = self.ablation_study.model.base_model_generator
