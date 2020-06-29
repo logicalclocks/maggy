@@ -117,7 +117,7 @@ class LOCO(AbstractAblator):
     starting_layer=None, ending_layer=None): # TODO rewrite with kwargs?
         
         if type=='module':
-            return ablate_module(starting_layer, ending_layer)
+            return self.ablate_module(starting_layer, ending_layer)
 
         if layer_identifier is not None and custom_model_generator is not None:
             raise BadArgumentsError(
