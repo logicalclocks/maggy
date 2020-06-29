@@ -24,7 +24,7 @@ from tensorboard.plugins.hparams import summary_v2 as hp
 from tensorboard.plugins.hparams import api_pb2
 from tensorboard.plugins.hparams import summary
 
-__import__("tensorflow").compat.v1.enable_eager_execution()
+#__import__("tensorflow").compat.v1.enable_eager_execution()
 
 _tensorboard_dir = None
 _writer = None
