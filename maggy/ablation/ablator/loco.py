@@ -117,6 +117,7 @@ class LOCO(AbstractAblator):
     starting_layer=None, ending_layer=None): # TODO rewrite with kwargs?
         
         if type=='module':
+            print("ABLATION: calling ablate_module in get_model_generator for start={0} and end={1}".format(starting_layer, ending_layer))
             return self.ablate_module(starting_layer, ending_layer)
 
         if layer_identifier is not None and custom_model_generator is not None:
@@ -376,8 +377,11 @@ class LOCO(AbstractAblator):
         
         # 2.4 - module ablation based on base model generator
         elif type=='module':
+            print("ABLATION: in trial_dict for module, start={0} and end={1}".format(starting_layer, ending_layer))
             trial_dict['model_function'] = self.get_model_generator(type='module', 
             starting_layer=starting_layer, ending_layer=ending_layer)
             trial_dict['ablated_layer'] = "All layers between {0} and {1}".format(starting_layer, ending_layer)
+            print("ABLATION: created trial_dict for module, start={0} and end={1}".format(starting_layer, ending_layer))
+
 
         return trial_dict
