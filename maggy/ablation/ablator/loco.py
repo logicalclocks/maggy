@@ -363,7 +363,8 @@ class LOCO(AbstractAblator):
         if type=='base':
             trial_dict[
                 "model_function"
-            ] = self.ablation_study.model.base_model_generator
+            #] = self.ablation_study.model.base_model_generator
+            ] = self.get_model_generator(type='base')
             print("ABLATION: BASE trial, ab_st.model.base... is: " + str(self.ablation_study.model.base_model_generator))
             print("ABLATION: BASE trial, model: " + str(trial_dict['dataset_function']))
 
