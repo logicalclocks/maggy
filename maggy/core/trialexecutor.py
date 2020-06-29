@@ -30,6 +30,8 @@ from maggy import util, tensorboard
 from maggy.core import rpc, exceptions
 from maggy.core.reporter import Reporter
 
+os.environ['TF_FORCE_GPU_ALLOW_GROWTH'] = 'true'
+
 
 def _prepare_func(
     app_id,
