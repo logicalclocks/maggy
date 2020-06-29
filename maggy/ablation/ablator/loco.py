@@ -246,6 +246,13 @@ class LOCO(AbstractAblator):
         (i.e. the components that will be removed one-at-a-time). The first trial will include all the components and
         can be regarded as the base for comparison.
         """
+        
+        print("LOCO INITIALIZE ABLATION: self.ablation_study: " + str(self.ablation_study))
+        print("LOCO INITIALIZE ABLATION: self.ablation_study.model: " + str(self.ablation_study.model))
+        print("LOCO INITIALIZE ABLATION: self.ablation_study.model.base_model_generator: " + str(self.ablation_study.model.base_model_generator))
+        print("LOCO INITIALIZE ABLATION: self.ablation_study.custom_dataset_generator: " + str(self.ablation_study.custom_dataset_generator))
+        print("LOCO INITIALIZE ABLATION: self.base_dataset_generator: " + str(self.base_dataset_generator))
+       
 
         # 0 - add first trial with all the components (base/reference trial)
         self.trial_buffer.append(
