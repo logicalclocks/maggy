@@ -305,6 +305,7 @@ class LOCO(AbstractAblator):
                     trial_type='ablation'
                 )
             )
+        print("ABLATION: trial_buffer is: " + self.trial_buffer)
         
 
     def get_trial(self, trial=None):
