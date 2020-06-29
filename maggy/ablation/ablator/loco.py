@@ -384,5 +384,6 @@ class LOCO(AbstractAblator):
             trial_dict['ablated_layer'] = "All layers between {0} and {1}".format(starting_layer, ending_layer)
             print("ABLATION: created trial_dict for module, start={0} and end={1}".format(starting_layer, ending_layer))
 
+        print("ABLATION: created trial_dict: " + trial_dict)
 
         return trial_dict
