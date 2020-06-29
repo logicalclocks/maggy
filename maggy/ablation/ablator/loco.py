@@ -342,7 +342,7 @@ class LOCO(AbstractAblator):
 
         # 1 - determine the dataset generation logic
         if ablated_feature is None:
-            trial_dict["dataset_function"] = self.base_dataset_generator
+            trial_dict["dataset_function"] = self.get_dataset_generator()
             trial_dict["ablated_feature"] = "None"
             print("ABLATION: set dataset function: " + str(trial_dict['dataset_function']))
             print("ABLATION: base dataset function is: " + str(self.base_dataset_generator))
