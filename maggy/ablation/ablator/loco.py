@@ -348,7 +348,7 @@ class LOCO(AbstractAblator):
         # 2 - determine the model generation logic
         # 2.1 - no model ablation
 
-        if layer_identifier is None and custom_model_generator is None:
+        if layer_identifier is None and custom_model_generator is None and type!='module':
             trial_dict[
                 "model_function"
             ] = self.ablation_study.model.base_model_generator
