@@ -226,7 +226,7 @@ class LOCO(AbstractAblator):
         if ending_layer == starting_layer:
             return
         for inbound_layer in layers_mapping_dict[ending_layer]:
-            get_layers_for_removal(starting_layer, inbound_layer, layers_mapping_dict, layers_for_removal)
+            self.get_layers_for_removal(starting_layer, inbound_layer, layers_mapping_dict, layers_for_removal)
         
         layers_mapping_dict.pop(ending_layer) # not sure how this will change the state
         layers_for_removal.append(ending_layer)
