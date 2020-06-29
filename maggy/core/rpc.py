@@ -546,9 +546,9 @@ class Client(MessageSocket):
         """Blocking call to get new parameter combination."""
         while not self.done:
             resp = self._request(self.sock, "GET")
-            print("ABLATION: in rpc get_suggestion (549), resp is: " + resp)
+            print("ABLATION: in rpc get_suggestion (549), resp is: " + str(resp))
             trial_id, parameters = self._handle_message(resp, reporter) or (None, None)
-            print("ABLATION: in rpc get_suggestion (551), trial_id, parameters: {0}, {1}".format(trial_id, parameters))
+            print("ABLATION: in rpc get_suggestion (551), trial_id, parameters: {0}, {1}".format(trial_id, str(parameters)))
 
             if trial_id is not None:
                 break
