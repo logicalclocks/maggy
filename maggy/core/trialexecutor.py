@@ -112,6 +112,7 @@ def _prepare_func(
                         "ablated_feature": parameters.get("ablated_feature", "None"),
                         "ablated_layer": parameters.get("ablated_layer", "None"),
                     }
+                    print("ABLATION: in trialexecutor (115), parameters: " + ablation_params)
                     parameters.pop("ablated_feature")
                     parameters.pop("ablated_layer")
 
