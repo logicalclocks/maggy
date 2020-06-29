@@ -116,9 +116,9 @@ class LOCO(AbstractAblator):
     def get_model_generator(self, layer_identifier=None, custom_model_generator=None, type=None,
     starting_layer=None, ending_layer=None): # TODO rewrite with kwargs?
         
-        if type=='module':
-            print("ABLATION: calling ablate_module in get_model_generator for start={0} and end={1}".format(starting_layer, ending_layer))
-            return self.ablate_module(starting_layer, ending_layer)
+        # if type=='module':
+        #     print("ABLATION: calling ablate_module in get_model_generator for start={0} and end={1}".format(starting_layer, ending_layer))
+        #     return self.ablate_module(starting_layer, ending_layer)
 
         if layer_identifier is not None and custom_model_generator is not None:
             raise BadArgumentsError(
@@ -132,10 +132,13 @@ class LOCO(AbstractAblator):
         # if this is a model ablation of a base model, construct a new model generator
         # using the layer_identifier
         base_model_generator = self.ablation_study.model.base_model_generator
-        if layer_identifier is None:
+        if layer_identifier is None and type!='module':
             return base_model_generator
 
         def model_generator():
+            if type == 'module':
+                new_model = self.ablate_module(starting_layer, ending_layer)
+                return model_generator
             import tensorflow as tf
 
             base_model = base_model_generator()
