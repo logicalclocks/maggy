@@ -372,6 +372,8 @@ class LOCO(AbstractAblator):
             trial_dict["ablated_feature"] = ablated_feature
             print("ABLATION: ELSE set dataset function: " + str(trial_dict['dataset_function']))
             print("ABLATION: ELSE base dataset function is: " + str(self.base_dataset_generator))
+            trial_dict["ablated_layer"] = "None"
+
 
         # 2 - determine the model generation logic
         # 2.1 - no model ablation
