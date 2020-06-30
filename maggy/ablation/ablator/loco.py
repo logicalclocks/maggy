@@ -183,7 +183,7 @@ class LOCO(AbstractAblator):
     
     def get_model_generator_modules(self, starting_layer, ending_layer):
         
-        base_model = self.ablation_study.model.base_model_generator()
+        base_model_generator = self.ablation_study.model.base_model_generator
 
         def ablate_module():
 
@@ -215,6 +215,9 @@ class LOCO(AbstractAblator):
                 return layers_for_removal
 
             import tensorflow as tf
+            
+            base_model = base_model_generator()
+            
             config_dict = base_model.get_config()
             base_model_dict = json.loads(base_model.to_json())
 
