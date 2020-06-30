@@ -389,6 +389,7 @@ class LOCO(AbstractAblator):
             trial_dict["model_function"] = self.get_model_generator(
                 layer_identifier=layer_identifier
             )
+            print("ABLATION: LAYER IDENTIFIER: " + str(layer_identifier))
             if type(layer_identifier) is str:
                 trial_dict["ablated_layer"] = layer_identifier
             elif type(layer_identifier) is set:
