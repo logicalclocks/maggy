@@ -186,6 +186,33 @@ class LOCO(AbstractAblator):
 
         def ablate_module():
 
+            def get_list_of_layer_names(config_dict):
+                list_of_names = []
+                for layer in config_dict['layers']:
+                    list_of_names.append(layer['name'])
+                return list_of_names
+
+            def get_dict_of_inbound_layers_mapping(config_dict):
+                dict_of_inbound_layers = {}
+                for layer in config_dict['layers']:
+                    list_of_inbound_layers = []
+                    name = layer['name']
+                    if len(layer['inbound_nodes']) > 0: # because some layers, such as input layers, do not have any inbound_nodes
+                        for inbound_layer in layer['inbound_nodes'][0]:
+                            list_of_inbound_layers.append(inbound_layer[0])
+                    dict_of_inbound_layers[name] = list_of_inbound_layers
+                return dict_of_inbound_layers
+
+            def get_layers_for_removal(starting_layer, ending_layer, layers_mapping_dict, layers_for_removal):
+                if ending_layer == starting_layer:
+                    return
+                for inbound_layer in layers_mapping_dict[ending_layer]:
+                    get_layers_for_removal(starting_layer, inbound_layer, layers_mapping_dict, layers_for_removal)
+                
+                layers_mapping_dict.pop(ending_layer) # not sure how this will change the state
+                layers_for_removal.append(ending_layer)
+                return layers_for_removal
+
             import tensorflow as tf
             config_dict = base_model.get_config()
             base_model_dict = json.loads(base_model.to_json())
@@ -217,33 +244,6 @@ class LOCO(AbstractAblator):
             return new_model
 
         return ablate_module
-
-    def get_list_of_layer_names(self, config_dict):
-        list_of_names = []
-        for layer in config_dict['layers']:
-            list_of_names.append(layer['name'])
-        return list_of_names
-
-    def get_dict_of_inbound_layers_mapping(self, config_dict):
-        dict_of_inbound_layers = {}
-        for layer in config_dict['layers']:
-            list_of_inbound_layers = []
-            name = layer['name']
-            if len(layer['inbound_nodes']) > 0: # because some layers, such as input layers, do not have any inbound_nodes
-                for inbound_layer in layer['inbound_nodes'][0]:
-                    list_of_inbound_layers.append(inbound_layer[0])
-            dict_of_inbound_layers[name] = list_of_inbound_layers
-        return dict_of_inbound_layers
-
-    def get_layers_for_removal(self, starting_layer, ending_layer, layers_mapping_dict, layers_for_removal):
-        if ending_layer == starting_layer:
-            return
-        for inbound_layer in layers_mapping_dict[ending_layer]:
-            self.get_layers_for_removal(starting_layer, inbound_layer, layers_mapping_dict, layers_for_removal)
-        
-        layers_mapping_dict.pop(ending_layer) # not sure how this will change the state
-        layers_for_removal.append(ending_layer)
-        return layers_for_removal
 
 
     def initialize(self):
