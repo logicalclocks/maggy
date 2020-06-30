@@ -378,14 +378,14 @@ class LOCO(AbstractAblator):
         # 2 - determine the model generation logic
         # 2.1 - no model ablation
 
-        #if layer_identifier is None and custom_model_generator is None and type!='module':
-        if trial_type=='base':
+        if layer_identifier is None and custom_model_generator is None and trial_type!='module':
+        #if trial_type=='base':
             trial_dict[
                 "model_function"
             #] = self.ablation_study.model.base_model_generator
             ] = self.get_model_generator(trial_type='base')
-            print("ABLATION: BASE trial, ab_st.model.base... is: " + str(self.ablation_study.model.base_model_generator))
-            print("ABLATION: BASE trial, model: " + str(trial_dict['dataset_function']))
+            #print("ABLATION: BASE trial, ab_st.model.base... is: " + str(self.ablation_study.model.base_model_generator))
+            #print("ABLATION: BASE trial, model: " + str(trial_dict['dataset_function']))
 
             trial_dict["ablated_layer"] = "None"
         # 2.2 - layer ablation based on base model generator
