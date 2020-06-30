@@ -137,7 +137,7 @@ class LOCO(AbstractAblator):
         base_model_generator = self.ablation_study.model.base_model_generator
 
         if trial_type=='base':
-            return base_model_generator(
+            return base_model_generator
 
         def model_generator():
             # if type == 'module':
