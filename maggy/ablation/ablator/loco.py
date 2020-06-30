@@ -217,13 +217,13 @@ class LOCO(AbstractAblator):
             config_dict = base_model.get_config()
             base_model_dict = json.loads(base_model.to_json())
 
-            layers_mapping_dict = self.get_dict_of_inbound_layers_mapping(config_dict)
-            all_layers = self.get_list_of_layer_names(config_dict)
+            layers_mapping_dict = get_dict_of_inbound_layers_mapping(config_dict)
+            all_layers = get_list_of_layer_names(config_dict)
             # example of an ending_layer: the concat layer that is at the end of the inception module that we want to remove
             # example of starting_layer: the concat layer at the same level and before the ending_layer
 
             # passing the state as the argument (layers_for_removal), rather than using a global variable
-            removal_list = self.get_layers_for_removal(starting_layer, ending_layer, layers_mapping_dict, [])
+            removal_list = get_layers_for_removal(starting_layer, ending_layer, layers_mapping_dict, [])
             removal_indices = sorted([all_layers.index(layer_name) for layer_name in removal_list], reverse=True)
 
             # first change the future references then remove the layers, since the indices
