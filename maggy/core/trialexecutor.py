@@ -79,13 +79,13 @@ def _prepare_func(
 
         reporter = Reporter(log_file, partition_id, task_attempt, original_print)
 
-        def maggy_print(*args, **kwargs):
-            """Maggy custom print() function."""
-            original_print(*args, **kwargs)
-            reporter.log(" ".join(str(x) for x in args), True)
+        # def maggy_print(*args, **kwargs):
+        #     """Maggy custom print() function."""
+        #     original_print(*args, **kwargs)
+        #     reporter.log(" ".join(str(x) for x in args), True)
 
-        # override the builtin print
-        __builtin__.print = maggy_print
+        # # override the builtin print
+        # __builtin__.print = maggy_print
 
         try:
             client_addr = client.client_addr
