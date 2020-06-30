@@ -279,6 +279,7 @@ class LOCO(AbstractAblator):
 
         # 2 - generate single-layer ablation trials
         for layer in self.ablation_study.model.layers.included_layers:
+            print("ABLATION: LAYER IDENTIFIER in initialize: " + str(layer))
             self.trial_buffer.append(
                 Trial(
                     self.create_trial_dict(layer_identifier=layer),
@@ -389,7 +390,7 @@ class LOCO(AbstractAblator):
             trial_dict["model_function"] = self.get_model_generator(
                 layer_identifier=layer_identifier
             )
-            print("ABLATION: LAYER IDENTIFIER: " + str(layer_identifier))
+            print("ABLATION: LAYER IDENTIFIER in create_trial_dict: " + str(layer_identifier))
             if type(layer_identifier) is str:
                 trial_dict["ablated_layer"] = layer_identifier
             elif type(layer_identifier) is set:
