@@ -391,6 +391,8 @@ class LOCO(AbstractAblator):
                 layer_identifier=layer_identifier
             )
             print("ABLATION: LAYER IDENTIFIER in create_trial_dict: " + str(layer_identifier))
+            print("ABLATION: LAYER IDENTIFIER TYPE in create_trial_dict: " + type(layer_identifier))
+
             if type(layer_identifier) is str:
                 trial_dict["ablated_layer"] = layer_identifier
             elif type(layer_identifier) is set:
