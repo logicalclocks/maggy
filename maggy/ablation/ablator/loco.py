@@ -43,7 +43,7 @@ class LOCO(AbstractAblator):
     ):
 
         # for dataset generators provided by users
-        if self.ablation_study.custom_dataset_generator is not None and not False:
+        if self.ablation_study.custom_dataset_generator is not (None or False):
             print('ABLATION: in get_dataset_generator, setting custom: ' + str(self.ablation_study.custom_dataset_generator))
             print('ABLATION: in get_dataset_generator, setting custom, length: ' + str(len(str(self.ablation_study.custom_dataset_generator))))
             print('ABLATION: in get_dataset_generator, setting custom, type: ' + str(type((self.ablation_study.custom_dataset_generator))))
