@@ -301,7 +301,7 @@ class LOCO(AbstractAblator):
         # 2.4 - module ablation based on base model generator
         elif ablation_type=='module':
             print("ABLATION: in trial_dict for module, start={0} and end={1}".format(starting_layer, ending_layer))
-            trial_dict['model_function'] = self.get_model_generator_modules(starting_layer=starting_layer, ending_layer=ending_layer, ablation_type='module')
+            trial_dict['model_function'] = self.get_model_generator(starting_layer=starting_layer, ending_layer=ending_layer, ablation_type='module')
             trial_dict['ablated_layer'] = "All layers between {0} and {1}".format(starting_layer, ending_layer)
             print("ABLATION: created trial_dict for module, start={0} and end={1}".format(starting_layer, ending_layer))
             print("ABLATION MODULE: created trial_dict: " + str(trial_dict))
