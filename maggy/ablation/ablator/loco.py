@@ -185,43 +185,48 @@ class LOCO(AbstractAblator):
         
         base_model_generator = self.ablation_study.model.base_model_generator
 
-        def ablate_module():
+        def model_generator():
 
-            import tensorflow as tf
             from maggy.ablation.utils import functionalmodel
-            
-            base_model = base_model_generator()
-            
-            config_dict = base_model.get_config()
-            base_model_dict = json.loads(base_model.to_json())
+            return functionalmodel.get_module_ablated_generator(starting_layer, ending_layer, base_model_generator)
 
-            layers_mapping_dict = functionalmodel.get_dict_of_inbound_layers_mapping(config_dict)
-            all_layers = functionalmodel.get_list_of_layer_names(config_dict)
-            # example of an ending_layer: the concat layer that is at the end of the inception module that we want to remove
-            # example of starting_layer: the concat layer at the same level and before the ending_layer
+        # def ablate_module():
 
-            # passing the state as the argument (layers_for_removal), rather than using a global variable
-            removal_list = functionalmodel.get_layers_for_removal(starting_layer, ending_layer, layers_mapping_dict, [])
-            removal_indices = sorted([all_layers.index(layer_name) for layer_name in removal_list], reverse=True)
-
-            # first change the future references then remove the layers, since the indices
-            # will be changed after removal of each layer, and all_layers.index() would become invalid
-            layers_to_be_modified = []
-            for layer, its_inbound_layers in layers_mapping_dict.items():    
-                if ending_layer in its_inbound_layers:
-                    # print(layer)
-                    inbound_list = base_model_dict['config']['layers'][all_layers.index(layer)]['inbound_nodes'][0][0]
-                    new_inbound_list = [starting_layer if x==ending_layer else x for x in inbound_list]
-                    base_model_dict['config']['layers'][all_layers.index(layer)]['inbound_nodes'][0][0] = new_inbound_list
+        #     import tensorflow as tf
+        #     from maggy.ablation.utils import functionalmodel
             
-            # now remove the layers
-            for index in removal_indices:
-                base_model_dict['config']['layers'].pop(index)
+        #     base_model = base_model_generator()
             
-            new_model = tf.keras.models.model_from_json(json.dumps(base_model_dict))
-            return new_model
+        #     config_dict = base_model.get_config()
+        #     base_model_dict = json.loads(base_model.to_json())
 
-        return ablate_module
+        #     layers_mapping_dict = functionalmodel.get_dict_of_inbound_layers_mapping(config_dict)
+        #     all_layers = functionalmodel.get_list_of_layer_names(config_dict)
+        #     # example of an ending_layer: the concat layer that is at the end of the inception module that we want to remove
+        #     # example of starting_layer: the concat layer at the same level and before the ending_layer
+
+        #     # passing the state as the argument (layers_for_removal), rather than using a global variable
+        #     removal_list = functionalmodel.get_layers_for_removal(starting_layer, ending_layer, layers_mapping_dict, [])
+        #     removal_indices = sorted([all_layers.index(layer_name) for layer_name in removal_list], reverse=True)
+
+        #     # first change the future references then remove the layers, since the indices
+        #     # will be changed after removal of each layer, and all_layers.index() would become invalid
+        #     layers_to_be_modified = []
+        #     for layer, its_inbound_layers in layers_mapping_dict.items():    
+        #         if ending_layer in its_inbound_layers:
+        #             # print(layer)
+        #             inbound_list = base_model_dict['config']['layers'][all_layers.index(layer)]['inbound_nodes'][0][0]
+        #             new_inbound_list = [starting_layer if x==ending_layer else x for x in inbound_list]
+        #             base_model_dict['config']['layers'][all_layers.index(layer)]['inbound_nodes'][0][0] = new_inbound_list
+            
+        #     # now remove the layers
+        #     for index in removal_indices:
+        #         base_model_dict['config']['layers'].pop(index)
+            
+        #     new_model = tf.keras.models.model_from_json(json.dumps(base_model_dict))
+        #     return new_model
+
+        return model_generator
 
 
     def initialize(self):
