@@ -118,5 +118,3 @@ def get_module_ablated_generator(starting_layer, ending_layer, base_model_genera
     
     new_model = tf.keras.models.model_from_json(json.dumps(base_model_dict))
     return new_model
-
-return ablate_module
