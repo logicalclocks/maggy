@@ -80,7 +80,7 @@ def get_layers_for_removal(starting_layer, ending_layer, inbound_layers_mapping_
     return layers_for_removal
 
 
-def get_module_ablated_generator(starting_layer, ending_layer, base_model_generator):
+def model_generator_for_module_ablation(starting_layer, ending_layer, base_model_generator):
     
     import tensorflow as tf
     import json

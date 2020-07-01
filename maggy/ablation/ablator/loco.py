@@ -44,9 +44,6 @@ class LOCO(AbstractAblator):
 
         # for dataset generators provided by users
         if self.ablation_study.custom_dataset_generator is not (None or False):
-            # print('ABLATION: in get_dataset_generator, setting custom: ' + str(self.ablation_study.custom_dataset_generator))
-            # print('ABLATION: in get_dataset_generator, setting custom, length: ' + str(len(str(self.ablation_study.custom_dataset_generator))))
-            # print('ABLATION: in get_dataset_generator, setting custom, type: ' + str(type((self.ablation_study.custom_dataset_generator))))
             return self.ablation_study.custom_dataset_generator
         else:
             training_dataset_name = self.ablation_study.hops_training_dataset_name
@@ -119,10 +116,6 @@ class LOCO(AbstractAblator):
     def get_model_generator(self, layer_identifier=None, custom_model_generator=None, trial_type=None,
     starting_layer=None, ending_layer=None): # TODO rewrite with kwargs?
         
-        # if type=='module':
-        #     print("ABLATION: calling ablate_module in get_model_generator for start={0} and end={1}".format(starting_layer, ending_layer))
-        #     return self.ablate_module(starting_layer, ending_layer)
-
         if layer_identifier is not None and custom_model_generator is not None:
             raise BadArgumentsError(
                 "get_model_generator",
@@ -134,98 +127,30 @@ class LOCO(AbstractAblator):
             return custom_model_generator[0]
         # if this is a model ablation of a base model, construct a new model generator
         # using the layer_identifier
+
         base_model_generator = self.ablation_study.model.base_model_generator
 
         if trial_type=='base':
             return base_model_generator
 
+        # sequential, layer ablation
+        # if
+
         def model_generator():
-            # if type == 'module':
-            #     new_model = self.ablate_module(starting_layer, ending_layer)
-            #     return model_generator
-            import tensorflow as tf
-
-            base_model = base_model_generator()
-
-            list_of_layers = [
-                base_layer for base_layer in base_model.get_config()["layers"]
-            ]
-            if type(layer_identifier) is str:
-                # ablation of a single layer
-                for base_layer in reversed(list_of_layers[1:-1]):
-                    # the first (input) and last (output) layers should not be considered, hence list_of_layers[1:-1]
-                    if base_layer["config"]["name"] == layer_identifier:
-                        list_of_layers.remove(base_layer)
-                        break
-            elif type(layer_identifier) is set:
-                # ablation of a layer group - all the layers in the group should be removed together
-                if len(layer_identifier) > 1:
-                    # group of layers (non-prefix)
-                    for base_layer in reversed(list_of_layers[1:-1]):
-                        if base_layer["config"]["name"] in layer_identifier:
-                            list_of_layers.remove(base_layer)
-                elif len(layer_identifier) == 1:
-                    # layer_identifier is a prefix
-                    prefix = list(layer_identifier)[0].lower()
-                    for base_layer in reversed(list_of_layers[1:-1]):
-                        if base_layer["config"]["name"].lower().startswith(prefix):
-                            list_of_layers.remove(base_layer)
-
-            base_json = base_model.to_json()
-            new_dict = json.loads(base_json)
-            new_dict["config"]["layers"] = list_of_layers
-            new_json = json.dumps(new_dict)
-            new_model = tf.keras.models.model_from_json(new_json)
-
-            return new_model
+            from maggy.ablation.utils import sequentialmodel
+            return sequentialmodel.model_generator_for_layer_ablation(layer_identifier, base_model_generator)
 
         return model_generator
-    
+
+
     def get_model_generator_modules(self, starting_layer, ending_layer):
         
         base_model_generator = self.ablation_study.model.base_model_generator
 
         def model_generator():
-
             from maggy.ablation.utils import functionalmodel
-            return functionalmodel.get_module_ablated_generator(starting_layer, ending_layer, base_model_generator)
-
-        # def ablate_module():
-
-        #     import tensorflow as tf
-        #     from maggy.ablation.utils import functionalmodel
-            
-        #     base_model = base_model_generator()
-            
-        #     config_dict = base_model.get_config()
-        #     base_model_dict = json.loads(base_model.to_json())
-
-        #     layers_mapping_dict = functionalmodel.get_dict_of_inbound_layers_mapping(config_dict)
-        #     all_layers = functionalmodel.get_list_of_layer_names(config_dict)
-        #     # example of an ending_layer: the concat layer that is at the end of the inception module that we want to remove
-        #     # example of starting_layer: the concat layer at the same level and before the ending_layer
-
-        #     # passing the state as the argument (layers_for_removal), rather than using a global variable
-        #     removal_list = functionalmodel.get_layers_for_removal(starting_layer, ending_layer, layers_mapping_dict, [])
-        #     removal_indices = sorted([all_layers.index(layer_name) for layer_name in removal_list], reverse=True)
-
-        #     # first change the future references then remove the layers, since the indices
-        #     # will be changed after removal of each layer, and all_layers.index() would become invalid
-        #     layers_to_be_modified = []
-        #     for layer, its_inbound_layers in layers_mapping_dict.items():    
-        #         if ending_layer in its_inbound_layers:
-        #             # print(layer)
-        #             inbound_list = base_model_dict['config']['layers'][all_layers.index(layer)]['inbound_nodes'][0][0]
-        #             new_inbound_list = [starting_layer if x==ending_layer else x for x in inbound_list]
-        #             base_model_dict['config']['layers'][all_layers.index(layer)]['inbound_nodes'][0][0] = new_inbound_list
-            
-        #     # now remove the layers
-        #     for index in removal_indices:
-        #         base_model_dict['config']['layers'].pop(index)
-            
-        #     new_model = tf.keras.models.model_from_json(json.dumps(base_model_dict))
-        #     return new_model
-
+            return functionalmodel.model_generator_for_module_ablation(starting_layer, ending_layer, base_model_generator)
+        
         return model_generator
 
 
