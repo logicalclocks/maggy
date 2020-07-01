@@ -142,7 +142,6 @@ class LOCO(AbstractAblator):
 
         return model_generator
 
-
     def get_model_generator_modules(self, starting_layer, ending_layer):
         
         base_model_generator = self.ablation_study.model.base_model_generator
