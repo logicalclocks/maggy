@@ -104,16 +104,13 @@ def _prepare_func(
             client.start_heartbeat(reporter)
 
             # blocking
-            print("ABLATION: in trialexecutor (107), before get_suggestion")
             trial_id, parameters = client.get_suggestion(reporter)
-            print("ABLATION: in trialexecutor (109), after get_suggestion, trial_id and parameters: {0}, {1}".format(trial_id, str(parameters)))           
             while not client.done:
                 if experiment_type == "ablation":
                     ablation_params = {
                         "ablated_feature": parameters.get("ablated_feature", "None"),
                         "ablated_layer": parameters.get("ablated_layer", "None"),
                     }
-                    print("ABLATION: in trialexecutor (115), parameters: " + str(ablation_params))
                     parameters.pop("ablated_feature")
                     parameters.pop("ablated_layer")
 
