@@ -39,79 +39,33 @@ class LOCO(AbstractAblator):
         )
 
     def get_dataset_generator(
-        self, ablated_feature=None, dataset_type="tfrecord", shuffle_buffer_size=10000
+        self, ablated_feature=None, dataset_type="tfrecord"
     ):
 
-        # for dataset generators provided by users
+        # if available, use the dataset generator provided by the user
         if self.ablation_study.custom_dataset_generator is not (None or False):
             return self.ablation_study.custom_dataset_generator
+
+        # else use a dataset generator from maggy
+        training_dataset_name = self.ablation_study.hops_training_dataset_name
+        training_dataset_version = self.ablation_study.hops_training_dataset_version
+        label_name = self.ablation_study.label_name
+
+        if dataset_type == "tfrecord":
+
+            def dataset_generator(num_epochs, batch_size):
+                from maggy.ablation.utils import tensorflowdatasets
+                return tensorflowdatasets.ablate_feature_and_create_tfrecord_dataset_from_featurestore(ablated_feature=ablated_feature, 
+                training_dataset_name=training_dataset_name, training_dataset_version=training_dataset_version,
+                label_name=label_name, num_epochs=num_epochs, batch_size=batch_size)
+            return dataset_generator
+
         else:
-            training_dataset_name = self.ablation_study.hops_training_dataset_name
-            training_dataset_version = self.ablation_study.hops_training_dataset_version
-            label_name = self.ablation_study.label_name
-
-            if dataset_type == "tfrecord":
-
-                def create_tf_dataset(num_epochs, batch_size):
-                    import tensorflow as tf
-
-                    dataset_dir = featurestore.get_training_dataset_path(
-                        training_dataset_name, training_dataset_version
-                    )
-                    input_files = tf.gfile.Glob(dataset_dir + "/part-r-*")
-                    dataset = tf.data.TFRecordDataset(input_files)
-                    tf_record_schema = featurestore.get_training_dataset_tf_record_schema(
-                        training_dataset_name
-                    )
-                    meta = featurestore.get_featurestore_metadata()
-                    training_features = [
-                        feature.name
-                        for feature in meta.training_datasets[
-                            training_dataset_name + "_" + str(training_dataset_version)
-                        ].features
-                    ]
-
-                    if ablated_feature is not None:
-                        training_features.remove(ablated_feature)
-
-                    training_features.remove(label_name)
-
-                    def decode(example_proto):
-                        example = tf.parse_single_example(
-                            example_proto, tf_record_schema
-                        )
-                        # prepare the features
-                        x = []
-                        for feature_name in training_features:
-                            # temporary fix for the case of tf.int types
-                            if tf_record_schema[feature_name].dtype.is_integer:
-                                x.append(tf.cast(example[feature_name], tf.float32))
-                            else:
-                                x.append(example[feature_name])
-
-                        # prepare the labels
-                        if tf_record_schema[label_name].dtype.is_integer:
-                            y = [tf.cast(example[label_name], tf.float32)]
-                        else:
-                            y = [example[label_name]]
-
-                        return x, y
-
-                    dataset = (
-                        dataset.map(decode)
-                        .shuffle(shuffle_buffer_size)
-                        .batch(batch_size)
-                        .repeat(num_epochs)
-                    )
-                    return dataset
-
-                return create_tf_dataset
-            else:
-                raise NotSupportedError(
-                    "dataset type",
-                    dataset_type,
-                    "Use 'tfrecord' or write your own custom dataset generator.",
-                )
+            raise NotSupportedError(
+                "dataset type",
+                dataset_type,
+                "Use 'tfrecord' or write your own custom dataset generator.",
+            )
 
     def get_model_generator(self, layer_identifier=None, custom_model_generator=None, ablation_type=None,
     starting_layer=None, ending_layer=None):

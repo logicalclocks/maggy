@@ -84,8 +84,6 @@ def model_generator_for_module_ablation(starting_layer, ending_layer, base_model
     
     import tensorflow as tf
     import json
-
-    # from maggy.ablation.utils import functionalmodel
     
     base_model = base_model_generator()
     
@@ -107,7 +105,6 @@ def model_generator_for_module_ablation(starting_layer, ending_layer, base_model
     layers_to_be_modified = []
     for layer, its_inbound_layers in layers_mapping_dict.items():    
         if ending_layer in its_inbound_layers:
-            # print(layer)
             inbound_list = base_model_dict['config']['layers'][all_layers.index(layer)]['inbound_nodes'][0][0]
             new_inbound_list = [starting_layer if x==ending_layer else x for x in inbound_list]
             base_model_dict['config']['layers'][all_layers.index(layer)]['inbound_nodes'][0][0] = new_inbound_list
