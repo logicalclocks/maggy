@@ -68,5 +68,3 @@ training_dataset_version, label_name, num_epochs, batch_size, shuffle_buffer_siz
         .repeat(num_epochs)
     )
     return dataset
-
-return ablate_feature_and_create_tfrecord_dataset_from_featurestore
