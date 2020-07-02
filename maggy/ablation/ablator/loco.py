@@ -104,13 +104,6 @@ class LOCO(AbstractAblator):
         can be regarded as the base for comparison.
         """
         
-        print("LOCO INITIALIZE ABLATION: self.ablation_study: " + str(self.ablation_study))
-        print("LOCO INITIALIZE ABLATION: self.ablation_study.model: " + str(self.ablation_study.model))
-        print("LOCO INITIALIZE ABLATION: self.ablation_study.model.base_model_generator: " + str(self.ablation_study.model.base_model_generator))
-        print("LOCO INITIALIZE ABLATION: self.ablation_study.custom_dataset_generator: " + str(self.ablation_study.custom_dataset_generator))
-        print("LOCO INITIALIZE ABLATION: self.base_dataset_generator: " + str(self.base_dataset_generator))
-       
-
         # 0 - add first trial with all the components (base/reference trial)
         self.trial_buffer.append(
             Trial(self.create_trial_dict(ablation_type='base'), trial_type="ablation")
@@ -172,9 +165,7 @@ class LOCO(AbstractAblator):
                     ),
                     trial_type='ablation'
                 )
-            )
-        print("ABLATION: trial_buffer is: " + str(self.trial_buffer))
-        
+            )        
 
     def get_trial(self, trial=None):
         if self.trial_buffer:
@@ -254,12 +245,7 @@ class LOCO(AbstractAblator):
         
         # 2.4 - module ablation based on base model generator
         elif ablation_type=='module':
-            print("ABLATION: in trial_dict for module, start={0} and end={1}".format(starting_layer, ending_layer))
             trial_dict['model_function'] = self.get_model_generator(starting_layer=starting_layer, ending_layer=ending_layer, ablation_type='module')
             trial_dict['ablated_layer'] = "All layers between {0} and {1}".format(starting_layer, ending_layer)
-            print("ABLATION: created trial_dict for module, start={0} and end={1}".format(starting_layer, ending_layer))
-            print("ABLATION MODULE: created trial_dict: " + str(trial_dict))
-
-        print("ABLATION: created trial_dict: " + str(trial_dict))
 
         return trial_dict
