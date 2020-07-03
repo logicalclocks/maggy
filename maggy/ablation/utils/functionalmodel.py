@@ -14,6 +14,7 @@
 #   limitations under the License.
 #
 
+
 def get_list_of_layer_names(config_dict):
     """
         Return a list of layer names.
@@ -24,8 +25,9 @@ def get_list_of_layer_names(config_dict):
         :rtype: `list`
     """
 
-    list_of_names = [layer['name'] for layer in config_dict['layers']]
+    list_of_names = [layer["name"] for layer in config_dict["layers"]]
     return list_of_names
+
 
 def get_dict_of_inbound_layers_mapping(config_dict):
     """
@@ -38,18 +40,22 @@ def get_dict_of_inbound_layers_mapping(config_dict):
     """
 
     dict_of_inbound_layers = {}
-    for layer in config_dict['layers']:
+    for layer in config_dict["layers"]:
         list_of_inbound_layers = []
-        name = layer['name']
-        if len(layer['inbound_nodes']) > 0: # because some layers, such as input layers, do not have any inbound_nodes
-            for inbound_layer in layer['inbound_nodes'][0]:
+        name = layer["name"]
+        if (
+            len(layer["inbound_nodes"]) > 0
+        ):  # because some layers, such as input layers, do not have any inbound_nodes
+            for inbound_layer in layer["inbound_nodes"][0]:
                 list_of_inbound_layers.append(inbound_layer[0])
         dict_of_inbound_layers[name] = list_of_inbound_layers
 
     return dict_of_inbound_layers
 
 
-def get_layers_for_removal(starting_layer, ending_layer, inbound_layers_mapping_dict, layers_for_removal=[]):
+def get_layers_for_removal(
+    starting_layer, ending_layer, inbound_layers_mapping_dict, layers_for_removal=[]
+):
     """
     Return a list containing the names of all the layers that have to be removed, i.e., all the layers
     in a module.
@@ -59,7 +65,7 @@ def get_layers_for_removal(starting_layer, ending_layer, inbound_layers_mapping_
     :param ending_layer: name of the ending layer of the module, e.g., a mixed (concat) layer
     :type ending_layer: str
     :param layers_mapping_dict: a dictionary of inbound layers mapping, i.e. the output of
-    get_dict_of_inbound_layers_mapping() 
+    get_dict_of_inbound_layers_mapping()
     :type layers_mapping_dict: dict
     :param layers_for_removal: a list of layers to be removed, for the recursive calls
     :type layers_for_removal: list
@@ -70,23 +76,32 @@ def get_layers_for_removal(starting_layer, ending_layer, inbound_layers_mapping_
 
     if ending_layer == starting_layer:
         return
-    
-    for inbound_layer in inbound_layers_mapping_dict[ending_layer]:
-        get_layers_for_removal(starting_layer, inbound_layer, inbound_layers_mapping_dict, layers_for_removal)
 
-    inbound_layers_mapping_dict.pop(ending_layer) # not sure how this will change the state
+    for inbound_layer in inbound_layers_mapping_dict[ending_layer]:
+        get_layers_for_removal(
+            starting_layer,
+            inbound_layer,
+            inbound_layers_mapping_dict,
+            layers_for_removal,
+        )
+
+    inbound_layers_mapping_dict.pop(
+        ending_layer
+    )  # not sure how this will change the state
     layers_for_removal.append(ending_layer)
 
     return layers_for_removal
 
 
-def model_generator_for_module_ablation(starting_layer, ending_layer, base_model_generator):
-    
+def model_generator_for_module_ablation(
+    starting_layer, ending_layer, base_model_generator
+):
+
     import tensorflow as tf
     import json
-    
+
     base_model = base_model_generator()
-    
+
     config_dict = base_model.get_config()
     base_model_dict = json.loads(base_model.to_json())
 
@@ -97,21 +112,30 @@ def model_generator_for_module_ablation(starting_layer, ending_layer, base_model
     # example of starting_layer: the concat layer at the same level and before the ending_layer
 
     # passing the state as the argument (layers_for_removal), rather than using a global variable
-    removal_list = get_layers_for_removal(starting_layer, ending_layer, layers_mapping_dict, [])
-    removal_indices = sorted([all_layers.index(layer_name) for layer_name in removal_list], reverse=True)
+    removal_list = get_layers_for_removal(
+        starting_layer, ending_layer, layers_mapping_dict, []
+    )
+    removal_indices = sorted(
+        [all_layers.index(layer_name) for layer_name in removal_list], reverse=True
+    )
 
     # first change the future references then remove the layers, since the indices
     # will be changed after removal of each layer, and all_layers.index() would become invalid
-    layers_to_be_modified = []
-    for layer, its_inbound_layers in layers_mapping_dict.items():    
+    for layer, its_inbound_layers in layers_mapping_dict.items():
         if ending_layer in its_inbound_layers:
-            inbound_list = base_model_dict['config']['layers'][all_layers.index(layer)]['inbound_nodes'][0][0]
-            new_inbound_list = [starting_layer if x==ending_layer else x for x in inbound_list]
-            base_model_dict['config']['layers'][all_layers.index(layer)]['inbound_nodes'][0][0] = new_inbound_list
-    
+            inbound_list = base_model_dict["config"]["layers"][all_layers.index(layer)][
+                "inbound_nodes"
+            ][0][0]
+            new_inbound_list = [
+                starting_layer if x == ending_layer else x for x in inbound_list
+            ]
+            base_model_dict["config"]["layers"][all_layers.index(layer)][
+                "inbound_nodes"
+            ][0][0] = new_inbound_list
+
     # now remove the layers
     for index in removal_indices:
-        base_model_dict['config']['layers'].pop(index)
-    
+        base_model_dict["config"]["layers"].pop(index)
+
     new_model = tf.keras.models.model_from_json(json.dumps(base_model_dict))
     return new_model

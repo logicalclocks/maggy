@@ -14,15 +14,14 @@
 #   limitations under the License.
 #
 
+
 def model_generator_for_layer_ablation(layer_identifier, base_model_generator):
     import tensorflow as tf
     import json
-    
+
     base_model = base_model_generator()
 
-    list_of_layers = [
-        base_layer for base_layer in base_model.get_config()["layers"]
-    ]
+    list_of_layers = [base_layer for base_layer in base_model.get_config()["layers"]]
     if type(layer_identifier) is str:
         # ablation of a single layer
         for base_layer in reversed(list_of_layers[1:-1]):

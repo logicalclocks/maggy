@@ -14,11 +14,19 @@
 #   limitations under the License.
 #
 
-def ablate_feature_and_create_tfrecord_dataset_from_featurestore(ablated_feature, training_dataset_name,
-training_dataset_version, label_name, num_epochs, batch_size, shuffle_buffer_size=10000):
+
+def ablate_feature_and_create_tfrecord_dataset_from_featurestore(
+    ablated_feature,
+    training_dataset_name,
+    training_dataset_version,
+    label_name,
+    num_epochs,
+    batch_size,
+    shuffle_buffer_size=10000,
+):
 
     import tensorflow as tf
-    from hops import featurestore # @Moritz would this be needed?
+    from hops import featurestore
 
     dataset_dir = featurestore.get_training_dataset_path(
         training_dataset_name, training_dataset_version
@@ -33,7 +41,8 @@ training_dataset_version, label_name, num_epochs, batch_size, shuffle_buffer_siz
         feature.name
         for feature in meta.training_datasets[
             training_dataset_name + "_" + str(training_dataset_version)
-        ].features]
+        ].features
+    ]
 
     if ablated_feature is not None:
         training_features.remove(ablated_feature)
@@ -41,9 +50,7 @@ training_dataset_version, label_name, num_epochs, batch_size, shuffle_buffer_siz
     training_features.remove(label_name)
 
     def decode(example_proto):
-        example = tf.parse_single_example(
-            example_proto, tf_record_schema
-        )
+        example = tf.parse_single_example(example_proto, tf_record_schema)
         # prepare the features
         x = []
         for feature_name in training_features:
