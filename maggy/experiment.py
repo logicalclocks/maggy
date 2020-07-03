@@ -133,7 +133,7 @@ def lagom(
         # create experiment dir
         experiment_utils._create_experiment_dir(app_id, run_id)
 
-        #tensorboard._register(experiment_utils._get_logdir(app_id, run_id))
+        tensorboard._register(experiment_utils._get_logdir(app_id, run_id))
 
         num_executors = util.num_executors(sc)
 

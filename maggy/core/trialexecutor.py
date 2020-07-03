@@ -125,7 +125,7 @@ def _prepare_func(
                     hopshdfs.mkdir(tb_logdir)
 
                 reporter.init_logger(trial_log_file)
-                #tensorboard._register(tb_logdir)
+                tensorboard._register(tb_logdir)
                 if experiment_type == "ablation":
                     hopshdfs.dump(
                         json.dumps(ablation_params, default=util.json_default_numpy),
