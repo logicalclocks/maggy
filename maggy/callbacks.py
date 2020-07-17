@@ -38,15 +38,6 @@ class KerasBatchEnd(tf.keras.callbacks.Callback):
         self.metric_name = metric
         self.reporter = reporter
 
-    def on_train_begin(self, logs=None):
-        # if self.metric_name not in self.model.metrics_names:
-        #     raise ValueError(
-        #         "The choosen metric {0} is not monitored: {1}".format(
-        #             self.metric_name, self.model.metrics_names
-        #         )
-        #     )
-        pass
-
     def on_batch_end(self, batch, logs={}):
         self.reporter.broadcast(logs.get(self.metric_name, 0))
 
@@ -70,15 +61,6 @@ class KerasEpochEnd(tf.keras.callbacks.Callback):
         super().__init__()
         self.metric_name = metric
         self.reporter = reporter
-
-    def on_train_begin(self, logs=None):
-        # if self.metric_name not in self.model.metrics_names:
-        #     raise ValueError(
-        #         "The choosen metric {0} is not monitored: {1}".format(
-        #             self.metric_name, self.model.metrics_names
-        #         )
-        #     )
-        pass
 
     def on_epoch_end(self, epoch, logs={}):
         self.reporter.broadcast(logs.get(self.metric_name, 0), epoch)
