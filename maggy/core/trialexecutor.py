@@ -144,7 +144,7 @@ def _prepare_func(
 
                     sig = inspect.signature(map_fun)
                     if sig.parameters.get("reporter", None):
-                        retval = map_fun(reporter=reporter, **parameters)
+                        retval = map_fun(**parameters, reporter=reporter)
                     else:
                         retval = map_fun(**parameters)
 
@@ -162,11 +162,9 @@ def _prepare_func(
                 reporter.log("Finished Trial: {}".format(trial_id), False)
                 reporter.log("Final Metric: {}".format(retval), False)
                 client.finalize_metric(retval, reporter)
-                reporter.log("Finalized Metric", False)
 
                 # blocking
                 trial_id, parameters = client.get_suggestion(reporter)
-                reporter.log("Retrieved new trial_id, parameters", False)
 
         except:  # noqa: E722
             reporter.log(traceback.format_exc(), False)
