@@ -25,9 +25,6 @@ import os
 import secrets
 import time
 from datetime import datetime
-import h5py
-from copy import deepcopy
-import numpy as np
 
 from hops import constants as hopsconstants
 from hops import hdfs as hopshdfs
@@ -255,9 +252,6 @@ class ExperimentDriver(object):
         self.log_dir = kwargs.get("log_dir")
         self.exception = None
 
-        self.total_time = kwargs.get("total_time")
-        self.log_interval = kwargs.get("log_interval")
-
         # Open File desc for HDFS to log
         if not hopshdfs.exists(self.log_file):
             hopshdfs.dump("", self.log_file)
@@ -276,9 +270,6 @@ class ExperimentDriver(object):
             self.optimizer.trial_store = self._trial_store
             self.optimizer.final_store = self._final_store
             self.optimizer.direction = self.direction
-            # following two lines for experiments use only
-            self.optimizer.time_start = time.time()
-            self.optimizer.total_time = self.total_time
             self.optimizer.initialize()
         elif self.experiment_type == "ablation":
             self.ablator.initialize()
@@ -385,83 +376,9 @@ class ExperimentDriver(object):
         def _target_function(self):
 
             try:
-                # tabular benchmark stuff start
-                # load tabular benchmark data
-                dataset = "fcnet_protein_structure_data.hdf5"
-                local_dataset_path = os.path.join(os.getcwd(), dataset)
-                if not os.path.exists(local_dataset_path):
-                    hdfs_path = hopshdfs._expand_path(
-                        hopshdfs.project_path()
-                        + "/Resources/fcnet_tabular_benchmarks/{}".format(dataset)
-                    )
-                    local_dataset_path = hopshdfs.copy_to_local(
-                        hdfs_path, overwrite=False
-                    )
-                tabular_data = h5py.File(local_dataset_path, "r")
-
-                # original hpobench config space
-                original_searchspace = {
-                    "n_units_1": [16, 32, 64, 128, 256, 512],
-                    "n_units_2": [16, 32, 64, 128, 256, 512],
-                    "dropout_1": [0.0, 0.3, 0.6],
-                    "dropout_2": [0.0, 0.3, 0.6],
-                    "activation_fn_1": ["tanh", "relu"],
-                    "activation_fn_2": ["tanh", "relu"],
-                    "init_lr": [5 * 1e-4, 1e-3, 5 * 1e-3, 1e-2, 5 * 1e-2, 1e-1],
-                    "lr_schedule": ["cosine", "const"],
-                    "batch_size": [8, 16, 32, 64],
-                }
-
-                def transform_config(
-                    maggy_config, original_searchspace=original_searchspace
-                ):
-                    """transforms maggy config to original config with ordinal hparams"""
-                    original_config = deepcopy(maggy_config)
-
-                    try:
-                        del original_config["budget"]
-                    except KeyError:
-                        pass
-
-                    categorical_hparams = [
-                        "activation_fn_1",
-                        "activation_fn_2",
-                        "lr_schedule",
-                    ]
-                    for hparam, value in original_config.items():
-                        if hparam in categorical_hparams:
-                            continue
-
-                        original_config[hparam] = original_searchspace[hparam][value]
-
-                    return original_config
-
-                # below values need to be the same as in map fun !!!
-                time_reduction_factor = 1
-                min_epoch_duration = 0.60
-                max_epoch_duration = 22.09
-
-                def calculate_epoch_duration(actual_epoch_duration):
-                    """calculate sleep time in map func"""
-                    return np.clip(
-                        actual_epoch_duration / time_reduction_factor,
-                        min_epoch_duration,
-                        max_epoch_duration,
-                    )
-
-                time_add_per_partition = (
-                    {}
-                )  # time that needs to be added to trial time per executor
-
-                # tabular benchmark stuff end
-
-                time_start = time.time()
-                time_last_best = time.time()
-                header = "id;time;sim_time;best_id;best_val;worst_id;worst_val;avg;num_trials_fin;early_stopped;fin_id;fin_metric;fin_time;sim_fin_time;sample_type;num_epochs;model;sampling_time;partition_id\n"
-                hopshdfs.dump(header, self.log_dir + "/experiment")
-
-                header = "time;best_id;best_val;worst_id;worst_val;avg;num_trials_fin;early_stopped\n"
-                hopshdfs.dump(header, self.log_dir + "/experiment_time")
+                time_earlystop_check = (
+                    time.time()
+                )  # only used by earlystop-supporting experiments
 
                 while not self.worker_done:
                     trial = None
@@ -471,138 +388,26 @@ class ExperimentDriver(object):
                     except queue.Empty:
                         msg = {"type": None}
 
-                    # if (time.time() - time_start) >= (self.total_time * 60):
-                    #
-                    #     fd_experiment = hopshdfs.open_file(
-                    #         self.log_dir + "/experiment_time", flags="a"
-                    #     )
-                    #     # "time;best_id;best_val;worst_id;worst_val;avg;num_trials_fin;early_stopped;fin_id;fin_metric;fin_time\n"
-                    #     if self.result.get("best_id", None):
-                    #         line = (
-                    #             str(time.time() - time_start)
-                    #             + ";"
-                    #             + self.result["best_id"]
-                    #             + ";"
-                    #             + str(self.result["best_val"])
-                    #             + ";"
-                    #             + self.result["worst_id"]
-                    #             + ";"
-                    #             + str(self.result["worst_val"])
-                    #             + ";"
-                    #             + str(self.result["avg"])
-                    #             + ";"
-                    #             + str(self.result["num_trials"])
-                    #             + ";"
-                    #             + str(self.result["early_stopped"])
-                    #         )
-                    #     else:
-                    #         line = (
-                    #             str(time.time() - time_start)
-                    #             + ";;"
-                    #             + str(1)
-                    #             + ";;"
-                    #             + str(1)
-                    #             + ";"
-                    #             + str(1)
-                    #             + ";"
-                    #             + str(self.result["num_trials"])
-                    #             + ";"
-                    #             + str(self.result["early_stopped"])
-                    #         )
-                    #
-                    #     fd_experiment.write((line + "\n").encode())
-                    #     fd_experiment.flush()
-                    #     fd_experiment.close()
-                    #
-                    #     _ = self.optimizer.finalize_experiment(self._final_store)
-                    #
-                    #     self.job_end = time.time()
-                    #
-                    #     self.duration = experiment_utils._time_diff(
-                    #         self.job_start, self.job_end
-                    #     )
-                    #
-                    #     results = (
-                    #         "\n------ "
-                    #         + str(self.optimizer.__class__.__name__)
-                    #         + " results ------ direction("
-                    #         + self.direction
-                    #         + ") \n"
-                    #         "NUMBER TRIALS evaluated -- "
-                    #         + str(self.result["num_trials"])
-                    #         + "\n"
-                    #         "BEST combination "
-                    #         + json.dumps(self.result["best_hp"])
-                    #         + " -- metric "
-                    #         + str(self.result["best_val"])
-                    #         + "\n"
-                    #         "WORST combination "
-                    #         + json.dumps(self.result["worst_hp"])
-                    #         + " -- metric "
-                    #         + str(self.result["worst_val"])
-                    #         + "\n"
-                    #         "AVERAGE metric -- " + str(self.result["avg"]) + "\n"
-                    #         "EARLY STOPPED Trials -- "
-                    #         + str(self.result["early_stopped"])
-                    #         + "\n"
-                    #         "Total job time " + self.duration + "\n"
-                    #     )
-                    #     print(results)
-                    #
-                    #     self._log(results)
-                    #
-                    #     hopshdfs.dump(
-                    #         json.dumps(self.result, default=util.json_default_numpy),
-                    #         self.log_dir + "/result.json",
-                    #     )
-                    #     sc = hopsutil._find_spark().sparkContext
-                    #     hopshdfs.dump(self.json(sc), self.log_dir + "/maggy.json")
-                    #
-                    #     raise Exception("Time is up")
+                    if self.earlystop_check != NoStoppingRule.earlystop_check:
+                        if (time.time() - time_earlystop_check) >= self.es_interval:
+                            time_earlystop_check = time.time()
 
-                    if (time.time() - time_last_best) >= self.log_interval:
-                        time_last_best = time.time()
-
-                        fd_experiment = hopshdfs.open_file(
-                            self.log_dir + "/experiment_time", flags="a"
-                        )
-                        # "time;best_id;best_val;worst_id;worst_val;avg;num_trials_fin;early_stopped;fin_id;fin_metric;fin_time\n"
-                        if self.result.get("best_id", None):
-                            line = (
-                                str(time.time() - time_start)
-                                + ";"
-                                + self.result["best_id"]
-                                + ";"
-                                + str(self.result["best_val"])
-                                + ";"
-                                + self.result["worst_id"]
-                                + ";"
-                                + str(self.result["worst_val"])
-                                + ";"
-                                + str(self.result["avg"])
-                                + ";"
-                                + str(self.result["num_trials"])
-                                + ";"
-                                + str(self.result["early_stopped"])
-                            )
-                        else:
-                            line = (
-                                str(time.time() - time_start)
-                                + ";;"
-                                + str(1)
-                                + ";;"
-                                + str(1)
-                                + ";"
-                                + str(1)
-                                + ";"
-                                + str(self.result["num_trials"])
-                                + ";"
-                                + str(self.result["early_stopped"])
-                            )
-
-                        fd_experiment.write((line + "\n").encode())
-                        fd_experiment.flush()
-                        fd_experiment.close()
+                            # pass currently running trials to early stop component
+                            if len(self._final_store) > self.es_min:
+                                self._log("Check for early stopping.")
+                                try:
+                                    to_stop = self.earlystop_check(
+                                        self._trial_store,
+                                        self._final_store,
+                                        self.direction,
+                                    )
+                                except Exception as e:
+                                    self._log(e)
+                                    to_stop = []
+                                if len(to_stop) > 0:
+                                    self._log("Trials to stop: {}".format(to_stop))
+                                for trial_id in to_stop:
+                                    self.get_trial(trial_id).set_early_stop()
 
                     # depending on message do the work
                     # 1. METRIC
@@ -613,32 +418,8 @@ class ExperimentDriver(object):
                             with self.log_lock:
                                 self.executor_logs = self.executor_logs + logs
 
-                        step = None
                         if msg["trial_id"] is not None and msg["data"] is not None:
-                            step = self.get_trial(msg["trial_id"]).append_metric(
-                                msg["data"]
-                            )
-
-                        # maybe these if statements should be in a function
-                        # also this could be made a separate message
-                        # i.e. step nr is added to the queue as message which will
-                        # then later be checked for early stopping, just to not
-                        # block for too long for other messages
-                        if len(self._final_store) > self.es_min:
-                            if step is not None and step != 0:
-                                if step % self.es_interval == 0:
-                                    try:
-                                        to_stop = self.earlystop_check(
-                                            self.get_trial(msg["trial_id"]),
-                                            self._final_store,
-                                            self.direction,
-                                        )
-                                    except Exception as e:
-                                        self._log(e)
-                                        to_stop = None
-                                    if to_stop is not None:
-                                        self._log("Trials to stop: {}".format(to_stop))
-                                        self.get_trial(to_stop).set_early_stop()
+                            self.get_trial(msg["trial_id"]).append_metric(msg["data"])
 
                     # 2. BLACKLIST the trial
                     elif msg["type"] == "BLACK":
@@ -654,6 +435,7 @@ class ExperimentDriver(object):
                         # set status
                         # get trial only once
                         trial = self.get_trial(msg["trial_id"])
+
                         logs = msg.get("logs", None)
                         if logs is not None:
                             with self.log_lock:
@@ -681,87 +463,6 @@ class ExperimentDriver(object):
                             trial.to_json(),
                             self.log_dir + "/" + trial.trial_id + "/trial.json",
                         )
-
-                        fd_experiment = hopshdfs.open_file(
-                            self.log_dir + "/experiment", flags="a"
-                        )
-                        # tabular benchmark stuff start
-
-                        # load data
-                        hparams = deepcopy(trial.params)
-                        original_hparams = transform_config(hparams)
-                        k = json.dumps(original_hparams, sort_keys=True)
-
-                        # calculate actual time for the trial
-                        num_epochs = len(trial.metric_history)
-                        time_per_epoch = np.mean(tabular_data[k]["runtime"]) / 100
-                        sleep_per_epoch = calculate_epoch_duration(time_per_epoch)
-                        time_add = (time_per_epoch - sleep_per_epoch) * num_epochs
-
-                        # add time to execution time of executor of the trial
-                        partition_id = str(msg["partition_id"])
-                        if partition_id in time_add_per_partition:
-                            time_add_per_partition[partition_id] += time_add
-                        else:
-                            time_add_per_partition[partition_id] = time_add
-
-                        # sampling info
-                        sample_type = trial.info_dict["sample_type"]
-                        sampling_time = trial.info_dict["sampling_time"]
-                        if sample_type == "model":
-                            model_budget = trial.info_dict["model_budget"]
-                        else:
-                            model_budget = None
-                        # tabular benchmark stuff end
-
-                        # "id;time;sim_time;best_id;best_val;worst_id;worst_val;avg;num_trials_fin;early_stopped;fin_id;fin_metric;fin_time;sim_fin_time;sample_type;num_epochs;model;sampling_time;partition_id\n"
-                        line = (
-                            str(trial.trial_id)
-                            + ";"
-                            + str(time.time() - time_start)
-                            + ";"
-                            + str(
-                                time.time()
-                                - time_start
-                                + time_add_per_partition[partition_id]
-                            )
-                            + ";"
-                            + self.result["best_id"]
-                            + ";"
-                            + str(self.result["best_val"])
-                            + ";"
-                            + self.result["worst_id"]
-                            + ";"
-                            + str(self.result["worst_val"])
-                            + ";"
-                            + str(self.result["avg"])
-                            + ";"
-                            + str(self.result["num_trials"])
-                            + ";"
-                            + str(self.result["early_stopped"])
-                            + ";"
-                            + trial.trial_id
-                            + ";"
-                            + str(trial.final_metric)
-                            + ";"
-                            + str(time.time() - trial.start)
-                            + ";"
-                            + str(time.time() - trial.start + time_add)
-                            + ";"
-                            + str(sample_type)
-                            + ";"
-                            + str(num_epochs)
-                            + ";"
-                            + str(model_budget)
-                            + ";"
-                            + str(sampling_time)
-                            + ";"
-                            + partition_id
-                        )
-
-                        fd_experiment.write((line + "\n").encode())
-                        fd_experiment.flush()
-                        fd_experiment.close()
 
                         # assign new trial
                         if self.experiment_type == "optimization":
@@ -847,12 +548,6 @@ class ExperimentDriver(object):
             except Exception as exc:
                 # Exception can't be propagated to parent thread
                 # therefore log the exception and fail experiment
-
-                # todo remove this, for logging purposes only
-                self.optimizer._close_log()
-                if self.optimizer.pruner:
-                    self.optimizer.pruner._close_log()
-
                 self._log(exc)
                 self.exception = exc
                 self.server.stop()
