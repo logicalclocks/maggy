@@ -53,11 +53,9 @@ def lagom(
     optimization_key="metric",
     hb_interval=1,
     es_policy="median",
-    es_interval=1,
+    es_interval=300,
     es_min=10,
     description="",
-    total_time=180,
-    log_interval=180,
 ):
     """Launches a maggy experiment, which depending on `experiment_type` can
     either be a hyperparameter optimization or an ablation study experiment.
@@ -99,8 +97,8 @@ def lagom(
     :type hb_interval: int, optional
     :param es_policy: The earlystopping policy, defaults to 'median'
     :type es_policy: str, optional
-    :param es_interval: Frequency interval in number of steps to check currently
-        running trials for early stopping, defaults to 1.
+    :param es_interval: Frequency interval in seconds to check currently
+        running trials for early stopping, defaults to 300
     :type es_interval: int, optional
     :param es_min: Minimum number of trials finalized before checking for
         early stopping, defaults to 10
@@ -164,8 +162,6 @@ def lagom(
                 es_min=es_min,
                 description=description,
                 log_dir=experiment_utils._get_logdir(app_id, run_id),
-                total_time=total_time,
-                log_interval=log_interval,
             )
 
             exp_function = exp_driver.optimizer.name()
@@ -242,28 +238,25 @@ def lagom(
         job_end = time.time()
 
         result = exp_driver.finalize(job_end)
+        best_logdir = (
+            experiment_utils._get_logdir(app_id, run_id) + "/" + result["best_id"]
+        )
 
-        # todo remove comments
-        # best_logdir = (
-        #     experiment_utils._get_logdir(app_id, run_id) + "/" + result["best_id"]
-        # )
-
-        # util._finalize_experiment(
-        #     experiment_json,
-        #     float(result["best_val"]),
-        #     app_id,
-        #     run_id,
-        #     "FINISHED",
-        #     exp_driver.duration,
-        #     experiment_utils._get_logdir(app_id, run_id),
-        #     best_logdir,
-        #     optimization_key,
-        # )
+        util._finalize_experiment(
+            experiment_json,
+            float(result["best_val"]),
+            app_id,
+            run_id,
+            "FINISHED",
+            exp_driver.duration,
+            experiment_utils._get_logdir(app_id, run_id),
+            best_logdir,
+            optimization_key,
+        )
 
         util._log("Finished Experiment")
 
-        # todo remove exp_driver from return statement, its only for debugging purposes
-        return result, exp_driver.optimizer, exp_driver.log_dir
+        return result
 
     except:  # noqa: E722
         _exception_handler(
@@ -276,7 +269,7 @@ def lagom(
     finally:
         # grace period to send last logs to sparkmagic
         # sparkmagic hb poll intervall is 5 seconds, therefore wait 6 seconds
-        time.sleep(16)
+        time.sleep(6)
         # cleanup spark jobs
         if running and exp_driver is not None:
             exp_driver.stop()
