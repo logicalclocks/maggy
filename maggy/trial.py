@@ -42,7 +42,12 @@ class Trial(object):
 
         :param params: A dictionary of Hyperparameters as key value pairs.
         :type params: dict
-        :param info_dict: dict containing additional information about the trial # todo explain further
+        :param info_dict: dict containing additional information about the trial including
+                            - sample_type
+                            - sampling_time
+                            - run_budget
+                            - model_budget (optinally)
+                            see `create_trial()` method of base.py for further reference
         :type info_dict: dict
         """
         # XXX before merge, we should remove the default value for trial_type
