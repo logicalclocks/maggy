@@ -287,7 +287,6 @@ class Searchspace(object):
         transformed_hparams = []
         # loop through hparams
         for hparam, hparam_spec in zip(hparams, self.items()):
-            # todo implement transformation for DISCRETE type
             if hparam_spec["type"] == "DOUBLE":
                 normalized_hparam = Searchspace._normalize_scalar(
                     hparam_spec["values"], hparam
@@ -393,7 +392,6 @@ class Searchspace(object):
         :return: normalized scalar
         :rtype: float
         """
-        # todo check if bounds is valid and scalar is inside bounds
         scalar = float(scalar)
         scalar = (scalar - bounds[0]) / (bounds[1] - bounds[0])
         scalar = np.minimum(1.0, scalar)
@@ -411,8 +409,6 @@ class Searchspace(object):
         :return: original scalar
         :rtype: float
         """
-
-        # todo check if bounds is valid and scalar is inside bounds
         normalized_scalar = float(normalized_scalar)
         normalized_scalar = normalized_scalar * (bounds[1] - bounds[0]) + bounds[0]
         return normalized_scalar
