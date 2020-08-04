@@ -112,6 +112,8 @@ class ExperimentDriver(object):
                     self.optimizer = Asha()
                 elif optimizer.lower() == "tpe":
                     self.optimizer = bayes.TPE()
+                elif optimizer.lower() == "gp":
+                    self.optimizer = bayes.GP()
                 elif optimizer.lower() == "none":
                     if len(self.searchspace.names()) == 0:
                         self.optimizer = SingleRun()
