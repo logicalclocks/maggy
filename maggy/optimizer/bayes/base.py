@@ -587,9 +587,6 @@ class BaseAsyncBO(AbstractOptimizer):
         :return: True if experiment has finished, False else
         :rtype: bool
         """
-        # stop_experiment after time for experiments
-        if (time.time() - self.time_start) >= (self.total_time * 60):
-            return True
         if self.pruner:
             if self.pruner.finished():
                 return True
