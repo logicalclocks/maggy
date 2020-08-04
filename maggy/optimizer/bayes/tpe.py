@@ -4,13 +4,19 @@ import scipy.stats as sps
 
 from maggy.optimizer.bayes.base import BaseAsyncBO
 
+"""
+The implementation is heavliy inspired by the BOHB (Falkner et al. 2018) paper and the HpBandSter Framework
+
+BOHB: http://proceedings.mlr.press/v80/falkner18a.html
+HpBandSter: https://github.com/automl/HpBandSter
+"""
+
 
 class TPE(BaseAsyncBO):
-    """Implements AsyncBO with TPE
+    """TPE based Asynchronous Bayesian Optimization
 
-    todo desctiption of algo
-    todo reference to BOHB code
-    todo paste link here
+    TPE always uses Expected Improvement acquisition function, so it is not necessary to specify an acquisition function
+    here
     """
 
     def __init__(
@@ -23,8 +29,6 @@ class TPE(BaseAsyncBO):
     ):
         """
         See docstring of `BaseAsyncBO` for more info on parameters of base class
-
-        todo explain why we do not need arguments for acq_fun or acq_optimizer
 
         :param gamma: Determines the percentile of configurations that will be used as training data
                 for the kernel density estimator, e.g if set to 10 the 10% best configurations will be considered
@@ -59,8 +63,8 @@ class TPE(BaseAsyncBO):
         kde_good = self.models[budget]["good"]
         kde_bad = self.models[budget]["bad"]
 
-        # todo instead of this loop, sample all configs beforehand and then optimize acquisition function like
-        #  in simple bayes
+        # alternative way of implementation:
+        # instead of this loop, sample all configs beforehand and then optimize acquisition function like in GP
         for sample in range(self.n_samples):
             # randomly choose one of the `good` samples as mean
             idx = np.random.randint(0, len(kde_good.data))
@@ -87,12 +91,6 @@ class TPE(BaseAsyncBO):
                     low = -mean / bw
                     high = (1 - mean) / bw
 
-                    # self._log(
-                    #     "Mean: {}, BW: {}, Low: {}, High: {}".format(
-                    #         mean, bw, low, high
-                    #     )
-                    # )
-
                     rv = sps.truncnorm.rvs(low, high, loc=mean, scale=bw)
                     sample_vector.append(rv)
                 else:
@@ -103,25 +101,17 @@ class TPE(BaseAsyncBO):
                         n_choices = len(hparam_spec["values"])
                         sample_vector.append(np.random.randint(n_choices))
 
-            # self._log("Sample Vector: {}".format(sample_vector))
-
             # calculate EI for current sample
             ei_val = self._calculate_ei(sample_vector, kde_good, kde_bad)
-
-            # self._log("EI: {}".format(ei_val))
 
             if ei_val > best_improvement:
                 best_improvement = ei_val
                 best_sample = sample_vector
 
-        # self._log("Best Sample: {}".format(best_sample))
-
         # get original representation of hparams in dict
         best_sample_dict = self.searchspace.list_to_dict(
             self.searchspace.inverse_transform(best_sample)
         )
-
-        # self._log("Transformed Best Sample {}".format(best_sample_dict))
 
         return best_sample_dict
 
@@ -144,7 +134,6 @@ class TPE(BaseAsyncBO):
         # split good and bad trials
         good_hparams, bad_hparams = self._split_trials(budget)
 
-        # todo check calculation of n_good and n_bad according to BOHB (see Notebook (local))
         n_hparams = len(self.searchspace.keys())
         if n_hparams >= len(good_hparams) or n_hparams >= len(bad_hparams):
             self._log(
