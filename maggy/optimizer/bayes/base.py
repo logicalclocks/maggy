@@ -39,6 +39,12 @@ class BaseAsyncBO(AbstractOptimizer):
     of the `get_suggestion()` method and returns the hparam config and budget for the trial. The `trial_id` of the
     newly created Trial object is reported back to the pruner via `pruner.report_trial()`.
 
+    **budget**
+
+    If a pruner was specified ( and hence a multi-fidelity optimization is conducted ), the budget is added as an
+    additional hyperparameter to the hparam dict so it is passed to the map_fun. Note, that when fitting the
+    surrogate model the "budget" key is obviously omitted.
+
     **models**
 
     The surrogate models for different budgets are saved in the `models` dict with the budgets as key. In case of
@@ -75,7 +81,7 @@ class BaseAsyncBO(AbstractOptimizer):
     def __init__(
         self,
         num_warmup_trials=15,
-        random_fraction=0.1,
+        random_fraction=0.33,
         interim_results=False,
         interim_results_interval=10,
         pruner=None,

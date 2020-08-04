@@ -10,20 +10,13 @@ from maggy.optimizer.bayes.base import BaseAsyncBO
 from maggy.optimizer.bayes.acquisitions import (
     GaussianProcess_EI,
     GaussianProcess_LCB,
-    GaussianProcess_UCB,
     GaussianProcess_PI,
     AsyTS,
-    HLP,
 )
-
-# todo what about noise in GP
-# todo how and how often do the GP meta hparams get updated (lenght_scale etc.) so far length scale is set to 1
-# todo add documentation of how simple async bo works and what it is
-# todo explain gp
 
 
 class GP(BaseAsyncBO):
-    """Base class for asynchronous bayesian optimization"""
+    """Gaussian Process based Asynchronous Bayesian Optimization"""
 
     def __init__(
         self,
@@ -36,14 +29,11 @@ class GP(BaseAsyncBO):
         **kwargs
     ):
         """
-
         See docstring of `BaseAsyncBO` for more info on parameters of base class
 
         :param async_strategy: strategy to encourage diversity when sampling. Can take following values
-                               todo explain the strategies
-                               - `"impute"`
-                               - `"asy_ts"`
-                               - `"playbook"`
+                               - `"impute"`: impute metric for busy locations, then fit surrogate with imputed observations
+                               - `"asy_ts"`: asynchronous thompson sampling.
 
         :type async_strategy: str
         :param impute_strategy: Method to use as imputeing strategy in async bo, if async_strategy is `"impute"`
@@ -68,9 +58,6 @@ class GP(BaseAsyncBO):
                             - `"PI"` for negative probability of improvement.
                         - asy_ts
                             - `"AsyTS"` in async thompson sampling, the acquisition function is replaced by thompson sampling
-                        - playbook
-                            - `"UCB"` for upper confidence bound
-                            - todo EI possible as well ?
         :type acq_fun: str|None
         :param acq_fun_kwargs: Additional arguments to be passed to the acquisition function.
         :type acq_fun_kwargs: dict|None
@@ -102,11 +89,9 @@ class GP(BaseAsyncBO):
             "impute": {
                 "EI": GaussianProcess_EI,
                 "LCB": GaussianProcess_LCB,
-                "UCB": GaussianProcess_UCB,
                 "PI": GaussianProcess_PI,
             },
             "asy_ts": {"AsyTS": AsyTS},
-            "playbook": {"UCB": HLP},
         }
         if async_strategy not in allowed_combinations.keys():
             raise ValueError(
@@ -154,7 +139,6 @@ class GP(BaseAsyncBO):
         if acq_optimizer_kwargs is None:
             acq_optimizer_kwargs = dict()
 
-        # todo evtl verallgemeinern und oben via dict klären, vgl. acq functions
         if self.async_strategy == "asy_ts":
             # default value is 100 and max value is 1000 for asy ts
             self.n_points = np.clip(acq_optimizer_kwargs.get("n_points", 100), 10, 1000)
@@ -193,8 +177,6 @@ class GP(BaseAsyncBO):
         random_hparams_list = np.array(
             [self.searchspace.dict_to_list(hparams) for hparams in random_hparams]
         )
-
-        # todo does it make sense to use ybest of budget only
         y_opt = self.ybest(budget)
 
         # transform configs
@@ -262,8 +244,6 @@ class GP(BaseAsyncBO):
             next_x, normalize_categorical=True
         )  # is array [-3,3,"blue"]
 
-        # self._log("Next config to evaluate: {}".format(next_x))
-
         # convert list to dict representation
         hparam_dict = self.searchspace.list_to_dict(next_x)
 
@@ -281,11 +261,8 @@ class GP(BaseAsyncBO):
         if self.interim_results:
             n_dims += 1  # add one dim for augumented budget
 
-        # ToDo, find out why I need this → skopt/utils.py line 377
         cov_amplitude = ConstantKernel(1.0, (0.01, 1000.0))
 
-        # ToDo implement special case if all dimesnsions are catigorical --> skopt/utils.py l. 378ff
-        # ToDo compare the initialization of kernel parameters with other frameworks
         other_kernel = Matern(
             length_scale=np.ones(n_dims),
             length_scale_bounds=[(0.01, 100)] * n_dims,
@@ -326,9 +303,6 @@ class GP(BaseAsyncBO):
             interim_results=self.interim_results,
             interim_results_interval=self.interim_results_interval,
         )
-
-        # self._log("Xi: {}".format(Xi))
-        # self._log("yi: {}".format(yi))
 
         # fit model with data
         model.fit(Xi, yi)
