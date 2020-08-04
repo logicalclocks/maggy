@@ -27,34 +27,39 @@ class MedianStoppingRule(AbstractEarlyStop):
     @staticmethod
     def earlystop_check(to_check, finalized_trials, direction):
 
-        results = []
-        median = None
+        stop = []
 
-        # count step from zero so it can be used as index for array
-        step = len(to_check.metric_history)
+        for trial_id, trial in to_check.items():
 
-        if step > 0:
+            results = []
+            median = None
 
-            for fin_trial in finalized_trials:
+            # count step from zero so it can be used as index for array
+            step = len(trial.metric_history)
 
-                if len(fin_trial.metric_history) >= step:
-                    avg = sum(fin_trial.metric_history[:step]) / float(step)
-                    results.append(avg)
+            if step > 0:
 
-            try:
-                median = statistics.median(results)
-            except statistics.StatisticsError as e:
-                raise Exception(
-                    "Warning: StatisticsError when calling early stop method\n{}".format(
-                        e
+                for fin_trial in finalized_trials:
+
+                    if len(fin_trial.metric_history) >= step:
+                        avg = sum(fin_trial.metric_history[:step]) / float(step)
+                        results.append(avg)
+
+                try:
+                    median = statistics.median(results)
+                except statistics.StatisticsError as e:
+                    raise Exception(
+                        "Warning: StatisticsError when calling early stop method\n{}".format(
+                            e
+                        )
                     )
-                )
 
-            if median is not None:
-                if direction == "max":
-                    if max(to_check.metric_history) < median:
-                        return to_check.trial_id
-                elif direction == "min":
-                    if min(to_check.metric_history) > median:
-                        return to_check.trial_id
-            return None
+                if median is not None:
+                    if direction == "max":
+                        if max(trial.metric_history) < median:
+                            stop.append(trial_id)
+                    elif direction == "min":
+                        if min(trial.metric_history) > median:
+                            stop.append(trial_id)
+
+        return stop
