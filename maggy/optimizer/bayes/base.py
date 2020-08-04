@@ -13,14 +13,7 @@ from maggy.trial import Trial
 from hops import hdfs
 
 
-# todo which methods should be private
-# todo what about random_state → for reproducability → check skopt for reference
 # todo min_delta_x → warn when similar point has been evaluated before → see skopt for reference
-# TODO poss. shift `include_busy_locations` logic to gp.py if it is only used ther
-# TODO implement resuming trials
-# TODO when intermediate trial metric per budget is implemented, update models of lower budgets with intermediate
-#  results of trials with larger budget
-# TODO check that hparams have valid type,
 
 
 class BaseAsyncBO(AbstractOptimizer):
@@ -30,16 +23,21 @@ class BaseAsyncBO(AbstractOptimizer):
 
     **async bo**
 
-    todo explain async bo basics
-
-    **optimization loop details**
-
+    Bayesian Optimization consists of a surrogat model to approximate the black-box function and an acquisition
+    function to select the next hyperparameter configuration. In an asynchronous setting, we need to encourage diversity
+    when maximizing the acquisition function to prevent redundant sampling.
 
     **optimization direction**
 
     all optimizations are converted to minimizations problems via the `get_metrics_dict()` and `get_metrics_array()`
     methods, where the metrics are negated in case of a maximization.
     In the `final_store` the original metric values are saved.
+
+    **pruner**
+
+    Pruners can be run as a subroutine of an optimizer. It's interface `pruner.pruning_routine()` is called at the beginning
+    of the `get_suggestion()` method and returns the hparam config and budget for the trial. The `trial_id` of the
+    newly created Trial object is reported back to the pruner via `pruner.report_trial()`.
 
     **models**
 
@@ -51,12 +49,6 @@ class BaseAsyncBO(AbstractOptimizer):
 
     the imputed metrics are calculated on the fly in `get_metrics_array(include_busy_locations=True, budget=`budget`)`
     for currently evaluating trials that were sampled from model with `budget`
-
-    **pruner**
-
-    Pruners can be run as a subroutine of an optimizer. It's interface `pruner.pruning_routine()` is called at the beginning
-    of the `get_suggestion()` method and returns the hparam config and budget for the trial. The `trial_id` of the
-    newly created Trial object is reported back to the pruner via `pruner.report_trial()`.
 
     **interim results**
 
@@ -100,8 +92,10 @@ class BaseAsyncBO(AbstractOptimizer):
         :param interim_results_interval: Specifies which interim metrics are used (if interim_results==True)
                                          e.g. interval=10: the metric of every 10th epoch is used for fitting surrogate
         :type interim_results_interval: int
-        :param pruner: # todo
-        :param pruner_kwargs:
+        :param pruner: name of pruning algorithm to use. So far only `hyperband` supported
+        :type pruner: str
+        :param pruner_kwargs: dict of arguments for initializing pruner. See pruner classes for reference.
+        :type pruner_kwargs: dict
 
         Attributes
         ----------
@@ -116,13 +110,6 @@ class BaseAsyncBO(AbstractOptimizer):
                                       normalized between 0 and 1 in searchspace.transform()
         """
         super().__init__()
-
-        # from AbstractOptimizer
-        # self.final_store # dict of trials
-        # selt.trial_store # list of trials → all trials or only unfinished trials ??
-        # self.direction
-        # self.num_trials
-        # self.searchspace
 
         # configure pruner
         self.pruner = None
@@ -151,9 +138,7 @@ class BaseAsyncBO(AbstractOptimizer):
         # surrogate model related aruments
         self.models = {}  # fitted model of the estimator
         self.random_fraction = random_fraction
-        self.interim_results = (
-            interim_results  # todo do I maybe need to init this before init pruner
-        )
+        self.interim_results = interim_results
         self.interim_results_interval = interim_results_interval
 
         # configure logger
@@ -210,11 +195,6 @@ class BaseAsyncBO(AbstractOptimizer):
                 )
             else:
                 self._log("no previous finished trial")
-
-            # todo eliminate
-            self._log(
-                "currently evaluating trials: {}".format(list(self.trial_store.keys()))
-            )
 
             # check if experiment has finished
             if self._experiment_finished():
@@ -362,7 +342,6 @@ class BaseAsyncBO(AbstractOptimizer):
         self._log("Experiment finished")
         self._close_log()
 
-        # todo eliminiate
         if self.pruner:
             self.pruner._close_log()
 
@@ -431,8 +410,6 @@ class BaseAsyncBO(AbstractOptimizer):
     def warmup_routine(self):
         """implements logic for warming up bayesian optimization through random sampling by adding hparam configs to
         `warmup_config` list
-
-        todo add other options s.a. latin hypercube
         """
 
         # generate warmup hparam configs
@@ -447,7 +424,7 @@ class BaseAsyncBO(AbstractOptimizer):
                 )
             )
 
-    # todo, evtl. outsource to helpers or abstract optimizer or trial. possibly obsolete when trial has param budget
+    # potentially outsource to helpers or abstract optimizer or trial.
     def create_trial(self, hparams, sample_type, run_budget=0, model_budget=None):
         """helper function to create trial with budget and trial_dict
 
@@ -545,38 +522,6 @@ class BaseAsyncBO(AbstractOptimizer):
                 return True
 
         return False
-
-    def get_trial(self, trial_ids):
-        """return Trial or list of Trials with `trial_id` from `final_store`
-
-        # todo, probably eliminate
-
-        :param trial_ids: single trial id or list of trial ids of the requested trials
-        :type trial_ids: str|list[str]
-        :return: Trial/ Trials with specified id
-        :rtype: Trial|list[Trial]
-        """
-        if isinstance(trial_ids, str):
-            # return single trial object
-            trial = [trial for trial in self.final_store if trial.trial_id == trial_ids]
-            if len(trial) > 0:
-                return trial[0]
-            else:
-                self._log(
-                    "There is no trial with id {} in final_store".format(trial_ids)
-                )
-        else:
-            # return list of trials, `trial_id` is list of `trial_id`
-            trials = [
-                trial for trial in self.final_store if trial.trial_id in trial_ids
-            ]
-            return trials
-
-    def _acquisition_function(self):
-        """calculates the utility for given point and surrogate"""
-
-    def _maximize_acq_function(self):
-        """maximizes acquisition function"""
 
     def _experiment_finished(self):
         """checks if experiment is finished
