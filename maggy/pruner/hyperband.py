@@ -145,7 +145,6 @@ class Hyperband(AbstractPruner):
         4. All SH Iterations have been finished
             - return None
 
-
         :return: {"trial_id": `trial_id`, "budget": 9}
         :rtype: dict|None|str
         """
