@@ -20,12 +20,7 @@ import math
 import os
 import json
 import numpy as np
-
-try:
-    from pyspark import TaskContext
-except ModuleNotFoundError:
-    # todo remove this exception. only used for experiments to load optimizer in python
-    pass
+from pyspark import TaskContext
 
 from hops import util as hopsutil
 from hops import hdfs as hopshdfs
