@@ -41,7 +41,7 @@ experiment_json = None
 
 
 def lagom(
-    map_fun,
+    train_fn,
     name="no-name",
     experiment_type="optimization",
     searchspace=None,
@@ -59,7 +59,7 @@ def lagom(
 ):
     """Launches a maggy experiment, which depending on `experiment_type` can
     either be a hyperparameter optimization or an ablation study experiment.
-    Given a search space, objective and a model training procedure `map_fun`
+    Given a search space, objective and a model training procedure `train_fn`
     (black-box function), an experiment is the whole process of finding the
     best hyperparameter combination in the search space, optimizing the
     black-box function. Currently maggy supports random search and a median
@@ -67,8 +67,8 @@ def lagom(
 
     **lagom** is a Swedish word meaning "just the right amount".
 
-    :param map_fun: User defined experiment containing the model training.
-    :type map_fun: function
+    :param train_fn: User defined experiment containing the model training.
+    :type train_fn: function
     :param name: A user defined experiment identifier.
     :type name: str
     :param experiment_type: Type of Maggy experiment, either 'optimization'
@@ -227,7 +227,7 @@ def lagom(
                 app_id,
                 run_id,
                 experiment_type,
-                map_fun,
+                train_fn,
                 server_addr,
                 hb_interval,
                 exp_driver._secret,
