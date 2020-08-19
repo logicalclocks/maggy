@@ -32,6 +32,7 @@ from hops import util as hopsutil
 from hops.experiment_impl.util import experiment_utils
 
 from maggy import util
+from maggy.optimizer import bayes
 from maggy.optimizer import AbstractOptimizer, RandomSearch, Asha, SingleRun
 from maggy.core import rpc
 from maggy.trial import Trial
@@ -109,6 +110,10 @@ class ExperimentDriver(object):
                     self.optimizer = RandomSearch()
                 elif optimizer.lower() == "asha":
                     self.optimizer = Asha()
+                elif optimizer.lower() == "tpe":
+                    self.optimizer = bayes.TPE()
+                elif optimizer.lower() == "gp":
+                    self.optimizer = bayes.GP()
                 elif optimizer.lower() == "none":
                     if len(self.searchspace.names()) == 0:
                         self.optimizer = SingleRun()
@@ -625,6 +630,7 @@ class ExperimentDriver(object):
         metric = trial.final_metric
         param_string = trial.params
         trial_id = trial.trial_id
+        num_epochs = len(trial.metric_history)
 
         if self.experiment_type == "optimization":
             # First finalized trial
@@ -640,6 +646,8 @@ class ExperimentDriver(object):
                     "metric_list": [metric],
                     "num_trials": 1,
                     "early_stopped": 0,
+                    "num_epochs": num_epochs,
+                    "trial_id": trial_id,
                 }
 
                 if trial.early_stop:
