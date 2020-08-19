@@ -91,6 +91,10 @@ class Trial(object):
                 self.metric_dict[metric_data["step"]] = metric_data["value"]
                 self.metric_history.append(metric_data["value"])
                 self.step_history.append(metric_data["step"])
+                # return step number to indicate that it was a new unique step
+                return metric_data["step"]
+            # return None to indicate that no new step has finished
+            return None
 
     @classmethod
     def _generate_id(cls, params):
