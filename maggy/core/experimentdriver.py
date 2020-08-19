@@ -401,21 +401,24 @@ class ExperimentDriver(object):
                         # i.e. step nr is added to the queue as message which will
                         # then later be checked for early stopping, just to not
                         # block for too long for other messages
-                        if len(self._final_store) > self.es_min:
-                            if step is not None and step != 0:
-                                if step % self.es_interval == 0:
-                                    try:
-                                        to_stop = self.earlystop_check(
-                                            self.get_trial(msg["trial_id"]),
-                                            self._final_store,
-                                            self.direction,
-                                        )
-                                    except Exception as e:
-                                        self._log(e)
-                                        to_stop = None
-                                    if to_stop is not None:
-                                        self._log("Trials to stop: {}".format(to_stop))
-                                        self.get_trial(to_stop).set_early_stop()
+                        if self.earlystop_check != NoStoppingRule.earlystop_check:
+                            if len(self._final_store) > self.es_min:
+                                if step is not None and step != 0:
+                                    if step % self.es_interval == 0:
+                                        try:
+                                            to_stop = self.earlystop_check(
+                                                self.get_trial(msg["trial_id"]),
+                                                self._final_store,
+                                                self.direction,
+                                            )
+                                        except Exception as e:
+                                            self._log(e)
+                                            to_stop = None
+                                        if to_stop is not None:
+                                            self._log(
+                                                "Trials to stop: {}".format(to_stop)
+                                            )
+                                            self.get_trial(to_stop).set_early_stop()
 
                         # 2. BLACKLIST the trial
                     elif msg["type"] == "BLACK":
