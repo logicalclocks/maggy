@@ -15,6 +15,9 @@
 #
 
 from abc import ABC, abstractmethod
+from datetime import datetime
+
+from hops import hdfs
 
 
 class AbstractOptimizer(ABC):
@@ -24,9 +27,26 @@ class AbstractOptimizer(ABC):
         self.trial_store = None
         self.final_store = None
         self.direction = None
+        self.pruner = None
+
+    def initialize(self, exp_dir):
+        """
+        initialize the optimizer and configure logger.
+
+        :param exp_dir: path of experiment directory
+        :rtype exp_dir: str
+        """
+        # init logger of optimizer
+        self.initialize_logger(exp_dir=exp_dir)
+        # optimizer intitialization routine
+        self._initialize()
+        self._log("Initilized Optimizer {}: \n {}".format(self.name(), self.__dict__))
+        # init logger of pruner
+        if self.pruner:
+            self.pruner.initialize_logger(exp_dir=exp_dir)
 
     @abstractmethod
-    def initialize(self):
+    def _initialize(self):
         """
         A hook for the developer to initialize the optimizer.
         """
@@ -54,3 +74,27 @@ class AbstractOptimizer(ABC):
 
     def name(self):
         return str(self.__class__.__name__)
+
+    def initialize_logger(self, exp_dir):
+        """Initialize logger of optimizer
+
+        :param exp_dir: path of experiment directory
+        :rtype exp_dir: str
+        """
+
+        # configure logger
+        self.log_file = exp_dir + "/optimizer.log"
+        if not hdfs.exists(self.log_file):
+            hdfs.dump("", self.log_file)
+        self.fd = hdfs.open_file(self.log_file, flags="w")
+        self._log("Initialized Optimizer Logger")
+
+    def _log(self, msg):
+        if not self.fd.closed:
+            msg = datetime.now().isoformat() + ": " + str(msg)
+            self.fd.write((msg + "\n").encode())
+
+    def _close_log(self):
+        if not self.fd.closed:
+            self.fd.flush()
+            self.fd.close()

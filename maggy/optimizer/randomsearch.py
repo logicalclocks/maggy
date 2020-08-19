@@ -32,7 +32,6 @@ class RandomSearch(AbstractOptimizer):
         self.config_buffer = []
 
         # configure pruner
-        self.pruner = None
         if pruner:
             self.init_pruner(pruner, pruner_kwargs)
 

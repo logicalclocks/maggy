@@ -1,7 +1,5 @@
 import traceback
 import time
-import uuid
-from datetime import datetime
 from copy import deepcopy
 
 import numpy as np
@@ -9,8 +7,6 @@ import numpy as np
 from maggy.optimizer.abstractoptimizer import AbstractOptimizer
 from maggy.pruner import Hyperband
 from maggy.trial import Trial
-
-from hops import hdfs
 
 
 # todo min_delta_x → warn when similar point has been evaluated before → see skopt for reference
@@ -118,7 +114,6 @@ class BaseAsyncBO(AbstractOptimizer):
         super().__init__()
 
         # configure pruner
-        self.pruner = None
         if pruner:
             self.init_pruner(pruner, pruner_kwargs)
 
@@ -147,19 +142,6 @@ class BaseAsyncBO(AbstractOptimizer):
         self.interim_results = interim_results
         self.interim_results_interval = interim_results_interval
 
-        # configure logger
-        self.log_file = "hdfs:///Projects/{}/Experiments_Data/optimizer_{}_{}_{}.log".format(
-            hdfs.project_name(),
-            self.name(),
-            self.pruner.name() if self.pruner else "",
-            str(uuid.uuid4()),
-        )
-        if not hdfs.exists(self.log_file):
-            hdfs.dump("", self.log_file)
-        self.fd = hdfs.open_file(self.log_file, flags="w")
-        self._log("Initialized Logger")
-        self._log("Initilized Optimizer {}: \n {}".format(self.name(), self.__dict__))
-
         # helper variable to calculate time needed for calculating next suggestion
         self.sampling_time_start = 0.0
 
@@ -168,7 +150,7 @@ class BaseAsyncBO(AbstractOptimizer):
         if self.name() == "TPE":
             self.normalize_categorical = False
 
-    def initialize(self):
+    def _initialize(self):
         # validate hparam types
         # at least one hparam needs to be continuous & no DISCRETE hparams
         cont = False
@@ -1016,13 +998,3 @@ class BaseAsyncBO(AbstractOptimizer):
         """
         metric_history = self.get_metrics_array(budget=budget)
         return np.mean(metric_history)
-
-    def _log(self, msg):
-        if not self.fd.closed:
-            msg = datetime.now().isoformat() + ": " + str(msg)
-            self.fd.write((msg + "\n").encode())
-
-    def _close_log(self):
-        if not self.fd.closed:
-            self.fd.flush()
-            self.fd.close()

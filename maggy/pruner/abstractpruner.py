@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
 
-import uuid
 from hops import hdfs
 
 
@@ -13,18 +12,6 @@ class AbstractPruner(ABC):
                              It's only argument is `trial_ids`, it can be either str of single trial or list of trial ids
         :type trial_metric_getter: function
         """
-
-        # configure logger
-        self.log_file = "hdfs:///Projects/{}/Experiments_Data/pruner_{}_{}_{}.log".format(
-            hdfs.project_name(),
-            self.name(),
-            trial_metric_getter.__self__.__class__.__name__,
-            str(uuid.uuid4()),
-        )
-        if not hdfs.exists(self.log_file):
-            hdfs.dump("", self.log_file)
-        self.fd = hdfs.open_file(self.log_file, flags="w")
-        self._log("Initialized Logger")
 
         self.trial_metric_getter = trial_metric_getter
 
@@ -61,6 +48,20 @@ class AbstractPruner(ABC):
 
     def name(self):
         return str(self.__class__.__name__)
+
+    def initialize_logger(self, exp_dir):
+        """Initialize logger of optimizer
+
+        :param exp_dir: path of experiment directory
+        :rtype exp_dir: str
+        """
+
+        # configure logger
+        self.log_file = exp_dir + "/pruner.log"
+        if not hdfs.exists(self.log_file):
+            hdfs.dump("", self.log_file)
+        self.fd = hdfs.open_file(self.log_file, flags="w")
+        self._log("Initialized Pruner Logger")
 
     def _log(self, msg):
         if not self.fd.closed:
