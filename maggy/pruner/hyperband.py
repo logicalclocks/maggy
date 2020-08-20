@@ -208,11 +208,6 @@ class Hyperband(AbstractPruner):
                     logger=self._log,
                 )
             )
-            self._log(
-                "INIT SH Iteration {}. n_configs: {}, budgets: {}".format(
-                    iteration, ns, budgets
-                )
-            )
 
     def active_iterations(self):
         """returns currently active (i.e. state == "RUNNING") iterations

@@ -14,6 +14,8 @@ class AbstractPruner(ABC):
         """
 
         self.trial_metric_getter = trial_metric_getter
+        self.log_file = None
+        self.fd = None
 
     @abstractmethod
     def pruning_routine(self):
@@ -64,7 +66,7 @@ class AbstractPruner(ABC):
         self._log("Initialized Pruner Logger")
 
     def _log(self, msg):
-        if not self.fd.closed:
+        if self.fd and not self.fd.closed:
             msg = datetime.now().isoformat() + ": " + str(msg)
             self.fd.write((msg + "\n").encode())
 

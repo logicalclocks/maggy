@@ -90,7 +90,7 @@ class AbstractOptimizer(ABC):
         self._log("Initialized Optimizer Logger")
 
     def _log(self, msg):
-        if not self.fd.closed:
+        if self.fd and not self.fd.closed:
             msg = datetime.now().isoformat() + ": " + str(msg)
             self.fd.write((msg + "\n").encode())
 
