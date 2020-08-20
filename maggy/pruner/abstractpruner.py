@@ -14,6 +14,8 @@ class AbstractPruner(ABC):
         """
 
         self.trial_metric_getter = trial_metric_getter
+
+        # logger variables
         self.log_file = None
         self.fd = None
 

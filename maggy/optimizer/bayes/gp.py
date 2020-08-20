@@ -161,12 +161,6 @@ class GP(BaseAsyncBO):
         # estimator that has not been fit on any data.
         self.base_model = None
 
-        # write logs
-        self._log(
-            "Acquisition Function: {}, Async Strategy: {}".format(
-                self.acq_fun.name(), self.async_strategy
-            )
-        )
         if self.async_strategy == "impute":
             self._log("Impute Strategy: {}".format(self.impute_strategy))
 

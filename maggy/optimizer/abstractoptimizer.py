@@ -29,6 +29,10 @@ class AbstractOptimizer(ABC):
         self.direction = None
         self.pruner = None
 
+        # logger variables
+        self.log_file = None
+        self.fd = None
+
     def initialize(self, exp_dir):
         """
         initialize the optimizer and configure logger.
