@@ -111,10 +111,6 @@ class Hyperband(AbstractPruner):
         ).tolist()
         # convert tolist to convert values from np.int64 to int, necessary to be json serializable when creating trialid
 
-        self._log(
-            "INIT HB. s_max: {}, budgets: {}".format(self.max_sh_rungs, self.budgets)
-        )
-
         # configure SH iterations
         self.iterations = []
         self.init_iterations()
