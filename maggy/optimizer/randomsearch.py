@@ -51,7 +51,7 @@ class RandomSearch(AbstractOptimizer):
         # helper variable to calculate time needed for calculating next suggestion
         self.sampling_time_start = 0.0
 
-    def initialize(self):
+    def _initialize(self):
 
         if (
             Searchspace.DOUBLE not in self.searchspace.names().values()
