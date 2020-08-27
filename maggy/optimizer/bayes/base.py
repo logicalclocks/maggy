@@ -17,6 +17,7 @@
 import traceback
 import time
 from copy import deepcopy
+from abc import abstractmethod
 
 import numpy as np
 
@@ -326,6 +327,7 @@ class BaseAsyncBO(AbstractOptimizer):
     def finalize_experiment(self, trials):
         return
 
+    @abstractmethod
     def init_model(self):
         """initializes the surrogate model of the gaussian process
 
@@ -334,6 +336,7 @@ class BaseAsyncBO(AbstractOptimizer):
         """
         raise NotImplementedError
 
+    @abstractmethod
     def update_model(self, budget=0):
         """update surrogate model with new observations
 
@@ -348,6 +351,7 @@ class BaseAsyncBO(AbstractOptimizer):
         """
         raise NotImplementedError
 
+    @abstractmethod
     def sampling_routine(self, budget=0):
         """Samples new config from model
 
