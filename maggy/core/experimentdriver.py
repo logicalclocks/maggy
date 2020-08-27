@@ -272,7 +272,7 @@ class ExperimentDriver(object):
             self.optimizer.trial_store = self._trial_store
             self.optimizer.final_store = self._final_store
             self.optimizer.direction = self.direction
-            self.optimizer.initialize(exp_dir=self.log_dir)
+            self.optimizer._initialize(exp_dir=self.log_dir)
         elif self.experiment_type == "ablation":
             self.ablator.initialize()
 

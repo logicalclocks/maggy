@@ -33,24 +33,8 @@ class AbstractOptimizer(ABC):
         self.log_file = None
         self.fd = None
 
-    def initialize(self, exp_dir):
-        """
-        initialize the optimizer and configure logger.
-
-        :param exp_dir: path of experiment directory
-        :rtype exp_dir: str
-        """
-        # init logger of optimizer
-        self.initialize_logger(exp_dir=exp_dir)
-        # optimizer intitialization routine
-        self._initialize()
-        self._log("Initilized Optimizer {}: \n {}".format(self.name(), self.__dict__))
-        # init logger of pruner
-        if self.pruner:
-            self.pruner.initialize_logger(exp_dir=exp_dir)
-
     @abstractmethod
-    def _initialize(self):
+    def initialize(self):
         """
         A hook for the developer to initialize the optimizer.
         """
@@ -79,7 +63,7 @@ class AbstractOptimizer(ABC):
     def name(self):
         return str(self.__class__.__name__)
 
-    def initialize_logger(self, exp_dir):
+    def _initialize_logger(self, exp_dir):
         """Initialize logger of optimizer
 
         :param exp_dir: path of experiment directory
@@ -92,6 +76,22 @@ class AbstractOptimizer(ABC):
             hdfs.dump("", self.log_file)
         self.fd = hdfs.open_file(self.log_file, flags="w")
         self._log("Initialized Optimizer Logger")
+
+    def _initialize(self, exp_dir):
+        """
+        initialize the optimizer and configure logger.
+
+        :param exp_dir: path of experiment directory
+        :rtype exp_dir: str
+        """
+        # init logger of optimizer
+        self._initialize_logger(exp_dir=exp_dir)
+        # optimizer intitialization routine
+        self.initialize()
+        self._log("Initilized Optimizer {}: \n {}".format(self.name(), self.__dict__))
+        # init logger of pruner
+        if self.pruner:
+            self.pruner.initialize_logger(exp_dir=exp_dir)
 
     def _log(self, msg):
         if self.fd and not self.fd.closed:

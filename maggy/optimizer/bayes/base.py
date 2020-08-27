@@ -166,7 +166,7 @@ class BaseAsyncBO(AbstractOptimizer):
         if self.name() == "TPE":
             self.normalize_categorical = False
 
-    def _initialize(self):
+    def initialize(self):
         # validate hparam types
         # at least one hparam needs to be continuous & no DISCRETE hparams
         cont = False
