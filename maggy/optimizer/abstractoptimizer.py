@@ -111,9 +111,9 @@ class AbstractOptimizer(ABC):
         if self.pruner:
             self.pruner.initialize_logger(exp_dir=exp_dir)
 
-    def _finalize_experiment(self):
+    def _finalize_experiment(self, trials):
         # run optimizer specific finalize routine
-        self.finalize_experiment()
+        self.finalize_experiment(trials)
 
         self._log("Experiment finished")
         self._close_log()
