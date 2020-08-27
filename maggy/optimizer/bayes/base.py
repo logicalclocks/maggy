@@ -23,8 +23,6 @@ import numpy as np
 
 from maggy.optimizer.abstractoptimizer import AbstractOptimizer
 
-# todo min_delta_x → warn when similar point has been evaluated before → see skopt for reference
-
 
 class BaseAsyncBO(AbstractOptimizer):
     """Base class for asynchronous bayesian optimization
@@ -96,17 +94,6 @@ class BaseAsyncBO(AbstractOptimizer):
         interim_results_interval=10,
     ):
         """
-        :param num_warmup_trials: number of random trials at the beginning of experiment
-        :type num_warmup_trials: int
-        :param random_fraction: fraction of random samples, between [0,1]
-        :type random_fraction: float
-        :param interim_results: If True, use interim metrics from trials for fitting surrogate model. Else use final
-                                metrics only
-        :type interim_results: bool
-        :param interim_results_interval: Specifies which interim metrics are used (if interim_results==True)
-                                         e.g. interval=10: the metric of every 10th epoch is used for fitting surrogate
-        :type interim_results_interval: int
-
         Attributes
         ----------
 
@@ -118,6 +105,17 @@ class BaseAsyncBO(AbstractOptimizer):
                                        in `create_trial()`
         normalize_categorical (bool): If True, the encoded categorical hparam is also max-min
                                       normalized between 0 and 1 in searchspace.transform()
+
+        :param num_warmup_trials: number of random trials at the beginning of experiment
+        :type num_warmup_trials: int
+        :param random_fraction: fraction of random samples, between [0,1]
+        :type random_fraction: float
+        :param interim_results: If True, use interim metrics from trials for fitting surrogate model. Else use final
+                                metrics only
+        :type interim_results: bool
+        :param interim_results_interval: Specifies which interim metrics are used (if interim_results==True)
+                                         e.g. interval=10: the metric of every 10th epoch is used for fitting surrogate
+        :type interim_results_interval: int
         """
         super().__init__()
 

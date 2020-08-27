@@ -303,18 +303,6 @@ class SHIteration:
 
     def __init__(self, n_configs, budgets, iteration_id, trial_metric_getter, logger):
         """
-        :param n_configs: number of trials per rung
-        :type n_configs: list[int]
-        :param budgets: budget per rung
-        :type budgets: list[int]
-        :param iteration_id: the id of the iteration is the index of the iteration in the `iterations` list of the pruner
-        :type iteration_id: int
-        :param trial_metric_getter: a function that returns a finished Trial object or a list of finished Trial objects from
-                             the `final_store` of the `optimizer`.
-                             It's only argument is the `trial_id` or a list of `trial_id`
-        :type trial_metric_getter: function
-        :param logger: logger
-
         Attributes
         ----------
 
@@ -337,7 +325,6 @@ class SHIteration:
         Note: this strategy gives also the opportunity to later continue
               trials instead of starting new ones for promoted trials
 
-
         Example for `configs`:
 
         {0:[
@@ -359,6 +346,18 @@ class SHIteration:
              "actual_trial_id": trial_id20}
             ],
         }
+
+        :param n_configs: number of trials per rung
+        :type n_configs: list[int]
+        :param budgets: budget per rung
+        :type budgets: list[int]
+        :param iteration_id: the id of the iteration is the index of the iteration in the `iterations` list of the pruner
+        :type iteration_id: int
+        :param trial_metric_getter: a function that returns a finished Trial object or a list of finished Trial objects from
+                             the `final_store` of the `optimizer`.
+                             It's only argument is the `trial_id` or a list of `trial_id`
+        :type trial_metric_getter: function
+        :param logger: logger
         """
         self.iteration_id = iteration_id
         self.state = SHIteration.INIT
@@ -526,9 +525,6 @@ class SHIteration:
                 self.iteration_id, self.current_rung - 1, sorted_trials, promoted_trials
             )
         )
-
-        # self._log("configs: {}".format(self.configs))
-        # self._log("trial_metrics: {}".format(trial_metrics))
 
     def promotable(self):
         """checks if current rung is promotable, i.e. if all trials are finished and current rung is not the last rung

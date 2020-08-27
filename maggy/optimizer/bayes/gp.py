@@ -47,6 +47,11 @@ class GP(BaseAsyncBO):
         """
         See docstring of `BaseAsyncBO` for more info on parameters of base class
 
+        Attributes
+        ----------
+
+        base_model (any): estimator that has not been fit on any data.
+
         :param async_strategy: strategy to encourage diversity when sampling. Can take following values
                                - `"impute"`: impute metric for busy locations, then fit surrogate with imputed observations
                                - `"asy_ts"`: asynchronous thompson sampling.
@@ -90,11 +95,6 @@ class GP(BaseAsyncBO):
                                 - The optimal of these local minima is used to update the prior.
         :param acq_optimizer_kwargs: Additional arguments to be passed to the acquisition optimizer.
         :type acq_optimizer_kwargs: dict
-
-        Attributes
-        ----------
-
-        base_model (any): estimator that has not been fit on any data.
         """
         super().__init__(**kwargs)
 
