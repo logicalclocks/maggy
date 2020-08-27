@@ -22,8 +22,8 @@ from maggy.searchspace import Searchspace
 
 
 class RandomSearch(AbstractOptimizer):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.config_buffer = []
 
     def initialize(self):

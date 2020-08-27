@@ -92,6 +92,7 @@ class BaseAsyncBO(AbstractOptimizer):
         random_fraction=0.33,
         interim_results=False,
         interim_results_interval=10,
+        **kwargs
     ):
         """
         Attributes
@@ -117,7 +118,7 @@ class BaseAsyncBO(AbstractOptimizer):
                                          e.g. interval=10: the metric of every 10th epoch is used for fitting surrogate
         :type interim_results_interval: int
         """
-        super().__init__()
+        super().__init__(**kwargs)
 
         # configure warmup routine
         self.num_warmup_trials = num_warmup_trials
