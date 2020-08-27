@@ -40,12 +40,6 @@ class RandomSearch(AbstractOptimizer):
             self.num_trials
         )
 
-        # configure number of trials ( for maggy progress bar )
-        if self.pruner:
-            self.num_trials = (
-                self.pruner.num_trials()
-            )  # todo does not work yet, progress bar uses num_trials from kwarg of optimizer
-
     def get_suggestion(self, trial=None):
         try:
             self._log("### start get_suggestion ###")
