@@ -343,12 +343,6 @@ class BaseAsyncBO(AbstractOptimizer):
                 self.pruner._close_log()
 
     def finalize_experiment(self, trials):
-        self._log("Experiment finished")
-        self._close_log()
-
-        if self.pruner:
-            self.pruner._close_log()
-
         return
 
     def init_model(self):

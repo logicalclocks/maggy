@@ -93,6 +93,18 @@ class AbstractOptimizer(ABC):
         if self.pruner:
             self.pruner.initialize_logger(exp_dir=exp_dir)
 
+    def _finalize_experiment(self):
+        # run optimizer specific finalize routine
+        self.finalize_experiment()
+
+        self._log("Experiment finished")
+        self._close_log()
+
+        if self.pruner:
+            self.pruner._close_log()
+
+        return
+
     def _log(self, msg):
         if self.fd and not self.fd.closed:
             msg = datetime.now().isoformat() + ": " + str(msg)

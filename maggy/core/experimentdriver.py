@@ -284,7 +284,7 @@ class ExperimentDriver(object):
 
         if self.experiment_type == "optimization":
 
-            _ = self.optimizer.finalize_experiment(self._final_store)
+            _ = self.optimizer._finalize_experiment(self._final_store)
 
             self.job_end = job_end
 
