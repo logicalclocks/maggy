@@ -14,18 +14,16 @@
 #   limitations under the License.
 #
 
-import traceback
-
-import numpy as np
-
-from maggy.pruner.abstractpruner import AbstractPruner
-
 """
 The implementation is heavliy inspired by the BOHB (Falkner et al. 2018) paper and the HpBandSter Framework
 
 BOHB: http://proceedings.mlr.press/v80/falkner18a.html
 HpBandSter: https://github.com/automl/HpBandSter
 """
+
+import numpy as np
+
+from maggy.pruner.abstractpruner import AbstractPruner
 
 
 class Hyperband(AbstractPruner):
@@ -67,23 +65,6 @@ class Hyperband(AbstractPruner):
 
     def __init__(self, min_budget, max_budget, eta, n_iterations, **kwargs):
         """
-        :param min_budget: The smallest budget to consider. Needs to be positive!
-        :type min_budget: int
-        :param max_budget: The largest budget to consider. Needs to be larger than min_budget!
-                            The budgets will be geometrically distributed
-        :type max_budget: int
-        :param eta: In each iteration, a complete run of sequential halving is executed. In it,
-                        after evaluating each configuration on the same subset size, only a fraction of
-                        1/eta of them 'advances' to the next round.
-                        Must be greater or equal to 2.
-        :type eta: int
-        :param n_iterations: number of SH Iterations
-        :type n_iterations: int
-        :param trial_metric_getter: a that returns a dict with `trial_id` as key and `metric` as value
-                             with the lowest metric being the "best"
-                             It's only argument is `trial_ids`, it can be either str of single trial or list of trial ids
-        :type trial_metric_getter: function
-
         Note: `trial_metric_getter` is param of parent class and has to be passed as kwarg
 
         Attributes
@@ -94,6 +75,22 @@ class Hyperband(AbstractPruner):
         - iterations (list(SHIteration)): list of initialized SH iterations
         - updating_iteration (None|int): id of currently updating SH iteration
 
+        :param min_budget: The smallest budget to consider. Needs to be positive!
+        :type min_budget: int
+        :param max_budget: The largest budget to consider. Needs to be larger than min_budget!
+            The budgets will be geometrically distributed
+        :type max_budget: int
+        :param eta: In each iteration, a complete run of sequential halving is executed. In it,
+            after evaluating each configuration on the same subset size, only a fraction of
+            1/eta of them 'advances' to the next round.
+            Must be greater or equal to 2.
+        :type eta: int
+        :param n_iterations: number of SH Iterations
+        :type n_iterations: int
+        :param trial_metric_getter: a that returns a dict with `trial_id` as key and `metric` as value
+            with the lowest metric being the "best"
+            It's only argument is `trial_ids`, it can be either str of single trial or list of trial ids
+        :type trial_metric_getter: function
         """
         super().__init__(**kwargs)
 
@@ -160,47 +157,42 @@ class Hyperband(AbstractPruner):
         :return: {"trial_id": `trial_id`, "budget": 9}
         :rtype: dict|None|str
         """
-        try:
-            # loop through active iterations and return config and budget of next run
-            next_run = None
-            for iteration in self.active_iterations():
-                next_run = iteration.get_next_run()
-                if next_run is not None:
-                    # set updateing iteration
-                    self.updating_iteration = iteration.iteration_id
-                    break
-
+        # loop through active iterations and return config and budget of next run
+        next_run = None
+        for iteration in self.active_iterations():
+            next_run = iteration.get_next_run()
             if next_run is not None:
-                # schedule new run for `iteration`
-                self._log(
-                    "{}. Iteration, {}. Rung. Run next {}".format(
-                        iteration.iteration_id, iteration.current_rung, next_run
-                    )
-                )
-                return next_run
+                # set updateing iteration
+                self.updating_iteration = iteration.iteration_id
+                break
 
+        if next_run is not None:
+            # schedule new run for `iteration`
+            self._log(
+                "{}. Iteration, {}. Rung. Run next {}".format(
+                    iteration.iteration_id, iteration.current_rung, next_run
+                )
+            )
+            return next_run
+
+        else:
+            # all active iterations are busy or finished, no immediate run can be scheduled
+            if self.n_iterations > 0:
+                # start next iteration in the queue
+                self.start_next_iteration()
+                return self.pruning_routine()
+            elif self.finished():
+                # All SH iterations in HB are finished
+                self._log("All Iterations have finished")
+                self._close_log()
+                return None
             else:
-                # all active iterations are busy or finished, no immediate run can be scheduled
-                if self.n_iterations > 0:
-                    # start next iteration in the queue
-                    self.start_next_iteration()
-                    return self.pruning_routine()
-                elif self.finished():
-                    # All SH iterations in HB are finished
-                    self._log("All Iterations have finished")
-                    self._close_log()
-                    return None
-                else:
-                    # no immediate run can be scheduled, because all iterations are busy.
-                    self._log(
-                        "All Iterations have been started and all trials in their current rung have been started. "
-                        "Wait until new run can be scheduled"
-                    )
-                    return "IDLE"
-        except BaseException:
-            self._log(traceback.format_exc())
-            self._close_log()
-            raise Exception("Exception in Hyperband. {}".format(traceback.format_exc()))
+                # no immediate run can be scheduled, because all iterations are busy.
+                self._log(
+                    "All Iterations have been started and all trials in their current rung have been started. "
+                    "Wait until new run can be scheduled"
+                )
+                return "IDLE"
 
     def init_iterations(self):
         """calculates budgets and amount of trials for each iteration"""
@@ -319,7 +311,7 @@ class SHIteration:
         :type iteration_id: int
         :param trial_metric_getter: a function that returns a finished Trial object or a list of finished Trial objects from
                              the `final_store` of the `optimizer`.
-                             It's only argument is the `trial_id` or list a list of `trial_id`
+                             It's only argument is the `trial_id` or a list of `trial_id`
         :type trial_metric_getter: function
         :param logger: logger
 
