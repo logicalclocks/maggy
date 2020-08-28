@@ -121,10 +121,10 @@ def _finalize_experiment(
 ):
     """Attaches the experiment outcome as xattr metadata to the app directory.
     """
-    # outputs = _build_summary_json(logdir)
+    outputs = _build_summary_json(logdir)
 
-    # if outputs:
-    #    hopshdfs.dump(outputs, logdir + "/.summary.json")>
+    if outputs:
+        hopshdfs.dump(outputs, logdir + "/.summary.json")
 
     if best_logdir:
         experiment_json["bestDir"] = best_logdir[len(hopshdfs.project_path()) :]
