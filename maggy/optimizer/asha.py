@@ -127,7 +127,7 @@ class Asha(AbstractOptimizer):
                     old_trial = promotable[0]
                     # make copy of params to be able to change resource
                     params = old_trial.params.copy()
-                    params["resource"] = self.resource_min * (
+                    params["budget"] = self.resource_min * (
                         self.reduction_factor ** new_rung
                     )
                     promote_trial = Trial(params)
@@ -149,7 +149,7 @@ class Asha(AbstractOptimizer):
         # else return random configuration in base rung
         params = self.searchspace.get_random_parameter_values(1)[0]
         # set resource to minimum
-        params["resource"] = self.resource_min
+        params["budget"] = self.resource_min
         to_return = Trial(params)
         # add to bottom rung
         self.rungs[0].append(to_return)
