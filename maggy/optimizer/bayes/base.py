@@ -14,7 +14,6 @@
 #   limitations under the License.
 #
 
-import traceback
 import time
 from copy import deepcopy
 from abc import abstractmethod
@@ -169,159 +168,146 @@ class BaseAsyncBO(AbstractOptimizer):
         self.init_model()
 
     def get_suggestion(self, trial=None):
-        try:
-            self._log("### start get_suggestion ###")
-            self.sampling_time_start = time.time()
-            if trial:
+        self._log("### start get_suggestion ###")
+        self.sampling_time_start = time.time()
+        if trial:
+            self._log(
+                "last finished trial: {} with params {}".format(
+                    trial.trial_id, trial.params
+                )
+            )
+        else:
+            self._log("no previous finished trial")
+
+        # check if experiment has finished
+        if self._experiment_finished():
+            return None
+
+        # pruning routine
+        if self.pruner:
+            next_trial_info = self.pruner.pruning_routine()
+            if next_trial_info == "IDLE":
                 self._log(
-                    "last finished trial: {} with params {}".format(
-                        trial.trial_id, trial.params
-                    )
+                    "Worker is IDLE and has to wait until a new trial can be scheduled"
                 )
-            else:
-                self._log("no previous finished trial")
-
-            # check if experiment has finished
-            if self._experiment_finished():
+                return "IDLE"
+            elif next_trial_info is None:
+                # experiment is finished
+                self._log("Experiment has finished")
                 return None
-
-            # pruning routine
-            if self.pruner:
-                next_trial_info = self.pruner.pruning_routine()
-                if next_trial_info == "IDLE":
-                    self._log(
-                        "Worker is IDLE and has to wait until a new trial can be scheduled"
-                    )
-                    return "IDLE"
-                elif next_trial_info is None:
-                    # experiment is finished
-                    self._log("Experiment has finished")
-                    return None
-                elif next_trial_info["trial_id"]:
-                    # copy hparams of given promoted trial and start new trial with it
-                    parent_trial_id = next_trial_info["trial_id"]
-                    parent_trial_hparams = deepcopy(
-                        self.get_hparams_dict(trial_ids=parent_trial_id)[
-                            parent_trial_id
-                        ]
-                    )
-                    # update trial info dict and create new trial object
-                    next_trial = self.create_trial(
-                        hparams=parent_trial_hparams,
-                        sample_type="promoted",
-                        run_budget=next_trial_info["budget"],
-                    )
-                    # report new trial id to pruner
-                    self.pruner.report_trial(
-                        original_trial_id=parent_trial_id,
-                        new_trial_id=next_trial.trial_id,
-                    )
-                    self._log(
-                        "use hparams from promoted trial {}. \n start trial {}: {} \n".format(
-                            parent_trial_id, next_trial.trial_id, next_trial.params
-                        )
-                    )
-                    return next_trial
-                else:
-                    # start sampling procedure with given budget
-                    run_budget = next_trial_info["budget"]
-                    if self.interim_results:
-                        model_budget = 0
-                    else:
-                        model_budget = run_budget
-            else:
-                run_budget = 0
-                model_budget = 0
-
-            # check if there are still trials in the warmup buffer
-            if self.warmup_configs:
-                self._log("take sample from warmup buffer")
-                next_trial_params = self.warmup_configs.pop()
-                next_trial = self.create_trial(
-                    hparams=next_trial_params,
-                    sample_type="random",
-                    run_budget=run_budget,
+            elif next_trial_info["trial_id"]:
+                # copy hparams of given promoted trial and start new trial with it
+                parent_trial_id = next_trial_info["trial_id"]
+                parent_trial_hparams = deepcopy(
+                    self.get_hparams_dict(trial_ids=parent_trial_id)[parent_trial_id]
                 )
+                # update trial info dict and create new trial object
+                next_trial = self.create_trial(
+                    hparams=parent_trial_hparams,
+                    sample_type="promoted",
+                    run_budget=next_trial_info["budget"],
+                )
+                # report new trial id to pruner
+                self.pruner.report_trial(
+                    original_trial_id=parent_trial_id, new_trial_id=next_trial.trial_id,
+                )
+                self._log(
+                    "use hparams from promoted trial {}. \n start trial {}: {} \n".format(
+                        parent_trial_id, next_trial.trial_id, next_trial.params
+                    )
+                )
+                return next_trial
+            else:
+                # start sampling procedure with given budget
+                run_budget = next_trial_info["budget"]
+                if self.interim_results:
+                    model_budget = 0
+                else:
+                    model_budget = run_budget
+        else:
+            run_budget = 0
+            model_budget = 0
 
-            elif np.random.rand() < self.random_fraction:
-                # random fraction applies, sample randomly
+        # check if there are still trials in the warmup buffer
+        if self.warmup_configs:
+            self._log("take sample from warmup buffer")
+            next_trial_params = self.warmup_configs.pop()
+            next_trial = self.create_trial(
+                hparams=next_trial_params, sample_type="random", run_budget=run_budget,
+            )
+
+        elif np.random.rand() < self.random_fraction:
+            # random fraction applies, sample randomly
+            hparams = self.searchspace.get_random_parameter_values(1)[0]
+            next_trial = self.create_trial(
+                hparams=hparams, sample_type="random", run_budget=run_budget
+            )
+            self._log("sampled randomly: {}".format(hparams))
+        else:
+            # update model
+            if self.pruner and not self.interim_results:
+                # skip model building if we already have a bigger model
+                if max(list(self.models.keys()) + [-np.inf]) <= model_budget:
+                    self.update_model(model_budget)
+            else:
+                self.update_model(model_budget)
+
+            if not self.models:
+                # in case there is no model yet, sample randomly
                 hparams = self.searchspace.get_random_parameter_values(1)[0]
                 next_trial = self.create_trial(
                     hparams=hparams, sample_type="random", run_budget=run_budget
                 )
                 self._log("sampled randomly: {}".format(hparams))
             else:
-                # update model
                 if self.pruner and not self.interim_results:
-                    # skip model building if we already have a bigger model
-                    if max(list(self.models.keys()) + [-np.inf]) <= model_budget:
-                        self.update_model(model_budget)
-                else:
-                    self.update_model(model_budget)
-
-                if not self.models:
-                    # in case there is no model yet, sample randomly
-                    hparams = self.searchspace.get_random_parameter_values(1)[0]
-                    next_trial = self.create_trial(
-                        hparams=hparams, sample_type="random", run_budget=run_budget
+                    # sample from largest model available
+                    model_budget = max(self.models.keys())
+                # sample from model with model budget
+                self._log(
+                    "start sampling routine from model with budget {}".format(
+                        model_budget
                     )
-                    self._log("sampled randomly: {}".format(hparams))
-                else:
-                    if self.pruner and not self.interim_results:
-                        # sample from largest model available
-                        model_budget = max(self.models.keys())
-                    # sample from model with model budget
-                    self._log(
-                        "start sampling routine from model with budget {}".format(
-                            model_budget
-                        )
-                    )
-                    hparams = self.sampling_routine(model_budget)
-                    next_trial = self.create_trial(
-                        hparams=hparams,
-                        sample_type="model",
-                        run_budget=run_budget,
-                        model_budget=model_budget,
-                    )
-                    self._log(
-                        "sampled from model with budget {}: {}".format(
-                            model_budget, hparams
-                        )
-                    )
-
-            # check if Trial with same hparams has already been created
-            i = 0
-            while self.hparams_exist(trial=next_trial):
-                self._log("sample randomly to encourage exploration")
-                hparams = self.searchspace.get_random_parameter_values(1)[0]
+                )
+                hparams = self.sampling_routine(model_budget)
                 next_trial = self.create_trial(
-                    hparams=hparams, sample_type="random_forced", run_budget=run_budget
+                    hparams=hparams,
+                    sample_type="model",
+                    run_budget=run_budget,
+                    model_budget=model_budget,
                 )
-                i += 1
-                if i > 3:
-                    self._log(
-                        "not possible to sample new config. Stop Experiment (most/all configs have already been used)"
+                self._log(
+                    "sampled from model with budget {}: {}".format(
+                        model_budget, hparams
                     )
-                    return None
+                )
 
-            # report new trial id to pruner
-            if self.pruner:
-                self.pruner.report_trial(
-                    original_trial_id=None, new_trial_id=next_trial.trial_id
-                )
-            self._log(
-                "start trial {}: {}, {} \n".format(
-                    next_trial.trial_id, next_trial.params, next_trial.info_dict
-                )
+        # check if Trial with same hparams has already been created
+        i = 0
+        while self.hparams_exist(trial=next_trial):
+            self._log("sample randomly to encourage exploration")
+            hparams = self.searchspace.get_random_parameter_values(1)[0]
+            next_trial = self.create_trial(
+                hparams=hparams, sample_type="random_forced", run_budget=run_budget
             )
-            return next_trial
+            i += 1
+            if i > 3:
+                self._log(
+                    "not possible to sample new config. Stop Experiment (most/all configs have already been used)"
+                )
+                return None
 
-        except BaseException:
-            self._log(traceback.format_exc())
-            self._close_log()
-
-            if self.pruner:
-                self.pruner._close_log()
+        # report new trial id to pruner
+        if self.pruner:
+            self.pruner.report_trial(
+                original_trial_id=None, new_trial_id=next_trial.trial_id
+            )
+        self._log(
+            "start trial {}: {}, {} \n".format(
+                next_trial.trial_id, next_trial.params, next_trial.info_dict
+            )
+        )
+        return next_trial
 
     def finalize_experiment(self, trials):
         return
