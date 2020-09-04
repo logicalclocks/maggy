@@ -78,7 +78,7 @@ class LOCO(AbstractAblator):
                     training_features.remove(label_name)
 
                     def decode(example_proto):
-                        example = tf.parse_single_example(
+                        example = tf.io.parse_single_example(
                             example_proto, tf_record_schema
                         )
                         # prepare the features
