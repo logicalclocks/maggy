@@ -35,7 +35,7 @@ def _prepare_func(
     app_id,
     run_id,
     experiment_type,
-    map_fun,
+    train_fn,
     server_addr,
     hb_interval,
     secret,
@@ -142,11 +142,11 @@ def _prepare_func(
                     if experiment_type == "optimization":
                         tensorboard._write_hparams(parameters, trial_id)
 
-                    sig = inspect.signature(map_fun)
+                    sig = inspect.signature(train_fn)
                     if sig.parameters.get("reporter", None):
-                        retval = map_fun(**parameters, reporter=reporter)
+                        retval = train_fn(**parameters, reporter=reporter)
                     else:
-                        retval = map_fun(**parameters)
+                        retval = train_fn(**parameters)
 
                     if experiment_type == "optimization":
                         tensorboard._write_session_end()

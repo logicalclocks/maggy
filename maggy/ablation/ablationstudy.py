@@ -32,8 +32,8 @@ class AblationStudy(object):
     (for an example, look at `ablator.LOCO.get_dataset_generator()`).
     If you want to provide your own dataset generator function,
     define it before creating the `AblationStudy` instance and pass it to
-    the initializer or use 'set_dataset_generator()'. In the example below 
-    we assume the user has created a function called `create_tf_dataset()` 
+    the initializer or use 'set_dataset_generator()'. In the example below
+    we assume the user has created a function called `create_tf_dataset()`
     that returns a `TFRecordDataset`:
 
     >>> ablation_study = AblationStudy('titanic_train_dataset',
@@ -99,7 +99,7 @@ class AblationStudy(object):
 
     Lagom the experiment:
 
-    >>> result = experiment.lagom(map_fun=training_function,
+    >>> result = experiment.lagom(train_fn=training_function,
     >>>                         experiment_type='ablation',
     >>>                         ablation_study=ablation_study,
     >>>                         ablator='loco',
@@ -147,7 +147,7 @@ class AblationStudy(object):
         }
 
         return ablation_dict
-    
+
     def set_dataset_generator(self, dataset_generator):
         """
         Sets a user-defined function as the dataset generator.

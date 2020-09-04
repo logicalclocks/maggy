@@ -75,7 +75,7 @@ Sample usage:
 
 >>> # Launch maggy experiment
 >>> from maggy import experiment
->>> result = experiment.lagom(map_fun=mnist,
+>>> result = experiment.lagom(train_fn=mnist,
 >>>                            searchspace=sp,
 >>>                            optimizer='randomsearch',
 >>>                            direction='max',
