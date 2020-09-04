@@ -57,7 +57,7 @@ class LOCO(AbstractAblator):
                     dataset_dir = featurestore.get_training_dataset_path(
                         training_dataset_name, training_dataset_version
                     )
-                    input_files = tf.io.gfile.Glob(dataset_dir + "/part-r-*")
+                    input_files = tf.io.gfile.glob(dataset_dir + "/part-r-*")
                     dataset = tf.data.TFRecordDataset(input_files)
                     tf_record_schema = featurestore.get_training_dataset_tf_record_schema(
                         training_dataset_name
