@@ -101,7 +101,6 @@ def _prepare_func(
 
             # blocking
             trial_id, parameters = client.get_suggestion(reporter)
-
             while not client.done:
                 if experiment_type == "ablation":
                     ablation_params = {
