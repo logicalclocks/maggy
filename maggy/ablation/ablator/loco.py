@@ -57,7 +57,9 @@ class LOCO(AbstractAblator):
                     dataset_dir = featurestore.get_training_dataset_path(
                         training_dataset_name, training_dataset_version
                     )
-                    input_files = tf.gfile.Glob(dataset_dir + "/part-r-*")
+                    input_files = tf.io.gfile.glob(
+                        (dataset_dir + "/part-r-*").replace("hopsfs", "hdfs")
+                    )
                     dataset = tf.data.TFRecordDataset(input_files)
                     tf_record_schema = featurestore.get_training_dataset_tf_record_schema(
                         training_dataset_name
@@ -76,7 +78,7 @@ class LOCO(AbstractAblator):
                     training_features.remove(label_name)
 
                     def decode(example_proto):
-                        example = tf.parse_single_example(
+                        example = tf.io.parse_single_example(
                             example_proto, tf_record_schema
                         )
                         # prepare the features
