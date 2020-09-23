@@ -139,7 +139,7 @@ class ExperimentDriver(object):
                 )
 
             # if optimizer has pruner, num trials is determined by pruner
-            if optimizer.pruner:
+            if self.optimizer.pruner:
                 self.num_trials = self.optimizer.pruner.num_trials()
 
             direction = kwargs.get("direction", "max")
