@@ -263,6 +263,12 @@ def lagom(
             experiment_utils._seconds_to_milliseconds(time.time() - job_start)
         )
         if exp_driver:
+            if experiment_type == "optimization":
+                # close logfiles of optimizer
+                exp_driver.optimizer._close_log()
+                if exp_driver.optimizer.pruner:
+                    exp_driver.optimizer.pruner._close_log()
+
             if exp_driver.exception:
                 raise exp_driver.exception
         raise
