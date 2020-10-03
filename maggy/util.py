@@ -133,6 +133,8 @@ def _finalize_experiment(
     experiment_json["state"] = state
     experiment_json["duration"] = duration
 
+    experiment_json["earlystop"] = False
+
     experiment_utils._attach_experiment_xattr(
         app_id, run_id, experiment_json, "REPLACE"
     )

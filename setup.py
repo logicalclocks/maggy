@@ -31,7 +31,7 @@ setup(
     ],
     extras_require={
         'pydoop': ['pydoop'],
-        'tf': ['tensorflow==1.14.0'],
+        'tf': ['tensorflow==2.3.1'],
         'docs': [
             'sphinx==1.8.5',
             'sphinx-autobuild',
@@ -52,10 +52,10 @@ setup(
     author='Moritz Meister',
     author_email='meister.mo@gmail.com',
     description='Efficient asynchronous optimization of expensive black-box functions on top of Apache Spark',
-    license='GNU Affero General Public License v3',
+    license='Apache V2',
     keywords='Hyperparameter, Optimization, Auto-ML, Hops, Hadoop, TensorFlow, Spark',
     url='https://github.com/logicalclocks/maggy',
-    download_url='http://snurran.sics.se/hops/maggy/maggy-' + __version__ + '.tar.gz',
+    download_url='https://repo.hops.works/repository/maggy-' + __version__ + '.tar.gz',
     packages=find_packages(),
     long_description=read('README.rst'),
     classifiers=[
