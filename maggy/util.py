@@ -133,8 +133,6 @@ def _finalize_experiment(
     experiment_json["state"] = state
     experiment_json["duration"] = duration
 
-    experiment_json["earlystop"] = False
-
     experiment_utils._attach_experiment_xattr(
         app_id, run_id, experiment_json, "REPLACE"
     )
@@ -152,6 +150,7 @@ def _build_summary_json(logdir):
             if hopshdfs.exists(return_file) and hopshdfs.exists(hparams_file):
                 metric_arr = experiment_utils._convert_return_file_to_arr(return_file)
                 hparams_dict = _load_hparams(hparams_file)
+                hparams_dict["early_stopped"] = trial.get_early_stop()
                 combinations.append({"parameters": hparams_dict, "outputs": metric_arr})
 
     return json.dumps({"combinations": combinations}, default=json_default_numpy)
