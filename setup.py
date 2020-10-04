@@ -31,7 +31,7 @@ setup(
     ],
     extras_require={
         'pydoop': ['pydoop'],
-        'tf': ['tensorflow==2.3.1'],
+        'tf': ['tensorflow==2.3.0'],
         'docs': [
             'sphinx==1.8.5',
             'sphinx-autobuild',
@@ -55,7 +55,6 @@ setup(
     license='Apache V2',
     keywords='Hyperparameter, Optimization, Auto-ML, Hops, Hadoop, TensorFlow, Spark',
     url='https://github.com/logicalclocks/maggy',
-    download_url='https://repo.hops.works/repository/maggy-' + __version__ + '.tar.gz',
     packages=find_packages(),
     long_description=read('README.rst'),
     classifiers=[
