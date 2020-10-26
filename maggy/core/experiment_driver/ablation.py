@@ -93,7 +93,9 @@ class Driver(base.Driver):
 
         self.result = {"best_val": "n.a.", "num_trials": 0, "early_stopped": "n.a"}
 
-        # Init controller
+        # Init controller and set references to data in ablator
+        self.controller.ablation_study = self.ablation_study
+        self.controller.final_store = self._final_store
         self.controller.initialize()
 
     def controller_get_next(self, trial=None):

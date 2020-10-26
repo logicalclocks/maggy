@@ -265,9 +265,9 @@ def lagom(
         if exp_driver:
             if experiment_type == "optimization":
                 # close logfiles of optimizer
-                exp_driver.optimizer._close_log()
-                if exp_driver.optimizer.pruner:
-                    exp_driver.optimizer.pruner._close_log()
+                exp_driver.controller._close_log()
+                if exp_driver.controller.pruner:
+                    exp_driver.controller.pruner._close_log()
 
             if exp_driver.exception:
                 raise exp_driver.exception

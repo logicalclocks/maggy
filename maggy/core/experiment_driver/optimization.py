@@ -20,6 +20,7 @@ from maggy import util
 from maggy.searchspace import Searchspace
 from maggy.optimizer import AbstractOptimizer, RandomSearch, Asha, SingleRun
 from maggy.earlystop import AbstractEarlyStop, MedianStoppingRule, NoStoppingRule
+from maggy.optimizer import bayes
 from maggy.core.experiment_driver import base
 
 
@@ -72,6 +73,10 @@ class Driver(base.Driver):
                 self.controller = RandomSearch()
             elif optimizer.lower() == "asha":
                 self.controller = Asha()
+            elif optimizer.lower() == "tpe":
+                self.controller = bayes.TPE()
+            elif optimizer.lower() == "gp":
+                self.controller = bayes.GP()
             elif optimizer.lower() == "none":
                 if len(self.searchspace.names()) == 0:
                     self.controller = SingleRun()
@@ -95,6 +100,10 @@ class Driver(base.Driver):
                     str(optimizer), type(optimizer).__name__
                 )
             )
+
+        # if optimizer has pruner, num trials is determined by pruner
+        if self.controller.pruner:
+            self.num_trials = self.controller.pruner.num_trials()
 
         if isinstance(es_policy, str):
             if es_policy.lower() == "median":
@@ -132,13 +141,13 @@ class Driver(base.Driver):
         self.controller.trial_store = self._trial_store
         self.controller.final_store = self._final_store
         self.controller.direction = self.direction
-        self.controller.initialize()
+        self.controller._initialize(exp_dir=self.log_dir)
 
     def controller_get_next(self, trial=None):
         return self.controller.get_suggestion(trial)
 
     def prep_results(self):
-        _ = self.controller.finalize_experiment(self._final_store)
+        _ = self.controller._finalize_experiment(self._final_store)
         results = (
             "\n------ "
             + self.controller.name()
