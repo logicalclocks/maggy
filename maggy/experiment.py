@@ -168,7 +168,6 @@ def lagom(
             exp_driver = ablation.Driver(
                 ablation_study=ablation_study,
                 ablator=ablator,
-                searchspace=None,
                 name=name,
                 num_executors=num_executors,
                 hb_interval=hb_interval,
@@ -202,7 +201,7 @@ def lagom(
             name,
             exp_function,
             "MAGGY",
-            exp_driver.searchspace.json(),
+            None,
             description,
             app_id,
             direction,

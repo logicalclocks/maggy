@@ -17,7 +17,6 @@
 import json
 
 from maggy import util
-from maggy.searchspace import Searchspace
 from maggy.earlystop import NoStoppingRule
 from maggy.ablation.ablationstudy import AblationStudy
 from maggy.ablation.ablator.loco import LOCO
@@ -29,7 +28,6 @@ class Driver(base.Driver):
     def __init__(
         self,
         ablator,
-        searchspace,
         ablation_study,
         name,
         description,
@@ -52,16 +50,6 @@ class Driver(base.Driver):
                 "maggy.ablation.AblationStudy, "
                 "but it is {0} (of type '{1}').".format(
                     str(ablation_study), type(ablation_study).__name__
-                )
-            )
-
-        if not searchspace:
-            self.searchspace = Searchspace()
-        else:
-            raise Exception(
-                "The experiment's search space should be None for ablation experiments, "
-                "but it is {0} (of type '{1}').".format(
-                    str(searchspace), type(searchspace).__name__
                 )
             )
 
