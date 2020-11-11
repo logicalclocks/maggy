@@ -32,7 +32,8 @@ from hops import util as hopsutil
 from hops.experiment_impl.util import experiment_utils
 
 from maggy import util, tensorboard
-from maggy.core import trialexecutor, experimentdriver
+from maggy.core import trialexecutor
+from maggy.core.experiment_driver import optimization, ablation
 
 app_id = None
 running = False
@@ -148,8 +149,7 @@ def lagom(
             if num_executors > num_trials:
                 num_executors = num_trials
 
-            exp_driver = experimentdriver.ExperimentDriver(
-                "optimization",
+            exp_driver = optimization.Driver(
                 searchspace=searchspace,
                 optimizer=optimizer,
                 direction=direction,
@@ -164,17 +164,15 @@ def lagom(
                 log_dir=experiment_utils._get_logdir(app_id, run_id),
             )
 
-            exp_function = exp_driver.optimizer.name()
-
         elif experiment_type == "ablation":
-            exp_driver = experimentdriver.ExperimentDriver(
-                "ablation",
+            exp_driver = ablation.Driver(
                 ablation_study=ablation_study,
                 ablator=ablator,
                 name=name,
                 num_executors=num_executors,
                 hb_interval=hb_interval,
                 description=description,
+                direction="max",
                 log_dir=experiment_utils._get_logdir(app_id, run_id),
             )
             # using exp_driver.num_executor since
@@ -183,7 +181,6 @@ def lagom(
             if num_executors > exp_driver.num_executors:
                 num_executors = exp_driver.num_executors
 
-            exp_function = exp_driver.ablator.name()
         else:
             running = False
             raise RuntimeError(
@@ -191,6 +188,8 @@ def lagom(
                 "should be either 'optimization' or 'ablation', "
                 "But it is '{0}'".format(str(experiment_type))
             )
+
+        exp_function = exp_driver.controller.name()
 
         nodeRDD = sc.parallelize(range(num_executors), num_executors)
 
@@ -202,7 +201,7 @@ def lagom(
             name,
             exp_function,
             "MAGGY",
-            exp_driver.searchspace.json(),
+            None,
             description,
             app_id,
             direction,
@@ -265,9 +264,9 @@ def lagom(
         if exp_driver:
             if experiment_type == "optimization":
                 # close logfiles of optimizer
-                exp_driver.optimizer._close_log()
-                if exp_driver.optimizer.pruner:
-                    exp_driver.optimizer.pruner._close_log()
+                exp_driver.controller._close_log()
+                if exp_driver.controller.pruner:
+                    exp_driver.controller.pruner._close_log()
 
             if exp_driver.exception:
                 raise exp_driver.exception
