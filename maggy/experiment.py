@@ -208,9 +208,8 @@ def lagom(
             optimization_key,
         )
 
-        experiment_json = experiment_utils._attach_experiment_xattr(
-            app_id, run_id, experiment_json, "CREATE"
-        )
+        exp_ml_id = app_id + "_" + str(run_id)
+        experiment_json = experiment_utils._attach_experiment_xattr(exp_ml_id, experiment_json, "INIT")
 
         util._log(
             "Started Maggy Experiment: {0}, {1}, run {2}".format(name, app_id, run_id)
@@ -298,9 +297,8 @@ def _exception_handler(duration):
         if running and experiment_json is not None:
             experiment_json["state"] = "FAILED"
             experiment_json["duration"] = duration
-            experiment_utils._attach_experiment_xattr(
-                app_id, run_id, experiment_json, "REPLACE"
-            )
+            exp_ml_id = app_id + "_" + str(run_id)
+            experiment_utils._attach_experiment_xattr(exp_ml_id, experiment_json, "FULL_UPDATE")
     except Exception as err:
         util._log(err)
 
@@ -314,9 +312,8 @@ def _exit_handler():
         global experiment_json
         if running and experiment_json is not None:
             experiment_json["status"] = "KILLED"
-            experiment_utils._attach_experiment_xattr(
-                app_id, run_id, experiment_json, "REPLACE"
-            )
+            exp_ml_id = app_id + "_" + str(run_id)
+            experiment_utils._attach_experiment_xattr(exp_ml_id, experiment_json, "FULL_UPDATE")
     except Exception as err:
         util._log(err)
 
