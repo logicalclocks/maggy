@@ -132,10 +132,8 @@ def _finalize_experiment(
     experiment_json["metric"] = metric
     experiment_json["state"] = state
     experiment_json["duration"] = duration
-
-    experiment_utils._attach_experiment_xattr(
-        app_id, run_id, experiment_json, "REPLACE"
-    )
+    exp_ml_id = app_id + "_" + str(run_id)
+    experiment_utils._attach_experiment_xattr(exp_ml_id, experiment_json, "FULL_UPDATE")
 
 
 def _build_summary_json(logdir):
