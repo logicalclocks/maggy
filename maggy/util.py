@@ -22,14 +22,20 @@ import json
 import numpy as np
 from pyspark import TaskContext
 
-from hops import util as hopsutil
-from hops import hdfs as hopshdfs
-from hops.experiment_impl.util import experiment_utils
+#from hops import util as hopsutil
+#from hops import hdfs as hopshdfs
+#from hops.experiment_impl.util import experiment_utils
 
 from maggy import constants
 from maggy.core import exceptions
-
+from maggy import util
 DEBUG = True
+
+# in case importing in %%local
+try:
+    from pyspark.sql import SparkSession
+except:
+    pass
 
 
 def _log(msg):
@@ -52,7 +58,7 @@ def num_executors(sc):
     :return: Number of configured executors for Jupyter
     :rtype: int
     """
-    sc = hopsutil._find_spark().sparkContext
+    sc = util._find_spark().sparkContext
     try:
         return int(sc._conf.get("spark.dynamicAllocation.maxExecutors"))
     except:  # noqa: E722
@@ -234,3 +240,10 @@ def _validate_ml_id(app_id, run_id):
     if prev_app_id == app_id and int(prev_run_id) >= run_id:
         return app_id, (int(prev_run_id) + 1)
     return app_id, run_id
+
+
+def _find_spark():
+    """
+    Returns: SparkSession
+    """
+    return SparkSession.builder.getOrCreate()

@@ -23,8 +23,8 @@ import inspect
 import json
 import traceback
 
-from hops import hdfs as hopshdfs
-from hops.experiment_impl.util import experiment_utils
+#from hops import hdfs as hopshdfs
+#from hops.experiment_impl.util import experiment_utils
 
 from maggy import util, tensorboard
 from maggy.core import rpc, exceptions

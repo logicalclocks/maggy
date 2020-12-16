@@ -27,10 +27,10 @@ import time
 from abc import ABC, abstractmethod
 from datetime import datetime
 
-from hops import constants as hopsconstants
-from hops import hdfs as hopshdfs
+#from hops import constants as hopsconstants
+#from hops import hdfs as hopshdfs
 from hops import util as hopsutil
-from hops.experiment_impl.util import experiment_utils
+#from hops.experiment_impl.util import experiment_utils
 
 from maggy import util
 from maggy.core import rpc
@@ -121,7 +121,7 @@ class Driver(ABC):
             json.dumps(self.result, default=util.json_default_numpy),
             self.log_dir + "/result.json",
         )
-        sc = hopsutil._find_spark().sparkContext
+        sc = util._find_spark().sparkContext
         hopshdfs.dump(self.json(sc), self.log_dir + "/maggy.json")
 
         return self.result

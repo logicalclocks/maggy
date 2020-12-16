@@ -24,10 +24,10 @@ import secrets
 import json
 
 from maggy.trial import Trial
-
-from hops import constants as hopsconstants
-from hops import util as hopsutil
-from hops.experiment_impl.util import experiment_utils
+from maggy import util
+#from hops import constants as hopsconstants
+#from hops import util as hopsutil
+#from hops.experiment_impl.util import experiment_utils
 
 MAX_RETRIES = 3
 BUFSIZE = 1024 * 2
@@ -342,7 +342,7 @@ class Server(MessageSocket):
             server_host_port = (host, port)
 
             # register this driver with Hopsworks
-            sc = hopsutil._find_spark().sparkContext
+            sc = util._find_spark().sparkContext
             app_id = str(sc.applicationId)
 
             method = hopsconstants.HTTP_CONFIG.HTTP_POST

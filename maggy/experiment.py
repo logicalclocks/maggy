@@ -28,8 +28,8 @@ import os
 import atexit
 import time
 
-from hops import util as hopsutil
-from hops.experiment_impl.util import experiment_utils
+#from hops import util as hopsutil
+#from hops.experiment_impl.util import experiment_utils
 
 from maggy import util, tensorboard
 from maggy.core import trialexecutor
@@ -116,7 +116,7 @@ def lagom(
         raise RuntimeError("An experiment is currently running.")
 
     job_start = time.time()
-    sc = hopsutil._find_spark().sparkContext
+    sc = util._find_spark().sparkContext
     exp_driver = None
 
     try:
@@ -141,7 +141,7 @@ def lagom(
         # start experiment driver
         if experiment_type == "optimization":
 
-            assert num_trials > 0, "number of trials should be greater " + "than zero"
+            assert num_trials > 0, "number of trials should be greater than zero"
             tensorboard._write_hparams_config(
                 experiment_utils._get_logdir(app_id, run_id), searchspace
             )

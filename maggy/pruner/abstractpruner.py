@@ -17,7 +17,7 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
 
-from hops import hdfs
+#from hops import hdfs
 
 
 class AbstractPruner(ABC):

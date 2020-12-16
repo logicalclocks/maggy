@@ -21,7 +21,7 @@ API Module for the user to include in his training code.
 import threading
 from datetime import datetime
 
-from hops import hdfs as hopshdfs
+#from hops import hdfs as hopshdfs
 
 from maggy import constants
 from maggy.core import exceptions

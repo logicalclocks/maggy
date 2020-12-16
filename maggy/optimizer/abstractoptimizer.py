@@ -18,7 +18,7 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 import time
 
-from hops import hdfs
+#from hops import hdfs
 import numpy as np
 
 from maggy.trial import Trial
