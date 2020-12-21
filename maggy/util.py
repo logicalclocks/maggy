@@ -247,3 +247,29 @@ def _find_spark():
     Returns: SparkSession
     """
     return SparkSession.builder.getOrCreate()
+
+def _seconds_to_milliseconds(time):
+    """
+    Returns: time converted from seconds to milliseconds
+    """
+    return int(round(time * 1000))
+
+def _time_diff(t0, t1):
+    """
+    Args:
+        :t0: start time in seconds
+        :t1: end time in seconds
+
+    Returns: string with time difference (i.e. t1-t0)
+
+    """
+
+    millis = _seconds_to_milliseconds(t1) - _seconds_to_milliseconds(t0)
+    millis = int(millis)
+    seconds=(millis/1000)%60
+    seconds = int(seconds)
+    minutes=(millis/(1000*60))%60
+    minutes = int(minutes)
+    hours=(millis/(1000*60*60))%24
+
+    return "%d hours, %d minutes, %d seconds" % (hours, minutes, seconds)

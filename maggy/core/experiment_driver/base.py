@@ -106,11 +106,11 @@ class Driver(ABC):
     def finalize(self, job_end):
         self.job_end = job_end
 
-        self.duration = experiment_utils._seconds_to_milliseconds(
+        self.duration = util._seconds_to_milliseconds(
             self.job_end - self.job_start
         )
 
-        self.duration_str = experiment_utils._time_diff(self.job_start, self.job_end)
+        self.duration_str = util._time_diff(self.job_start, self.job_end)
 
         results = self.prep_results()
 
@@ -216,7 +216,7 @@ class Driver(ABC):
                         with trial.lock:
                             trial.status = Trial.FINALIZED
                             trial.final_metric = msg["data"]
-                            trial.duration = experiment_utils._seconds_to_milliseconds(
+                            trial.duration = util._seconds_to_milliseconds(
                                 time.time() - trial.start
                             )
 

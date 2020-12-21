@@ -34,6 +34,7 @@ import time
 from maggy import util, tensorboard
 from maggy.core import trialexecutor
 from maggy.core.experiment_driver import optimization, ablation
+from maggy.core.environment.abstractenvironment import AbstractEnvironment
 
 app_id = None
 running = False
@@ -258,7 +259,7 @@ def lagom(
 
     except:  # noqa: E722
         _exception_handler(
-            experiment_utils._seconds_to_milliseconds(time.time() - job_start)
+            util._seconds_to_milliseconds(time.time() - job_start)
         )
         if exp_driver:
             if experiment_type == "optimization":
