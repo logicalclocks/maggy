@@ -29,7 +29,7 @@ import traceback
 from maggy import util, tensorboard
 from maggy.core import rpc, exceptions
 from maggy.core.reporter import Reporter
-
+from maggy.core.environment_singleton import EnvironmentSingleton
 
 def _prepare_func(
     app_id,
@@ -53,7 +53,8 @@ def _prepare_func(
         Returns:
 
         """
-        experiment_utils._set_ml_id(app_id, run_id)
+        env = EnvironmentSingleton()
+        env._set_ml_id(app_id, run_id)
 
         # get task context information to determine executor identifier
         partition_id, task_attempt = util.get_partition_attempt_id()
@@ -116,21 +117,21 @@ def _prepare_func(
                 reporter.set_trial_id(trial_id)
 
                 # If trial is repeated, delete trial directory, except log file
-                if hopshdfs.exists(tb_logdir):
+                if env.exists(tb_logdir):
                     util._clean_dir(tb_logdir, [trial_log_file])
                 else:
-                    hopshdfs.mkdir(tb_logdir)
+                    env.mkdir(tb_logdir)
 
                 reporter.init_logger(trial_log_file)
                 tensorboard._register(tb_logdir)
                 if experiment_type == "ablation":
-                    hopshdfs.dump(
+                    env.dump(
                         json.dumps(ablation_params, default=util.json_default_numpy),
                         tb_logdir + "/.hparams.json",
                     )
 
                 else:
-                    hopshdfs.dump(
+                    env.dump(
                         json.dumps(parameters, default=util.json_default_numpy),
                         tb_logdir + "/.hparams.json",
                     )

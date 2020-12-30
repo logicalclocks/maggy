@@ -25,15 +25,13 @@ import json
 
 from maggy.trial import Trial
 from maggy import util
-#from hops import constants as hopsconstants
-#from hops import util as hopsutil
-#from hops.experiment_impl.util import experiment_utils
+from maggy.core.environment_singleton import EnvironmentSingleton
 
 MAX_RETRIES = 3
 BUFSIZE = 1024 * 2
 
 server_host_port = None
-
+env = None
 
 class Reservations(object):
     """Thread-safe store for worker reservations.
@@ -53,6 +51,8 @@ class Reservations(object):
         self.lock = threading.RLock()
         self.reservations = {}
         self.check_done = False
+
+        self.env = EnvironmentSingleton()
 
     def add(self, meta):
         """
@@ -331,13 +331,14 @@ class Server(MessageSocket):
             address of the Server as a tuple of (host, port)
         """
         global server_host_port
+        env = EnvironmentSingleton()
 
         server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         if not server_host_port:
             server_sock.bind(("", 0))
             # hostname may not be resolvable but IP address probably will be
-            host = experiment_utils._get_ip_address()
+            host = env._get_ip_address()
             port = server_sock.getsockname()[1]
             server_host_port = (host, port)
 
@@ -345,13 +346,14 @@ class Server(MessageSocket):
             sc = util._find_spark().sparkContext
             app_id = str(sc.applicationId)
 
-            method = hopsconstants.HTTP_CONFIG.HTTP_POST
+            hopscons = env.get_constants()
+            method = hopscons.HTTP_CONFIG.HTTP_POST
             resource_url = (
-                hopsconstants.DELIMITERS.SLASH_DELIMITER
-                + hopsconstants.REST_CONFIG.HOPSWORKS_REST_RESOURCE
-                + hopsconstants.DELIMITERS.SLASH_DELIMITER
+                hopscons.DELIMITERS.SLASH_DELIMITER
+                + hopscons.REST_CONFIG.HOPSWORKS_REST_RESOURCE
+                + hopscons.DELIMITERS.SLASH_DELIMITER
                 + "maggy"
-                + hopsconstants.DELIMITERS.SLASH_DELIMITER
+                + hopscons.DELIMITERS.SLASH_DELIMITER
                 + "drivers"
             )
             json_contents = {
@@ -362,11 +364,11 @@ class Server(MessageSocket):
             }
             json_embeddable = json.dumps(json_contents)
             headers = {
-                hopsconstants.HTTP_CONFIG.HTTP_CONTENT_TYPE: hopsconstants.HTTP_CONFIG.HTTP_APPLICATION_JSON
+                hopscons.HTTP_CONFIG.HTTP_CONTENT_TYPE: hopscons.HTTP_CONFIG.HTTP_APPLICATION_JSON
             }
 
             try:
-                response = hopsutil.send_request(
+                response = env.send_request(
                     method, resource_url, data=json_embeddable, headers=headers
                 )
 
@@ -447,7 +449,7 @@ class Client(MessageSocket):
         self.server_addr = server_addr
         self.done = False
         self.client_addr = (
-            experiment_utils._get_ip_address(),
+            env._get_ip_address(),
             self.sock.getsockname()[1],
         )
         self.partition_id = partition_id
