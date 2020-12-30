@@ -27,10 +27,7 @@ import time
 from abc import ABC, abstractmethod
 from datetime import datetime
 
-#from hops import constants as hopsconstants
-#from hops import hdfs as hopshdfs
-from hops import util as hopsutil
-#from hops.experiment_impl.util import experiment_utils
+from maggy.core.environment_singleton import EnvironmentSingleton
 
 from maggy import util
 from maggy.core import rpc
@@ -81,10 +78,11 @@ class Driver(ABC):
                 )
             )
 
+        self.env = EnvironmentSingleton()
         # Open File desc for HDFS to log
-        if not hopshdfs.exists(self.log_file):
-            hopshdfs.dump("", self.log_file)
-        self.fd = hopshdfs.open_file(self.log_file, flags="w")
+        if not self.env.exists(self.log_file):
+            self.env.dump("", self.log_file)
+        self.fd = self.env.open_file(self.log_file, flags="w")
 
         # overwritten for optimization
         self.es_interval = None
@@ -117,12 +115,12 @@ class Driver(ABC):
         print(results)
         self._log(results)
 
-        hopshdfs.dump(
+        self.env.dump(
             json.dumps(self.result, default=util.json_default_numpy),
             self.log_dir + "/result.json",
         )
         sc = util._find_spark().sparkContext
-        hopshdfs.dump(self.json(sc), self.log_dir + "/maggy.json")
+        self.env.dump(self.json(sc), self.log_dir + "/maggy.json")
 
         return self.result
 
@@ -230,7 +228,7 @@ class Driver(ABC):
                         self.maggy_log = self._update_maggy_log()
                         self._log(self.maggy_log)
 
-                        hopshdfs.dump(
+                        self.env.dump(
                             trial.to_json(),
                             self.log_dir + "/" + trial.trial_id + "/trial.json",
                         )
@@ -333,11 +331,12 @@ class Driver(ABC):
         """Get all relevant experiment information in JSON format.
         """
         user = None
-        if hopsconstants.ENV_VARIABLES.HOPSWORKS_USER_ENV_VAR in os.environ:
-            user = os.environ[hopsconstants.ENV_VARIABLES.HOPSWORKS_USER_ENV_VAR]
+        cons = self.env.get_constants()
+        if cons.ENV_VARIABLES.HOPSWORKS_USER_ENV_VAR in os.environ:
+            user = os.environ[cons.ENV_VARIABLES.HOPSWORKS_USER_ENV_VAR]
 
         experiment_json = {
-            "project": hopshdfs.project_name(),
+            "project": self.env.project_name(),
             "user": user,
             "name": self.name,
             "module": "maggy",

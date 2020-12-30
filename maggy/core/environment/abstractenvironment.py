@@ -38,3 +38,6 @@ class AbstractEnvironment(ABC,):
 
     def get_constants(self):
         pass
+
+    def open_file(self, hdfs_path, project=None, flags='rw', buff_size=0):
+        pass
