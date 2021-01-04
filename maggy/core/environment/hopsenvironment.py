@@ -29,7 +29,7 @@ class HopsEnvironment(AbstractEnvironment):
         return experiment_utils._populate_experiment(model_name, function, type, hp, description, app_id, direction, optimization_key)
 
     def _attach_experiment_xattr(self, ml_id, json_data, op_type):
-        return experiment_utils._attach_experiment_xattr((ml_id, json_data, op_type))
+        return experiment_utils._attach_experiment_xattr(ml_id, json_data, op_type)
 
     def _get_ip_address(self):
         return experiment_utils._get_ip_address()
