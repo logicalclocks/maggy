@@ -22,9 +22,7 @@ import json
 import numpy as np
 from pyspark import TaskContext
 
-#from hops import util as hopsutil
-#from hops import hdfs as hopshdfs
-#from hops.experiment_impl.util import experiment_utils
+from maggy.core.environment_singleton import EnvironmentSingleton
 
 from maggy import constants
 from maggy.core import exceptions
@@ -125,34 +123,36 @@ def _finalize_experiment(
     best_logdir,
     optimization_key,
 ):
+
+    env = EnvironmentSingleton()
     """Attaches the experiment outcome as xattr metadata to the app directory.
     """
     outputs = _build_summary_json(logdir)
 
     if outputs:
-        hopshdfs.dump(outputs, logdir + "/.summary.json")
+        env.dump(outputs, logdir + "/.summary.json")
 
     if best_logdir:
-        experiment_json["bestDir"] = best_logdir[len(hopshdfs.project_path()) :]
+        experiment_json["bestDir"] = best_logdir[len(env.project_path()) :]
     experiment_json["optimizationKey"] = optimization_key
     experiment_json["metric"] = metric
     experiment_json["state"] = state
     experiment_json["duration"] = duration
     exp_ml_id = app_id + "_" + str(run_id)
-    experiment_utils._attach_experiment_xattr(exp_ml_id, experiment_json, "FULL_UPDATE")
+    env._attach_experiment_xattr(exp_ml_id, experiment_json, "FULL_UPDATE")
 
 
 def _build_summary_json(logdir):
     """Builds the summary json to be read by the experiments service.
     """
     combinations = []
-
-    for trial in hopshdfs.ls(logdir):
-        if hopshdfs.isdir(trial):
+    env = EnvironmentSingleton()
+    for trial in env.ls(logdir):
+        if env.isdir(trial):
             return_file = trial + "/.outputs.json"
             hparams_file = trial + "/.hparams.json"
-            if hopshdfs.exists(return_file) and hopshdfs.exists(hparams_file):
-                metric_arr = experiment_utils._convert_return_file_to_arr(return_file)
+            if env.exists(return_file) and env.exists(hparams_file):
+                metric_arr = env._convert_return_file_to_arr(return_file)
                 hparams_dict = _load_hparams(hparams_file)
                 combinations.append({"parameters": hparams_dict, "outputs": metric_arr})
 
@@ -162,7 +162,9 @@ def _build_summary_json(logdir):
 def _load_hparams(hparams_file):
     """Loads the HParams configuration from a hparams file of a trial.
     """
-    hparams_file_contents = hopshdfs.load(hparams_file)
+    env = EnvironmentSingleton()
+
+    hparams_file_contents = env.load(hparams_file)
     hparams = json.loads(hparams_file_contents)
 
     return hparams
@@ -171,7 +173,9 @@ def _load_hparams(hparams_file):
 def _handle_return_val(return_val, log_dir, optimization_key, log_file):
     """Handles the return value of the user defined training function.
     """
-    experiment_utils._upload_file_output(return_val, log_dir)
+    env = EnvironmentSingleton()
+
+    env._upload_file_output(return_val, log_dir)
 
     # Return type validation
     if not optimization_key:
@@ -199,13 +203,13 @@ def _handle_return_val(return_val, log_dir, optimization_key, log_file):
     # for key, value in return_val.items():
     #    return_val[key] = value if isinstance(value, str) else str(value)
 
-    return_val["log"] = log_file.replace(hopshdfs.project_path(), "")
+    return_val["log"] = log_file.replace(env.project_path(), "")
 
     return_file = log_dir + "/.outputs.json"
-    hopshdfs.dump(json.dumps(return_val, default=json_default_numpy), return_file)
+    env.dump(json.dumps(return_val, default=json_default_numpy), return_file)
 
     metric_file = log_dir + "/.metric"
-    hopshdfs.dump(json.dumps(opt_val, default=json_default_numpy), metric_file)
+    env.dump(json.dumps(opt_val, default=json_default_numpy), metric_file)
 
     return opt_val
 
@@ -213,14 +217,16 @@ def _handle_return_val(return_val, log_dir, optimization_key, log_file):
 def _clean_dir(clean_dir, keep=[]):
     """Deletes all files in a directory but keeps a few.
     """
-    if not hopshdfs.isdir(clean_dir):
+    env = EnvironmentSingleton()
+
+    if not env.isdir(clean_dir):
         raise ValueError(
             "{} is not a directory. Use `hops.hdfs.delete()` to delete single "
             "files.".format(clean_dir)
         )
-    for path in hopshdfs.ls(clean_dir):
+    for path in env.ls(clean_dir):
         if path not in keep:
-            hopshdfs.delete(path, recursive=True)
+            env.delete(path, recursive=True)
 
 
 def _validate_ml_id(app_id, run_id):

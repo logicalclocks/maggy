@@ -21,10 +21,10 @@ API Module for the user to include in his training code.
 import threading
 from datetime import datetime
 
-#from hops import hdfs as hopshdfs
-
 from maggy import constants
 from maggy.core import exceptions
+
+from maggy.core.environment_singleton import EnvironmentSingleton
 
 
 class Reporter(object):
@@ -45,11 +45,13 @@ class Reporter(object):
         self.task_attempt = task_attempt
         self.print_executor = print_executor
 
+        self.env = EnvironmentSingleton()
+
         # Open executor log file descriptor
         # This log is for all maggy system related log messages
-        if not hopshdfs.exists(log_file):
-            hopshdfs.dump("", log_file)
-        self.fd = hopshdfs.open_file(log_file, flags="w")
+        if not self.env.exists(log_file):
+            self.env.dump("", log_file)
+        self.fd = self.env.open_file(log_file, flags="w")
         self.trial_fd = None
 
     def init_logger(self, trial_log_file):
@@ -57,9 +59,9 @@ class Reporter(object):
         """
         self.trial_log_file = trial_log_file
         # Open trial log file descriptor
-        if not hopshdfs.exists(self.trial_log_file):
-            hopshdfs.dump("", self.trial_log_file)
-        self.trial_fd = hopshdfs.open_file(self.trial_log_file, flags="w")
+        if not self.env.exists(self.trial_log_file):
+            self.env.dump("", self.trial_log_file)
+        self.trial_fd = self.env.open_file(self.trial_log_file, flags="w")
 
     def close_logger(self):
         """Savely closes the file descriptors of the log files.

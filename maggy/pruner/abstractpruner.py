@@ -17,7 +17,7 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
 
-#from hops import hdfs
+from maggy.core.environment_singleton import EnvironmentSingleton
 
 
 class AbstractPruner(ABC):
@@ -35,6 +35,7 @@ class AbstractPruner(ABC):
         self.log_file = None
         self.fd = None
 
+        self.env = EnvironmentSingleton()
     @abstractmethod
     def pruning_routine(self):
         """
@@ -78,9 +79,9 @@ class AbstractPruner(ABC):
 
         # configure logger
         self.log_file = exp_dir + "/pruner.log"
-        if not hdfs.exists(self.log_file):
-            hdfs.dump("", self.log_file)
-        self.fd = hdfs.open_file(self.log_file, flags="w")
+        if not self.env.exists(self.log_file):
+            self.env.dump("", self.log_file)
+        self.fd = self.env.open_file(self.log_file, flags="w")
         self._log("Initialized Pruner Logger")
 
     def _log(self, msg):

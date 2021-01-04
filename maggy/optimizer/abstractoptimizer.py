@@ -18,11 +18,12 @@ from abc import ABC, abstractmethod
 from datetime import datetime
 import time
 
-#from hops import hdfs
 import numpy as np
 
 from maggy.trial import Trial
 from maggy.pruner import Hyperband
+
+from maggy.core.environment_singleton import EnvironmentSingleton
 
 
 class AbstractOptimizer(ABC):
@@ -51,6 +52,7 @@ class AbstractOptimizer(ABC):
         # helper variable to calculate time needed for calculating next suggestion
         self.sampling_time_start = 0.0
 
+        self.env = EnvironmentSingleton()
     @abstractmethod
     def initialize(self):
         """
@@ -90,9 +92,9 @@ class AbstractOptimizer(ABC):
 
         # configure logger
         self.log_file = exp_dir + "/optimizer.log"
-        if not hdfs.exists(self.log_file):
-            hdfs.dump("", self.log_file)
-        self.fd = hdfs.open_file(self.log_file, flags="w")
+        if not self.env.exists(self.log_file):
+            self.env.dump("", self.log_file)
+        self.fd = self.env.open_file(self.log_file, flags="w")
         self._log("Initialized Optimizer Logger")
 
     def _initialize(self, exp_dir):
