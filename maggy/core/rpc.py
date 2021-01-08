@@ -31,7 +31,6 @@ MAX_RETRIES = 3
 BUFSIZE = 1024 * 2
 
 server_host_port = None
-env = None
 
 class Reservations(object):
     """Thread-safe store for worker reservations.
@@ -449,7 +448,7 @@ class Client(MessageSocket):
         self.server_addr = server_addr
         self.done = False
         self.client_addr = (
-            env._get_ip_address(),
+            EnvironmentSingleton()._get_ip_address(),
             self.sock.getsockname()[1],
         )
         self.partition_id = partition_id
