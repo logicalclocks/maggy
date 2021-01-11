@@ -1,22 +1,32 @@
 
-from maggy.core import environment
+def _is_hops_available():
+    try:
+        import hops
+    except ModuleNotFoundError:
+        return False
+    except ImportError:
+        return False
+
+    return True
 
 class EnvironmentSingleton:
     __instance = None
     def __new__(cls, *args):
         if cls.__instance is None:
             # check hopsworks availability
-            try:
-                from hops import util as hopsutil
-                is_hops = True
-            except ImportError:
-                is_hops = False
+            if _is_hops_available():
 
-            if is_hops:
-                cls.__instance = environment.HopsEnvironment(cls, *args)
+                from maggy.core.environment import HopsEnvironment
+                cls.__instance = HopsEnvironment(cls, *args)
                 print("Hopsworks APIs are available.")
             else:
-                cls.__instance = environment.BaseEnvironment(cls, *args)
-                print("Hopsoworks APIs are not available, using spark-only configuration")
+                from maggy.core.environment import BaseEnvironment
+                cls.__instance = BaseEnvironment(cls, *args)
+                print("Hopsoworks APIs are not available, using spark-only configuration.")
+
+            if cls.__instance is None:
+                raise AttributeError("Environment is None.")
 
         return cls.__instance
+
+

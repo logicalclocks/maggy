@@ -1,7 +1,21 @@
-from maggy.core.environment import abstractenvironment, hopsenvironment, baseenvironment
+from maggy.core.environment import abstractenvironment, baseenvironment
 
-AbstractEnvironment = abstractenvironment.AbstractEnvironment
-HopsEnvironment = hopsenvironment.HopsEnvironment
-BaseEnvironment = baseenvironment.BaseEnvironment
+try:
+    import hopsenvironment
+    HopsEnvironment = hopsenvironment.HopsEnvironment
+    AbstractEnvironment = abstractenvironment.AbstractEnvironment
+    BaseEnvironment = baseenvironment.BaseEnvironment
 
-__all__ = ["AbstractEnvironment", "HopsEnvironment", "BaseEnvironment"]
+    __all__ = ["AbstractEnvironment", "HopsEnvironment", "BaseEnvironment"]
+except ModuleNotFoundError:
+    AbstractEnvironment = abstractenvironment.AbstractEnvironment
+    BaseEnvironment = baseenvironment.BaseEnvironment
+
+    __all__ = ["AbstractEnvironment", "BaseEnvironment"]
+except ImportError:
+    AbstractEnvironment = abstractenvironment.AbstractEnvironment
+    BaseEnvironment = baseenvironment.BaseEnvironment
+
+    __all__ = ["AbstractEnvironment", "BaseEnvironment"]
+
+

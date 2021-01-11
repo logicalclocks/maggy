@@ -41,3 +41,12 @@ class AbstractEnvironment(ABC,):
 
     def open_file(self, hdfs_path, project=None, flags='rw', buff_size=0):
         pass
+
+    def get_training_dataset_path(self,training_dataset, featurestore=None, training_dataset_version=1):
+        pass
+
+    def get_training_dataset_tf_record_schema(self,training_dataset, training_dataset_version=1, featurestore=None):
+        pass
+
+    def get_featurestore_metadata(self, featurestore=None, update_cache=False):
+        pass

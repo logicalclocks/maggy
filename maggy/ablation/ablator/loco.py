@@ -17,15 +17,16 @@
 from maggy.ablation.ablator import AbstractAblator
 from maggy.core.exceptions import NotSupportedError
 from maggy.core.exceptions import BadArgumentsError
-from hops import featurestore
 from maggy.trial import Trial
 import json
+from maggy.core.environment_singleton import EnvironmentSingleton
 
 
 class LOCO(AbstractAblator):
     def __init__(self, ablation_study, final_store):
         super().__init__(ablation_study, final_store)
         self.base_dataset_generator = self.get_dataset_generator(ablated_feature=None)
+        self.env = EnvironmentSingleton()
 
     def get_number_of_trials(self):
         # the final ' + 1 ' is for the base (reference) trial with all the components
@@ -54,17 +55,17 @@ class LOCO(AbstractAblator):
                 def create_tf_dataset(num_epochs, batch_size):
                     import tensorflow as tf
 
-                    dataset_dir = featurestore.get_training_dataset_path(
+                    dataset_dir = self.env.get_training_dataset_path(
                         training_dataset_name, training_dataset_version
                     )
                     input_files = tf.io.gfile.glob(
                         (dataset_dir + "/part-r-*").replace("hopsfs", "hdfs")
                     )
                     dataset = tf.data.TFRecordDataset(input_files)
-                    tf_record_schema = featurestore.get_training_dataset_tf_record_schema(
+                    tf_record_schema = self.env.get_training_dataset_tf_record_schema(
                         training_dataset_name
                     )
-                    meta = featurestore.get_featurestore_metadata()
+                    meta = self.env.get_featurestore_metadata()
                     training_features = [
                         feature.name
                         for feature in meta.training_datasets[

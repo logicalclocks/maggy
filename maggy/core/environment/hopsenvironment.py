@@ -51,3 +51,18 @@ class HopsEnvironment(AbstractEnvironment):
 
     def open_file(self, hdfs_path, project=None, flags='rw', buff_size=0):
         return hopshdfs.open_file(hdfs_path, project=project, flags=flags, buff_size=buff_size)
+
+
+    def get_training_dataset_path(self, training_dataset, featurestore=None, training_dataset_version=1):
+        return featurestore.get_training_dataset_path(training_dataset, featurestore=None,
+                                                      training_dataset_version=training_dataset_version)
+
+
+    def get_training_dataset_tf_record_schema(self, training_dataset, training_dataset_version=1, featurestore=None):
+        return featurestore.get_training_dataset_tf_record_schema(training_dataset,
+                                                                  training_dataset_version=training_dataset_version,
+                                                                  featurestore=featurestore)
+
+
+    def get_featurestore_metadata(self, featurestore=None, update_cache=False):
+        return featurestore.get_featurestore_metadat
