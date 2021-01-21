@@ -56,15 +56,25 @@ def num_executors(sc):
     :return: Number of configured executors for Jupyter
     :rtype: int
     """
-    sc = util._find_spark().sparkContext
-    try:
-        return int(sc._conf.get("spark.dynamicAllocation.maxExecutors"))
-    except:  # noqa: E722
-        raise RuntimeError(
-            "Failed to find spark.dynamicAllocation.maxExecutors property, \
-            please select your mode as either Experiment, Parallel \
-            Experiments or Distributed Training."
-        )
+
+    if not sc._conf.get("spark.dynamicAllocation.maxExecutors") or sc._conf.get(
+            "spark.dynamicAllocation.maxExecutors") == 'None':
+
+        if sc._conf.get("spark.databricks.clusterUsageTags.clusterScalingType") == "autoscaling":
+            maxExecutors = int(sc._conf.get("spark.databricks.clusterUsageTags.clusterMaxWorkers"))
+        else:
+            maxExecutors = int(sc._conf.get("spark.databricks.clusterUsageTags.clusterMinWorkers"))
+
+        return maxExecutors
+    else:
+        try:
+            return int(sc._conf.get("spark.dynamicAllocation.maxExecutors"))
+        except:  # noqa: E722
+            raise RuntimeError(
+                "Failed to find spark.dynamicAllocation.maxExecutors property, \
+                please select your mode as either Experiment, Parallel \
+                Experiments or Distributed Training."
+            )
 
 
 def get_partition_attempt_id():
@@ -248,11 +258,15 @@ def _validate_ml_id(app_id, run_id):
     return app_id, run_id
 
 
-def _find_spark():
+def _find_spark(conf=None):
     """
     Returns: SparkSession
     """
-    return SparkSession.builder.getOrCreate()
+    #sp = SparkSession.builder.getOrCreate()
+    #sp.stop()
+
+    return SparkSession.builder.getOrCreate() if not conf else SparkSession.builder.config(conf=conf).getOrCreate()
+
 
 def _seconds_to_milliseconds(time):
     """

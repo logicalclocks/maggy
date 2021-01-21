@@ -21,10 +21,8 @@ import time
 import select
 import socket
 import secrets
-import json
 
 from maggy.trial import Trial
-from maggy import util
 from maggy.core.environment_singleton import EnvironmentSingleton
 
 MAX_RETRIES = 3
@@ -334,53 +332,7 @@ class Server(MessageSocket):
 
         server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        if not server_host_port:
-            server_sock.bind(("", 0))
-            # hostname may not be resolvable but IP address probably will be
-            host = env._get_ip_address()
-            port = server_sock.getsockname()[1]
-            server_host_port = (host, port)
-
-            # register this driver with Hopsworks
-            sc = util._find_spark().sparkContext
-            app_id = str(sc.applicationId)
-
-            hopscons = env.get_constants()
-            method = hopscons.HTTP_CONFIG.HTTP_POST
-            resource_url = (
-                hopscons.DELIMITERS.SLASH_DELIMITER
-                + hopscons.REST_CONFIG.HOPSWORKS_REST_RESOURCE
-                + hopscons.DELIMITERS.SLASH_DELIMITER
-                + "maggy"
-                + hopscons.DELIMITERS.SLASH_DELIMITER
-                + "drivers"
-            )
-            json_contents = {
-                "hostIp": host,
-                "port": port,
-                "appId": app_id,
-                "secret": exp_driver._secret,
-            }
-            json_embeddable = json.dumps(json_contents)
-            headers = {
-                hopscons.HTTP_CONFIG.HTTP_CONTENT_TYPE: hopscons.HTTP_CONFIG.HTTP_APPLICATION_JSON
-            }
-
-            try:
-                response = env.send_request(
-                    method, resource_url, data=json_embeddable, headers=headers
-                )
-
-                if (response.status_code // 100) != 2:
-                    print("No connection to Hopsworks for logging.")
-                    exp_driver._log("No connection to Hopsworks for logging.")
-            except Exception as e:
-                print("Connection failed to Hopsworks. No logging.")
-                exp_driver._log(e)
-                exp_driver._log("Connection failed to Hopsworks. No logging.")
-        else:
-            server_sock.bind(server_host_port)
-        server_sock.listen(10)
+        server_sock, server_host_port = env.connect_host(server_sock, server_host_port, exp_driver)
 
         def _listen(self, sock, driver):
             CONNECTIONS = []
@@ -448,7 +400,7 @@ class Client(MessageSocket):
         self.server_addr = server_addr
         self.done = False
         self.client_addr = (
-            EnvironmentSingleton()._get_ip_address(),
+            EnvironmentSingleton().get_ip_address(),
             self.sock.getsockname()[1],
         )
         self.partition_id = partition_id

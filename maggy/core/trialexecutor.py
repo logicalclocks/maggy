@@ -54,7 +54,7 @@ def _prepare_func(
 
         """
         env = EnvironmentSingleton()
-        env._set_ml_id(app_id, run_id)
+        env.set_ml_id(app_id, run_id)
 
         # get task context information to determine executor identifier
         partition_id, task_attempt = util.get_partition_attempt_id()

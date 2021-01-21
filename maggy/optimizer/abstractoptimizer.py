@@ -128,7 +128,7 @@ class AbstractOptimizer(ABC):
     def _log(self, msg):
         if self.fd and not self.fd.closed:
             msg = datetime.now().isoformat() + ": " + str(msg)
-            self.fd.write((msg + "\n").encode())
+            self.fd.write(str((msg + "\n").encode()))
 
     def _close_log(self):
         if not self.fd.closed:
