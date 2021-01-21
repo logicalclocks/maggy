@@ -148,9 +148,6 @@ def _prepare_func(
                     else:
                         retval = train_fn(**parameters)
 
-                    if experiment_type == "optimization":
-                        tensorboard._write_session_end()
-
                     retval = util._handle_return_val(
                         retval, tb_logdir, optimization_key, trial_log_file
                     )
