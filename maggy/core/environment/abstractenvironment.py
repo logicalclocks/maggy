@@ -76,3 +76,46 @@ class AbstractEnvironment(ABC,):
     @abstractmethod
     def connect_host(self,server_sock,server_host_port, exp_driver):
         pass
+
+    @abstractmethod
+    def isdir(self, dir_path):
+        pass
+
+    @abstractmethod
+    def ls(self, dir_path):
+        pass
+
+    @abstractmethod
+    def delete(self, path, recursive=False):
+        pass
+
+    @abstractmethod
+    def _upload_file_output(self, retval, hdfs_exec_logdir):
+        pass
+
+    @abstractmethod
+    def project_path(self):
+        pass
+
+    @abstractmethod
+    def get_user(self):
+        pass
+
+    @abstractmethod
+    def project_name(self):
+        pass
+
+    @abstractmethod
+    def finalize_experiment(
+            self,
+            experiment_json,
+            metric,
+            app_id,
+            run_id,
+            state,
+            duration,
+            logdir,
+            best_logdir,
+            optimization_key,
+    ):
+        pass

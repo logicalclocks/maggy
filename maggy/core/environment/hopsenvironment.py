@@ -9,6 +9,7 @@ from maggy import tensorboard
 from maggy import util
 
 import json
+import os
 
 from maggy.core.environment.abstractenvironment import AbstractEnvironment
 
@@ -128,3 +129,42 @@ class HopsEnvironment(AbstractEnvironment):
         server_sock.listen(10)
 
         return server_sock, server_host_port
+
+    def get_user(self):
+        user = None
+        if self.constants.ENV_VARIABLES.HOPSWORKS_USER_ENV_VAR in os.environ:
+            user = os.environ[self.constants.ENV_VARIABLES.HOPSWORKS_USER_ENV_VAR]
+        return user
+
+    def project_name(self):
+        #TODO implement
+        pass
+
+
+    def finalize_experiment(
+            self,
+            experiment_json,
+            metric,
+            app_id,
+            run_id,
+            state,
+            duration,
+            logdir,
+            best_logdir,
+            optimization_key,
+    ):
+        """Attaches the experiment outcome as xattr metadata to the app directory.
+        """
+        outputs = self._build_summary_json(logdir)
+
+        if outputs:
+            self.dump(outputs, logdir + "/.summary.json")
+
+        if best_logdir:
+            experiment_json["bestDir"] = best_logdir[len(self.project_path()):]
+        experiment_json["optimizationKey"] = optimization_key
+        experiment_json["metric"] = metric
+        experiment_json["state"] = state
+        experiment_json["duration"] = duration
+        exp_ml_id = app_id + "_" + str(run_id)
+        self.attach_experiment_xattr(exp_ml_id, experiment_json, "FULL_UPDATE")

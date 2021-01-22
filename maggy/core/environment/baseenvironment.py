@@ -4,11 +4,14 @@
 from maggy.core.environment.abstractenvironment import AbstractEnvironment
 import os
 import socket
+import maggy.util as util
 
 class BaseEnvironment(AbstractEnvironment):
 
     def __init__(self, *args):
-        self.log_dir = "/databricks/driver/logs"
+        self.log_dir = "/dbfs/maggy_log/"
+        if not os.path.exists(self.log_dir):
+            os.mkdir(self.log_dir)
         self.constants = []
         pass
 
@@ -28,26 +31,43 @@ class BaseEnvironment(AbstractEnvironment):
         pass
 
     def exists(self, hdfs_path, project=None):
-        pass
+        return os.path.exists(hdfs_path)
+
 
     def mkdir(self, hdfs_path, project=None):
         pass
 
+    def isdir(self, dir_path):
+        return os.path.exists(dir_path)
+
+    def ls(self, dir_path):
+        _ , dirnames, filenames = next(os.walk(dir_path))
+
+        return dirnames + filenames
+
+    def delete(self, path, recursive=False):
+        if self.exists(path):
+            if os.path.isdir(path):
+                os.rmdir(path)
+            elif os.path.isfile(path):
+                os.remove(path)
+
     def dump(self, data, hdfs_path):
-        pass
+        head_tail = os.path.split(hdfs_path)
+        if not os.path.exists(head_tail[0]):
+            os.mkdir(head_tail[0])
+        file = self.open_file(hdfs_path, flags='w+')
+        file.write(data)
 
     def get_ip_address(self):
-        try:
-            _, _, _, _, addr = socket.getaddrinfo(socket.gethostname(), None, socket.AF_INET, socket.SOCK_STREAM)[0]
-            return addr[0]
-        except:
-            return socket.gethostbyname(socket.getfqdn())
+        sc = util._find_spark().sparkContext
+        return sc._conf.get("spark.driver.host")
 
     def get_constants(self):
         pass
 
     def open_file(self, hdfs_path, project=None, flags='rw', buff_size=0):
-        return open(hdfs_path,mode=flags)
+        return open(hdfs_path, mode=flags)
 
     def get_training_dataset_path(self, training_dataset, featurestore=None, training_dataset_version=1):
         pass
@@ -66,16 +86,41 @@ class BaseEnvironment(AbstractEnvironment):
 
     def connect_host(self,server_sock, server_host_port, exp_driver):
         if not server_host_port:
+            server_sock.bind(("", 0))
             host = self.get_ip_address()
             port = server_sock.getsockname()[1]
             server_host_port = (host, port)
-            print("(not server_host_post) = True, server_host_port = {} ".format(server_host_port))
-            server_sock.bind(server_host_port)
 
         else:
-            print("server_host_post = True, server_host_port = {} ".format(server_host_port))
             server_sock.bind(server_host_port)
 
         server_sock.listen(10)
 
         return server_sock, server_host_port
+
+    def _upload_file_output(self, retval, hdfs_exec_logdir):
+        pass
+
+    def project_path(self):
+        return "/dbfs/"
+
+    def get_user(self):
+        # TODO retrieve user info from databricks
+        return ""
+
+    def project_name(self):
+        # TODO retrieve project_name from databricks
+        return ""
+
+    def finalize_experiment(self,
+            experiment_json,
+            metric,
+            app_id,
+            run_id,
+            state,
+            duration,
+            logdir,
+            best_logdir,
+            optimization_key
+                            ):
+        pass

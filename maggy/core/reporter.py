@@ -51,7 +51,7 @@ class Reporter(object):
         # This log is for all maggy system related log messages
         if not self.env.exists(log_file):
             self.env.dump("", log_file)
-        self.fd = self.env.open_file(log_file, flags="w")
+        self.fd = self.env.open_file(log_file, flags="w+")
         self.trial_fd = None
 
     def init_logger(self, trial_log_file):
@@ -61,7 +61,7 @@ class Reporter(object):
         # Open trial log file descriptor
         if not self.env.exists(self.trial_log_file):
             self.env.dump("", self.trial_log_file)
-        self.trial_fd = self.env.open_file(self.trial_log_file, flags="w")
+        self.trial_fd = self.env.open_file(self.trial_log_file, flags="w+")
 
     def close_logger(self):
         """Savely closes the file descriptors of the log files.
@@ -117,12 +117,12 @@ class Reporter(object):
                 )
                 if jupyter:
                     jupyter_log = str(self.partition_id) + ": " + log_msg
-                    self.trial_fd.write(msg.encode())
+                    self.trial_fd.write(str(msg.encode()))
                     self.logs = self.logs + jupyter_log + "\n"
                 else:
-                    self.fd.write(msg.encode())
+                    self.fd.write(str(msg.encode()))
                     if self.trial_fd:
-                        self.trial_fd.write(msg.encode())
+                        self.trial_fd.write(str(msg.encode()))
                     self.print_executor(msg)
             # Throws ValueError when operating on closed HDFS file object
             # Throws AttributeError when calling file ops on NoneType object

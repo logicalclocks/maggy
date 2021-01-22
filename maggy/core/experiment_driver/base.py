@@ -82,7 +82,7 @@ class Driver(ABC):
         # Open File desc for HDFS to log
         if not self.env.exists(self.log_file):
             self.env.dump("", self.log_file)
-        self.fd = self.env.open_file(self.log_file, flags="w")
+        self.fd = self.env.open_file(self.log_file, flags="w+")
 
         # overwritten for optimization
         self.es_interval = None
@@ -332,8 +332,8 @@ class Driver(ABC):
         """
         user = None
         cons = self.env.get_constants()
-        if cons.ENV_VARIABLES.HOPSWORKS_USER_ENV_VAR in os.environ:
-            user = os.environ[cons.ENV_VARIABLES.HOPSWORKS_USER_ENV_VAR]
+
+        user = EnvironmentSingleton().get_user()
 
         experiment_json = {
             "project": self.env.project_name(),

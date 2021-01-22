@@ -63,7 +63,7 @@ def num_executors(sc):
         if sc._conf.get("spark.databricks.clusterUsageTags.clusterScalingType") == "autoscaling":
             maxExecutors = int(sc._conf.get("spark.databricks.clusterUsageTags.clusterMaxWorkers"))
         else:
-            maxExecutors = int(sc._conf.get("spark.databricks.clusterUsageTags.clusterMinWorkers"))
+            maxExecutors = int(sc._conf.get("spark.databricks.clusterUsageTags.clusterWorkers"))
 
         return maxExecutors
     else:
@@ -134,22 +134,16 @@ def _finalize_experiment(
     optimization_key,
 ):
 
-    env = EnvironmentSingleton()
-    """Attaches the experiment outcome as xattr metadata to the app directory.
-    """
-    outputs = _build_summary_json(logdir)
-
-    if outputs:
-        env.dump(outputs, logdir + "/.summary.json")
-
-    if best_logdir:
-        experiment_json["bestDir"] = best_logdir[len(env.project_path()) :]
-    experiment_json["optimizationKey"] = optimization_key
-    experiment_json["metric"] = metric
-    experiment_json["state"] = state
-    experiment_json["duration"] = duration
-    exp_ml_id = app_id + "_" + str(run_id)
-    env._attach_experiment_xattr(exp_ml_id, experiment_json, "FULL_UPDATE")
+    EnvironmentSingleton().finalize_experiment(experiment_json,
+        metric,
+        app_id,
+        run_id,
+        state,
+        duration,
+        logdir,
+        best_logdir,
+        optimization_key
+    )
 
 
 def _build_summary_json(logdir):
