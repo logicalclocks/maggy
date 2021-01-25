@@ -78,11 +78,11 @@ class AbstractEnvironment(ABC,):
         pass
 
     @abstractmethod
-    def isdir(self, dir_path):
+    def isdir(self, dir_path, project=None):
         pass
 
     @abstractmethod
-    def ls(self, dir_path):
+    def ls(self, dir_path,recursive=False,project=None):
         pass
 
     @abstractmethod
@@ -94,7 +94,7 @@ class AbstractEnvironment(ABC,):
         pass
 
     @abstractmethod
-    def project_path(self):
+    def project_path(self,project=None,exclude_nn_addr=False):
         pass
 
     @abstractmethod

@@ -168,3 +168,19 @@ class HopsEnvironment(AbstractEnvironment):
         experiment_json["duration"] = duration
         exp_ml_id = app_id + "_" + str(run_id)
         self.attach_experiment_xattr(exp_ml_id, experiment_json, "FULL_UPDATE")
+
+    def isdir(self, dir_path, project=None):
+        return hopshdfs.isdir(dir_path, project=project)
+
+    def ls(self, dir_path,recursive=False,project=None):
+        return hopshdfs.ls(dir_path,recursive=recursive,project=project)
+
+    def delete(self, path, recursive=False):
+        return hopshdfs.delete(path,recursive=recursive)
+
+    def _upload_file_output(self, retval, hdfs_exec_logdir):
+        return experiment_utils._upload_file_output(retval,hdfs_exec_logdir)
+
+    def project_path(self,project=None,exclude_nn_addr=False):
+        return hopshdfs.project_path(project=project, exclude_nn_addr=exclude_nn_addr)
+
