@@ -184,3 +184,15 @@ class HopsEnvironment(AbstractEnvironment):
     def project_path(self,project=None,exclude_nn_addr=False):
         return hopshdfs.project_path(project=project, exclude_nn_addr=exclude_nn_addr)
 
+    def str_or_byte(self, str):
+        return str.encode()
+
+    def get_executors(self, sc):
+        try:
+            return int(sc._conf.get("spark.dynamicAllocation.maxExecutors"))
+        except:  # noqa: E722
+            raise RuntimeError(
+                "Failed to find spark.dynamicAllocation.maxExecutors property, \
+                please select your mode as either Experiment, Parallel \
+                Experiments or Distributed Training."
+            )

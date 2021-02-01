@@ -112,17 +112,18 @@ class Reporter(object):
         """
         with self.lock:
             try:
+                env = EnvironmentSingleton()
                 msg = (datetime.now().isoformat() + " ({0}/{1}): {2} \n").format(
                     self.partition_id, self.task_attempt, log_msg
                 )
                 if jupyter:
                     jupyter_log = str(self.partition_id) + ": " + log_msg
-                    self.trial_fd.write(str(msg.encode()))
+                    self.trial_fd.write(env.str_or_byte(msg))
                     self.logs = self.logs + jupyter_log + "\n"
                 else:
-                    self.fd.write(str(msg.encode()))
+                    self.fd.write(env.str_or_byte(msg))
                     if self.trial_fd:
-                        self.trial_fd.write(str(msg.encode()))
+                        self.trial_fd.write(env.str_or_byte(msg))
                     self.print_executor(msg)
             # Throws ValueError when operating on closed HDFS file object
             # Throws AttributeError when calling file ops on NoneType object

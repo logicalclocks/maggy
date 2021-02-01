@@ -32,6 +32,7 @@ DEBUG = True
 # in case importing in %%local
 try:
     from pyspark.sql import SparkSession
+    from pyspark import SparkConf
 except:
     pass
 
@@ -57,24 +58,9 @@ def num_executors(sc):
     :rtype: int
     """
 
-    if not sc._conf.get("spark.dynamicAllocation.maxExecutors") or sc._conf.get(
-            "spark.dynamicAllocation.maxExecutors") == 'None':
+    env = EnvironmentSingleton()
+    return env.get_executors(sc)
 
-        if sc._conf.get("spark.databricks.clusterUsageTags.clusterScalingType") == "autoscaling":
-            maxExecutors = int(sc._conf.get("spark.databricks.clusterUsageTags.clusterMaxWorkers"))
-        else:
-            maxExecutors = int(sc._conf.get("spark.databricks.clusterUsageTags.clusterWorkers"))
-
-        return maxExecutors
-    else:
-        try:
-            return int(sc._conf.get("spark.dynamicAllocation.maxExecutors"))
-        except:  # noqa: E722
-            raise RuntimeError(
-                "Failed to find spark.dynamicAllocation.maxExecutors property, \
-                please select your mode as either Experiment, Parallel \
-                Experiments or Distributed Training."
-            )
 
 
 def get_partition_attempt_id():
@@ -258,6 +244,9 @@ def _find_spark(conf=None):
     """
     #sp = SparkSession.builder.getOrCreate()
     #sp.stop()
+
+    conf = SparkConf()
+    conf.set("num-executors", "1")
 
     return SparkSession.builder.getOrCreate() if not conf else SparkSession.builder.config(conf=conf).getOrCreate()
 

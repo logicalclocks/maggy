@@ -6,10 +6,10 @@ import os
 import socket
 import maggy.util as util
 
-class BaseEnvironment(AbstractEnvironment):
+class DatabricksEnvironment(AbstractEnvironment):
 
     def __init__(self, *args):
-        self.log_dir = os.path.join(os.getcwd(),'experiment_log')
+        self.log_dir = "/dbfs/maggy_log/"
         if not os.path.exists(self.log_dir):
             os.mkdir(self.log_dir)
         self.constants = []
@@ -102,7 +102,7 @@ class BaseEnvironment(AbstractEnvironment):
         pass
 
     def project_path(self):
-        return os.getcwd()
+        return "/dbfs/"
 
     def get_user(self):
         # TODO retrieve user info from databricks
@@ -130,8 +130,13 @@ class BaseEnvironment(AbstractEnvironment):
 
     def get_executors(self, sc):
         try:
-            return int(sc._conf.get('num-executors'))
+            if sc._conf.get("spark.databricks.clusterUsageTags.clusterScalingType") == "autoscaling":
+                maxExecutors = int(sc._conf.get("spark.databricks.clusterUsageTags.clusterMaxWorkers"))
+            else:
+                maxExecutors = int(sc._conf.get("spark.databricks.clusterUsageTags.clusterWorkers"))
+
+            return maxExecutors
         except:  # noqa: E722
             raise RuntimeError(
-                "Failed to find spark properties."
+                "Failed to find some of the spark.databricks properties."
             )

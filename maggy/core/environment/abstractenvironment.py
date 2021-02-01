@@ -119,3 +119,11 @@ class AbstractEnvironment(ABC,):
             optimization_key,
     ):
         pass
+
+    @abstractmethod
+    def str_or_byte(self, str):
+        pass
+
+    @abstractmethod
+    def get_executors(self, sc):
+        pass
