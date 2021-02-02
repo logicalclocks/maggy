@@ -196,3 +196,4 @@ class HopsEnvironment(AbstractEnvironment):
                 please select your mode as either Experiment, Parallel \
                 Experiments or Distributed Training."
             )
+        self.attach_experiment_xattr(exp_ml_id, experiment_json, "FULL_UPDATE")
