@@ -59,7 +59,7 @@ class LOCO(AbstractAblator):
                         training_dataset_name, training_dataset_version
                     )
 
-                    feature_names = [f.name for f in td.features]
+                    feature_names = [f.name for f in td.schema]
 
                     if ablated_feature is not None:
                         feature_names.remove(ablated_feature)
