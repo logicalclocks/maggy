@@ -28,7 +28,7 @@ import os
 import atexit
 import time
 
-from maggy.core.environment_singleton import EnvironmentSingleton
+from maggy.core.environment_singleton import environment_singleton
 
 from maggy import util
 from maggy.core import trialexecutor
@@ -119,7 +119,7 @@ def lagom(
     sc = util._find_spark().sparkContext
     exp_driver = None
 
-    env = EnvironmentSingleton()
+    env = environment_singleton()
 
     try:
         global app_id
@@ -292,7 +292,7 @@ def _exception_handler(duration):
     :type duration: int
     """
     try:
-        env = EnvironmentSingleton()
+        env = environment_singleton()
 
         global running
         global experiment_json
@@ -310,7 +310,7 @@ def _exit_handler():
     Handles jobs killed by the user.
     """
     try:
-        env = EnvironmentSingleton()
+        env = environment_singleton()
 
         global running
         global experiment_json

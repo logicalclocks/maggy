@@ -1,32 +1,27 @@
+import os
+import json
+# in case importing in %%local
+try:
+    from pyspark.sql import SparkSession
+except:
+    pass
 
-def _is_hops_available():
-    try:
-        import hops
-    except ModuleNotFoundError:
-        return False
-    except ImportError:
-        return False
-
-    return True
-
-class EnvironmentSingleton:
-    __instance = None
-    def __new__(cls, *args):
-        if cls.__instance is None:
+def environment_singleton():
+        global environmentInstance
+        if not 'environmentInstance' in globals():
             # check hopsworks availability
-            if _is_hops_available():
-
+            if "REST_ENDPOINT" in os.environ:
                 from maggy.core.environment import HopsEnvironment
-                cls.__instance = HopsEnvironment(cls, *args)
-                print("Hopsworks APIs are available.")
+                environmentInstance = HopsEnvironment()
+
             else:
                 from maggy.core.environment import BaseEnvironment
-                cls.__instance = BaseEnvironment(cls, *args)
-                print("Hopsoworks APIs are not available, using spark-only configuration.")
+                environmentInstance = BaseEnvironment()
 
-            if cls.__instance is None:
-                raise AttributeError("Environment is None.")
+        if not 'environmentInstance' in globals():
+            raise ValueError("environmentInstance is not defined")
 
-        return cls.__instance
+        if environmentInstance is None :
+            raise AttributeError("environmentInstance is None")
 
-
+        return environmentInstance

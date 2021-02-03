@@ -23,7 +23,7 @@ import numpy as np
 from maggy.trial import Trial
 from maggy.pruner import Hyperband
 
-from maggy.core.environment_singleton import EnvironmentSingleton
+from maggy.core.environment_singleton import environment_singleton
 
 
 class AbstractOptimizer(ABC):
@@ -52,7 +52,7 @@ class AbstractOptimizer(ABC):
         # helper variable to calculate time needed for calculating next suggestion
         self.sampling_time_start = 0.0
 
-        self.env = EnvironmentSingleton()
+        self.env = environment_singleton()
     @abstractmethod
     def initialize(self):
         """
@@ -128,7 +128,7 @@ class AbstractOptimizer(ABC):
     def _log(self, msg):
         if self.fd and not self.fd.closed:
             msg = datetime.now().isoformat() + ": " + str(msg)
-            self.fd.write(str((msg + "\n").encode()))
+            self.fd.write(environment_singleton().str_or_byte(msg + "\n"))
 
     def _close_log(self):
         if not self.fd.closed:

@@ -17,7 +17,7 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
 
-from maggy.core.environment_singleton import EnvironmentSingleton
+from maggy.core.environment_singleton import environment_singleton
 
 
 class AbstractPruner(ABC):
@@ -35,7 +35,7 @@ class AbstractPruner(ABC):
         self.log_file = None
         self.fd = None
 
-        self.env = EnvironmentSingleton()
+        self.env = environment_singleton()
     @abstractmethod
     def pruning_routine(self):
         """
@@ -87,7 +87,7 @@ class AbstractPruner(ABC):
     def _log(self, msg):
         if self.fd and not self.fd.closed:
             msg = datetime.now().isoformat() + ": " + str(msg)
-            self.fd.write((msg + "\n").encode())
+            self.fd.write(environment_singleton().str_or_byte(msg + "\n"))
 
     def _close_log(self):
         if not self.fd.closed:

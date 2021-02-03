@@ -23,7 +23,7 @@ import socket
 import secrets
 
 from maggy.trial import Trial
-from maggy.core.environment_singleton import EnvironmentSingleton
+from maggy.core.environment_singleton import environment_singleton
 
 MAX_RETRIES = 3
 BUFSIZE = 1024 * 2
@@ -49,7 +49,7 @@ class Reservations(object):
         self.reservations = {}
         self.check_done = False
 
-        self.env = EnvironmentSingleton()
+        self.env = environment_singleton()
 
     def add(self, meta):
         """
@@ -328,7 +328,7 @@ class Server(MessageSocket):
             address of the Server as a tuple of (host, port)
         """
         global server_host_port
-        env = EnvironmentSingleton()
+        env = environment_singleton()
 
         server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -400,7 +400,7 @@ class Client(MessageSocket):
         self.server_addr = server_addr
         self.done = False
         self.client_addr = (
-            EnvironmentSingleton().get_ip_address(),
+            environment_singleton().get_ip_address(),
             self.sock.getsockname()[1],
         )
         self.partition_id = partition_id

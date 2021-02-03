@@ -124,3 +124,19 @@ class BaseEnvironment(AbstractEnvironment):
             optimization_key
                             ):
         pass
+
+    def str_or_byte(self, str):
+        return str
+
+    def get_executors(self, sc):
+        try:
+            if sc._conf.get("spark.databricks.clusterUsageTags.clusterScalingType") == "autoscaling":
+                maxExecutors = int(sc._conf.get("spark.databricks.clusterUsageTags.clusterMaxWorkers"))
+            else:
+                maxExecutors = int(sc._conf.get("spark.databricks.clusterUsageTags.clusterWorkers"))
+
+            return maxExecutors
+        except:  # noqa: E722
+            raise RuntimeError(
+                "Failed to find some of the spark.databricks properties."
+            )

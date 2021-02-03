@@ -24,7 +24,7 @@ from datetime import datetime
 from maggy import constants
 from maggy.core import exceptions
 
-from maggy.core.environment_singleton import EnvironmentSingleton
+from maggy.core.environment_singleton import environment_singleton
 
 
 class Reporter(object):
@@ -45,7 +45,7 @@ class Reporter(object):
         self.task_attempt = task_attempt
         self.print_executor = print_executor
 
-        self.env = EnvironmentSingleton()
+        self.env = environment_singleton()
 
         # Open executor log file descriptor
         # This log is for all maggy system related log messages
@@ -117,12 +117,12 @@ class Reporter(object):
                 )
                 if jupyter:
                     jupyter_log = str(self.partition_id) + ": " + log_msg
-                    self.trial_fd.write(str(msg.encode()))
+                    self.trial_fd.write(environment_singleton().str_or_byte(msg))
                     self.logs = self.logs + jupyter_log + "\n"
                 else:
-                    self.fd.write(str(msg.encode()))
+                    self.fd.write(environment_singleton().str_or_byte(msg))
                     if self.trial_fd:
-                        self.trial_fd.write(str(msg.encode()))
+                        self.trial_fd.write(environment_singleton().str_or_byte(msg))
                     self.print_executor(msg)
             # Throws ValueError when operating on closed HDFS file object
             # Throws AttributeError when calling file ops on NoneType object

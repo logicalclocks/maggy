@@ -77,7 +77,7 @@ class HopsEnvironment(AbstractEnvironment):
         tensorboard._register(experiment_utils._get_logdir(app_id, run_id))
 
     def log_searchspace(self, app_id, run_id, searchspace):
-        tensorboard._write_hparams_config(self.get_logdir(app_id, run_id), searchspace)
+        tensorboard._write_hparams_config(experiment_utils._get_logdir(app_id,run_id), searchspace)
 
     def connect_host(self,server_sock,server_host_port, exp_driver):
         if not server_host_port:
@@ -184,3 +184,15 @@ class HopsEnvironment(AbstractEnvironment):
     def project_path(self,project=None,exclude_nn_addr=False):
         return hopshdfs.project_path(project=project, exclude_nn_addr=exclude_nn_addr)
 
+    def str_or_byte(self, str):
+        return str.encode()
+
+    def get_executors(self, sc):
+        try:
+            return int(sc._conf.get("spark.dynamicAllocation.maxExecutors"))
+        except:  # noqa: E722
+            raise RuntimeError(
+                "Failed to find spark.dynamicAllocation.maxExecutors property, \
+                please select your mode as either Experiment, Parallel \
+                Experiments or Distributed Training."
+            )

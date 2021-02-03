@@ -19,14 +19,14 @@ from maggy.core.exceptions import NotSupportedError
 from maggy.core.exceptions import BadArgumentsError
 from maggy.trial import Trial
 import json
-from maggy.core.environment_singleton import EnvironmentSingleton
+from maggy.core.environment_singleton import environment_singleton
 
 
 class LOCO(AbstractAblator):
     def __init__(self, ablation_study, final_store):
         super().__init__(ablation_study, final_store)
         self.base_dataset_generator = self.get_dataset_generator(ablated_feature=None)
-        self.env = EnvironmentSingleton()
+        self.env = environment_singleton()
 
     def get_number_of_trials(self):
         # the final ' + 1 ' is for the base (reference) trial with all the components

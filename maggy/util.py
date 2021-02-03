@@ -22,7 +22,7 @@ import json
 import numpy as np
 from pyspark import TaskContext
 
-from maggy.core.environment_singleton import EnvironmentSingleton
+from maggy.core.environment_singleton import environment_singleton
 
 from maggy import constants
 from maggy.core import exceptions
@@ -134,23 +134,23 @@ def _finalize_experiment(
     optimization_key,
 ):
 
-    EnvironmentSingleton().finalize_experiment(experiment_json,
-        metric,
-        app_id,
-        run_id,
-        state,
-        duration,
-        logdir,
-        best_logdir,
-        optimization_key
-    )
+    environment_singleton().finalize_experiment(experiment_json,
+                                                metric,
+                                                app_id,
+                                                run_id,
+                                                state,
+                                                duration,
+                                                logdir,
+                                                best_logdir,
+                                                optimization_key
+                                                )
 
 
 def _build_summary_json(logdir):
     """Builds the summary json to be read by the experiments service.
     """
     combinations = []
-    env = EnvironmentSingleton()
+    env = environment_singleton()
     for trial in env.ls(logdir):
         if env.isdir(trial):
             return_file = trial + "/.outputs.json"
@@ -166,7 +166,7 @@ def _build_summary_json(logdir):
 def _load_hparams(hparams_file):
     """Loads the HParams configuration from a hparams file of a trial.
     """
-    env = EnvironmentSingleton()
+    env = environment_singleton()
 
     hparams_file_contents = env.load(hparams_file)
     hparams = json.loads(hparams_file_contents)
@@ -177,7 +177,7 @@ def _load_hparams(hparams_file):
 def _handle_return_val(return_val, log_dir, optimization_key, log_file):
     """Handles the return value of the user defined training function.
     """
-    env = EnvironmentSingleton()
+    env = environment_singleton()
 
     env._upload_file_output(return_val, log_dir)
 
@@ -221,7 +221,7 @@ def _handle_return_val(return_val, log_dir, optimization_key, log_file):
 def _clean_dir(clean_dir, keep=[]):
     """Deletes all files in a directory but keeps a few.
     """
-    env = EnvironmentSingleton()
+    env = environment_singleton()
 
     if not env.isdir(clean_dir):
         raise ValueError(

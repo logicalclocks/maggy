@@ -27,7 +27,7 @@ import time
 from abc import ABC, abstractmethod
 from datetime import datetime
 
-from maggy.core.environment_singleton import EnvironmentSingleton
+from maggy.core.environment_singleton import environment_singleton
 
 from maggy import util
 from maggy.core import rpc
@@ -78,7 +78,7 @@ class Driver(ABC):
                 )
             )
 
-        self.env = EnvironmentSingleton()
+        self.env = environment_singleton()
         # Open File desc for HDFS to log
         if not self.env.exists(self.log_file):
             self.env.dump("", self.log_file)
@@ -333,7 +333,7 @@ class Driver(ABC):
         user = None
         cons = self.env.get_constants()
 
-        user = EnvironmentSingleton().get_user()
+        user = environment_singleton().get_user()
 
         experiment_json = {
             "project": self.env.project_name(),
@@ -459,4 +459,4 @@ class Driver(ABC):
         """Logs a string to the maggy driver log file.
         """
         msg = datetime.now().isoformat() + ": " + str(log_msg)
-        self.fd.write(str((msg + "\n").encode()))
+        self.fd.write(environment_singleton().str_or_byte(msg + "\n"))

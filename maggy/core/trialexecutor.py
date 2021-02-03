@@ -29,7 +29,7 @@ import traceback
 from maggy import util, tensorboard
 from maggy.core import rpc, exceptions
 from maggy.core.reporter import Reporter
-from maggy.core.environment_singleton import EnvironmentSingleton
+from maggy.core.environment_singleton import environment_singleton
 
 def _prepare_func(
     app_id,
@@ -53,7 +53,7 @@ def _prepare_func(
         Returns:
 
         """
-        env = EnvironmentSingleton()
+        env = environment_singleton()
         env.set_ml_id(app_id, run_id)
 
         # get task context information to determine executor identifier

@@ -1,19 +1,20 @@
 from maggy.core.environment import abstractenvironment, baseenvironment
+import os
+import json
+from maggy import util
 
-try:
-    import hopsenvironment
+AbstractEnvironment = abstractenvironment.AbstractEnvironment
+
+if "REST_ENDPOINT" in os.environ:
+    print("You are running maggy on Hopsworks.")
+
+    from maggy.core.environment import hopsenvironment
     HopsEnvironment = hopsenvironment.HopsEnvironment
-    AbstractEnvironment = abstractenvironment.AbstractEnvironment
-    BaseEnvironment = baseenvironment.BaseEnvironment
 
-    __all__ = ["AbstractEnvironment", "HopsEnvironment", "BaseEnvironment"]
-except ModuleNotFoundError:
-    AbstractEnvironment = abstractenvironment.AbstractEnvironment
-    BaseEnvironment = baseenvironment.BaseEnvironment
+    __all__ = ["AbstractEnvironment", "HopsEnvironment"]
 
-    __all__ = ["AbstractEnvironment", "BaseEnvironment"]
-except ImportError:
-    AbstractEnvironment = abstractenvironment.AbstractEnvironment
+else:
+    print("You are running maggy spark-only configuration.")
     BaseEnvironment = baseenvironment.BaseEnvironment
 
     __all__ = ["AbstractEnvironment", "BaseEnvironment"]
