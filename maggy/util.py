@@ -58,7 +58,7 @@ def num_executors(sc):
     :rtype: int
     """
 
-    env = EnvironmentSingleton()
+    env = environment_singleton()
     return env.get_executors(sc)
 
 
