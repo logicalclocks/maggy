@@ -19,22 +19,15 @@ Module to encapsulate functionality related to writing to the tensorboard
 log dir and programmatically structure the outputs.
 """
 
-import tensorflow.compat.v2 as tf
-from tensorboard.plugins.hparams import summary_v2 as hp
-from tensorboard.plugins.hparams import api_pb2
-from tensorboard.plugins.hparams import summary
-
-# __import__("tensorflow").compat.v1.enable_eager_execution()
+import tensorflow as tf
+from tensorboard.plugins.hparams import api as hp
 
 _tensorboard_dir = None
-_writer = None
 
 
 def _register(trial_dir):
     global _tensorboard_dir
-    global _writer
     _tensorboard_dir = trial_dir
-    _writer = tf.summary.create_file_writer(_tensorboard_dir)
 
 
 def logdir():
@@ -95,15 +88,6 @@ def _write_hparams_config(log_dir, searchspace):
 
 
 def _write_hparams(hparams, trial_id):
-    global _writer
-    with _writer.as_default():
+    global _tensorboard_dir
+    with tf.summary.create_file_writer(_tensorboard_dir).as_default():
         hp.hparams(hparams, trial_id)
-
-
-def _write_session_end():
-    global _writer
-    with _writer.as_default():
-        protob = summary.session_end_pb(api_pb2.STATUS_SUCCESS)
-        raw_pb = protob.SerializeToString()
-        tf.summary.experimental.write_raw_pb(raw_pb, step=0)
-    _writer = None

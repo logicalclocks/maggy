@@ -18,6 +18,7 @@ from maggy.ablation.ablator import AbstractAblator
 from maggy.core.exceptions import NotSupportedError
 from maggy.core.exceptions import BadArgumentsError
 from maggy.trial import Trial
+import hsfs
 import json
 from maggy.core.environment_singleton import environment_singleton
 
@@ -53,59 +54,23 @@ class LOCO(AbstractAblator):
             if dataset_type == "tfrecord":
 
                 def create_tf_dataset(num_epochs, batch_size):
-                    import tensorflow as tf
+                    conn = hsfs.connection(engine="training")
+                    fs = conn.get_feature_store()
 
-                    dataset_dir = self.env.get_training_dataset_path(
+                    td = fs.get_training_dataset(
                         training_dataset_name, training_dataset_version
                     )
-                    input_files = tf.io.gfile.glob(
-                        (dataset_dir + "/part-r-*").replace("hopsfs", "hdfs")
-                    )
-                    dataset = tf.data.TFRecordDataset(input_files)
-                    tf_record_schema = self.env.get_training_dataset_tf_record_schema(
-                        training_dataset_name
-                    )
-                    meta = self.env.get_featurestore_metadata()
-                    training_features = [
-                        feature.name
-                        for feature in meta.training_datasets[
-                            training_dataset_name + "_" + str(training_dataset_version)
-                        ].features
-                    ]
+
+                    feature_names = [f.name for f in td.schema]
 
                     if ablated_feature is not None:
-                        training_features.remove(ablated_feature)
+                        feature_names.remove(ablated_feature)
 
-                    training_features.remove(label_name)
-
-                    def decode(example_proto):
-                        example = tf.io.parse_single_example(
-                            example_proto, tf_record_schema
-                        )
-                        # prepare the features
-                        x = []
-                        for feature_name in training_features:
-                            # temporary fix for the case of tf.int types
-                            if tf_record_schema[feature_name].dtype.is_integer:
-                                x.append(tf.cast(example[feature_name], tf.float32))
-                            else:
-                                x.append(example[feature_name])
-
-                        # prepare the labels
-                        if tf_record_schema[label_name].dtype.is_integer:
-                            y = [tf.cast(example[label_name], tf.float32)]
-                        else:
-                            y = [example[label_name]]
-
-                        return x, y
-
-                    dataset = (
-                        dataset.map(decode)
-                        .shuffle(shuffle_buffer_size)
-                        .batch(batch_size)
-                        .repeat(num_epochs)
+                    return td.tf_data(
+                        target_name=label_name, feature_names=feature_names
+                    ).tf_record_dataset(
+                        batch_size=batch_size, num_epochs=num_epochs, process=True
                     )
-                    return dataset
 
                 return create_tf_dataset
             else:
