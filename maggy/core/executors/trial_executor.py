@@ -1,5 +1,5 @@
 #
-#   Copyright 2020 Logical Clocks AB
+#   Copyright 2021 Logical Clocks AB
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ from maggy.core.reporter import Reporter
 from maggy.core.environment.singleton import EnvSing
 
 
-def _prepare_func(
+def prepare_function(
     app_id,
     run_id,
     experiment_type,
@@ -44,7 +44,6 @@ def _prepare_func(
         """
         Wraps the user supplied training function in order to be passed to the
         Spark Executors.
-
         Args:
             _ (object): Necessary sink for the iterator given by Spark to the function upon foreach
                 calls. Can safely be disregarded.

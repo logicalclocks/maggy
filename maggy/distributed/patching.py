@@ -14,9 +14,8 @@
 #   limitations under the License.
 #
 
-import os
-
 import torch
+import os
 
 
 class MaggyDataLoader(torch.utils.data.DataLoader):

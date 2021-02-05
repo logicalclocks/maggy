@@ -1,5 +1,5 @@
 #
-#   Copyright 2020 Logical Clocks AB
+#   Copyright 2021 Logical Clocks AB
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ from maggy.trial import Trial
 MAX_RETRIES = 3
 BUFSIZE = 1024 * 2
 
-server_host_port = None
+SERVER_HOST_PORT = None
 
 
 class Reservations(object):
@@ -335,12 +335,12 @@ class Server(MessageSocket):
         Returns:
             address of the Server as a tuple of (host, port)
         """
-        global server_host_port
+        global SERVER_HOST_PORT
 
         server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        server_sock, server_host_port = EnvSing.get_instance().connect_host(
-            server_sock, server_host_port, exp_driver
+        server_sock, SERVER_HOST_PORT = EnvSing.get_instance().connect_host(
+            server_sock, SERVER_HOST_PORT, exp_driver
         )
 
         def _listen(self, sock, driver):
@@ -379,7 +379,7 @@ class Server(MessageSocket):
         t.daemon = True
         t.start()
 
-        return server_host_port
+        return SERVER_HOST_PORT
 
     def stop(self):
         """

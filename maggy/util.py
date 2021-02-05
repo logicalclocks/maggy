@@ -1,5 +1,5 @@
 #
-#   Copyright 2020 Logical Clocks AB
+#   Copyright 2021 Logical Clocks AB
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ import numpy as np
 from pyspark import TaskContext
 from pyspark.sql import SparkSession
 
-from maggy import constants
+from maggy import constants, tensorboard
 from maggy.core import exceptions
 from maggy.core.environment.singleton import EnvSing
 

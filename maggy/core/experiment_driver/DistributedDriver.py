@@ -14,81 +14,33 @@
 #   limitations under the License.
 #
 
-import threading
-import queue
-
 from maggy.core.experiment_driver.Driver import Driver
 
 
 class DistributedDriver(Driver):
-    """Distributed driver class to run server in Torch registration mode.
+    """Distributed driver class to run server in Torch registration mode."""
 
-    Attributes:
-        server_addr (Union[str, None]): Address of the RPC server.
-        job_start (Union[float, None]): Start time of the job.
-    """
-
-    def __init__(self, name, description, num_executors, hb_interval, log_dir):
-        """Driver initialization.
-
-        Args:
-            name (str): Job name.
-            description (str): Job description.
-            num_executors (int): Number of Spark executors for the job.
-            hb_interval (float): Heart beat time intervall.
-            log_dir (str): Log directory path.
-        """
-        super().__init__(name, description, "max", num_executors, hb_interval, log_dir)
-        self.server_addr = None
-        self.num_trials = 1
+    def __init__(self, config, num_executors, log_dir):
+        super().__init__(config, num_executors, log_dir)
+        self.results = []
+        # Legacy: Define result and num_trials to make heartbeat work.
+        # Is going to get removed in the future.
         self.result = {"best_val": "n.a.", "num_trials": 1, "early_stopped": 0}
-        self.job_start = None
+        self.num_trials = 1
 
-    def init(self, job_start):
-        """Starts the server and worker to prepare for worker registration.
+    def _register_callbacks(self):
+        self.message_callbacks["METRIC"] = self.log_callback
+        self.message_callbacks["FINAL"] = self.final_callback
 
-        Args:
-            job_start (float): Job start time.
-        """
-        self.server_addr = self.server.start(self)
-        self.job_start = job_start
-        self._start_worker()
+    def log_callback(self, msg):
+        logs = msg.get("logs", None)
+        if logs is not None:
+            with self.log_lock:
+                self.executor_logs = self.executor_logs + logs
 
-    def _start_worker(self):
-        """Starts threaded worker to digest message queue.
-        """
+    def final_callback(self, msg):
+        self.results.append(msg.get("data", None))
 
-        def _digest_queue(self):
-            try:
-                while not self.worker_done:
-                    try:
-                        msg = self._message_q.get_nowait()
-                    except queue.Empty:
-                        msg = {"type": None}
-                    if msg["type"] == "METRIC":
-                        logs = msg.get("logs", None)
-                        if logs is not None:
-                            with self.log_lock:
-                                self.executor_logs = self.executor_logs + logs
-            except Exception as exc:  # pylint: disable=broad-except
-                self._log(exc)
-                self.exception = exc
-                self.server.stop()
-                raise
-
-        threading.Thread(target=_digest_queue, args=(self,), daemon=True).start()
-
-    def finalize(self, job_end):
-        raise NotImplementedError
-
-    def controller_get_next(self, trial=None):
-        raise NotImplementedError
-
-    def prep_results(self):
-        pass
-
-    def config_to_dict(self):
-        raise NotImplementedError
-
-    def log_string(self):
-        pass
+    def average_metric(self):
+        valid_results = [x for x in self.results if x is not None]
+        return sum(valid_results) / len(valid_results)
