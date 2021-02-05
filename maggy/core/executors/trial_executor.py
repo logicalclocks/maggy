@@ -31,27 +31,16 @@ from maggy.core import rpc, exceptions
 from maggy.core.reporter import Reporter
 
 
-def _prepare_func(
-    app_id,
-    run_id,
-    experiment_type,
-    train_fn,
-    server_addr,
-    hb_interval,
-    secret,
-    optimization_key,
-    log_dir,
-):
-    def _wrapper_fun(iter):
+def _prepare_func(app_id, run_id, experiment_type, train_fn, server_addr, hb_interval, secret,
+                  optimization_key, log_dir):
+    def _wrapper_fun(_):
         """
         Wraps the user supplied training function in order to be passed to the
         Spark Executors.
 
         Args:
-            iter:
-
-        Returns:
-
+            _ (object): Necessary sink for the iterator given by Spark to the function upon foreach
+                calls. Can safely be disregarded.
         """
         experiment_utils._set_ml_id(app_id, run_id)
 

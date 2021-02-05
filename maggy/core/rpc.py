@@ -66,6 +66,7 @@ class Reservations(object):
                 "host_port": meta["host_port"],
                 "task_attempt": meta["task_attempt"],
                 "trial_id": meta["trial_id"],
+                "num_executors": self.required
             }
 
             if self.remaining() == 0:
@@ -178,6 +179,7 @@ class Server(MessageSocket):
         """
         assert count > 0
         self.reservations = Reservations(count)
+        self.database = {}  # Generic data storage container for the server.
 
     def await_reservations(self, sc, status={}, timeout=600):
         """
@@ -193,7 +195,7 @@ class Server(MessageSocket):
         """
         timespent = 0
         while not self.reservations.done():
-            print("waiting for {} reservations.".format(self.reservations.remaining()))
+            print("Waiting for {} reservations.".format(self.reservations.remaining()))
             # check status flags for any errors
             if "error" in status:
                 sc.cancelAllJobs()
@@ -201,7 +203,7 @@ class Server(MessageSocket):
             timespent += 1
             if timespent > timeout:
                 raise Exception("Timed out waiting for reservations to complete")
-        print("All reservations completed")
+        print("All reservations completed.")
         return self.reservations.get()
 
     def _handle_message(self, sock, msg, exp_driver):
@@ -240,6 +242,12 @@ class Server(MessageSocket):
                 self.reservations.add(msg["data"])
                 exp_driver.add_message(msg)
 
+            send["type"] = "OK"
+        elif msg_type == "TORCH_CONFIG":
+            try:
+                send["data"] = self.reservations.get()[0]  # Config of worker with partition 1.
+            except KeyError:
+                send["data"] = None
             send["type"] = "OK"
         elif msg_type == "QUERY":
             send["type"] = "QUERY"
@@ -551,6 +559,13 @@ class Client(MessageSocket):
                 break
             time.sleep(1)
         return trial_id, parameters
+
+    def get_torch_config(self, timeout=60):
+        config = None
+        start_time = time.time()
+        while not config and time.time() - start_time < timeout:
+            config = self._request(self.sock, "TORCH_CONFIG").get("data", None)
+        return config
 
     def stop(self):
         """Stop the Clients's heartbeat thread."""

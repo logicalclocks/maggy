@@ -32,8 +32,11 @@ from hops import util as hopsutil
 from hops.experiment_impl.util import experiment_utils
 
 from maggy import util, tensorboard
-from maggy.core import trialexecutor
-from maggy.core.experiment_driver import optimization, ablation
+from maggy.distributed.distributed_lagom import distributed_lagom
+from maggy.core.executors.Executor import Executor
+from maggy.core.experiment_driver.OptimizationDriver import OptimizationDriver
+from maggy.core.experiment_driver.AblationDriver import AblationDriver
+
 
 app_id = None
 running = False
@@ -114,7 +117,10 @@ def lagom(
     global running
     if running:
         raise RuntimeError("An experiment is currently running.")
-
+    if experiment_type == "distributed_training":
+        result = distributed_lagom(train_fn, name=name, hb_interval=hb_interval,
+                                   description=description)
+        return result
     job_start = time.time()
     sc = hopsutil._find_spark().sparkContext
     exp_driver = None
@@ -149,7 +155,7 @@ def lagom(
             if num_executors > num_trials:
                 num_executors = num_trials
 
-            exp_driver = optimization.Driver(
+            exp_driver = OptimizationDriver(
                 searchspace=searchspace,
                 optimizer=optimizer,
                 direction=direction,
@@ -165,7 +171,7 @@ def lagom(
             )
 
         elif experiment_type == "ablation":
-            exp_driver = ablation.Driver(
+            exp_driver = AblationDriver(
                 ablation_study=ablation_study,
                 ablator=ablator,
                 name=name,
@@ -178,8 +184,7 @@ def lagom(
             # using exp_driver.num_executor since
             # it has been set using ablator.get_number_of_trials()
             # in experiment.py
-            if num_executors > exp_driver.num_executors:
-                num_executors = exp_driver.num_executors
+            num_executors = min(num_executors, exp_driver.num_executors)
 
         else:
             running = False
@@ -220,19 +225,10 @@ def lagom(
         server_addr = exp_driver.server_addr
 
         # Force execution on executor, since GPU is located on executor
-        nodeRDD.foreachPartition(
-            trialexecutor._prepare_func(
-                app_id,
-                run_id,
-                experiment_type,
-                train_fn,
-                server_addr,
-                hb_interval,
-                exp_driver._secret,
-                optimization_key,
-                experiment_utils._get_logdir(app_id, run_id),
-            )
-        )
+        exp_executor = Executor(exp_driver)
+        worker_fct = exp_executor.prepare_function(app_id, run_id, train_fn, server_addr,
+                                                   hb_interval, optimization_key)
+        nodeRDD.foreachPartition(worker_fct)
         job_end = time.time()
 
         result = exp_driver.finalize(job_end)
@@ -280,8 +276,6 @@ def lagom(
         run_id += 1
         running = False
         sc.setJobGroup("", "")
-
-    return result
 
 
 def _exception_handler(duration):
