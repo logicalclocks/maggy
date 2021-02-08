@@ -39,12 +39,23 @@ class Executor:
             exp_driver (Union[OptimizationDriver, AblationDriver, DistributedDriver]): Experiment
             driver for the patching function.
         """
-        assert type(exp_driver) in [OptimizationDriver, AblationDriver, DistributedDriver], \
-            f"Experiment driver type {type(exp_driver)} unsupported by Executor."
+        assert type(exp_driver) in [
+            OptimizationDriver,
+            AblationDriver,
+            DistributedDriver,
+        ], f"Experiment driver type {type(exp_driver)} unsupported by Executor."
         self.exp_driver = exp_driver
 
-    def prepare_function(self, app_id, run_id, train_fn, server_addr, hb_interval,
-                         optimization_key):
+    def prepare_function(
+        self,
+        app_id,
+        run_id,
+        train_fn,
+        server_addr,
+        hb_interval,
+        optimization_key,
+        **kwargs,
+    ):
         """Wrapper function for the monkey patching functions.
 
         Infers correct patching function from the driver type.
@@ -62,8 +73,24 @@ class Executor:
         """
         log_dir = experiment_utils._get_logdir(app_id, run_id)
         if self.exp_driver.exp_type in ["optimization", "ablation"]:
-            return trial_executor._prepare_func(app_id, run_id, self.exp_driver.exp_type, train_fn,
-                                                server_addr, hb_interval, self.exp_driver._secret,
-                                                optimization_key, log_dir)
-        return dist_executor.prepare_function(app_id, run_id, train_fn, server_addr, hb_interval,
-                                              self.exp_driver._secret, log_dir)
+            return trial_executor._prepare_func(
+                app_id,
+                run_id,
+                self.exp_driver.exp_type,
+                train_fn,
+                server_addr,
+                hb_interval,
+                self.exp_driver._secret,
+                optimization_key,
+                log_dir,
+            )
+        return dist_executor.prepare_function(
+            app_id,
+            run_id,
+            train_fn,
+            server_addr,
+            hb_interval,
+            self.exp_driver._secret,
+            log_dir,
+            **kwargs,
+        )

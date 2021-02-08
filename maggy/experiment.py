@@ -60,6 +60,7 @@ def lagom(
     es_interval=1,
     es_min=10,
     description="",
+    **kwargs,
 ):
     """Launches a maggy experiment, which depending on `experiment_type` can
     either be a hyperparameter optimization or an ablation study experiment.
@@ -118,8 +119,17 @@ def lagom(
     if running:
         raise RuntimeError("An experiment is currently running.")
     if experiment_type == "distributed_training":
-        result = distributed_lagom(train_fn, name=name, hb_interval=hb_interval,
-                                   description=description)
+        for kwarg in ("model", "train_set", "test_set"):
+            assert (
+                kwarg in kwargs.keys()
+            ), f"Distributed training requires {kwarg} as argument!"
+        result = distributed_lagom(
+            train_fn,
+            name=name,
+            hb_interval=hb_interval,
+            description=description,
+            **kwargs,
+        )
         return result
     job_start = time.time()
     sc = hopsutil._find_spark().sparkContext
@@ -214,7 +224,9 @@ def lagom(
         )
 
         exp_ml_id = app_id + "_" + str(run_id)
-        experiment_json = experiment_utils._attach_experiment_xattr(exp_ml_id, experiment_json, "INIT")
+        experiment_json = experiment_utils._attach_experiment_xattr(
+            exp_ml_id, experiment_json, "INIT"
+        )
 
         util._log(
             "Started Maggy Experiment: {0}, {1}, run {2}".format(name, app_id, run_id)
@@ -226,8 +238,9 @@ def lagom(
 
         # Force execution on executor, since GPU is located on executor
         exp_executor = Executor(exp_driver)
-        worker_fct = exp_executor.prepare_function(app_id, run_id, train_fn, server_addr,
-                                                   hb_interval, optimization_key)
+        worker_fct = exp_executor.prepare_function(
+            app_id, run_id, train_fn, server_addr, hb_interval, optimization_key
+        )
         nodeRDD.foreachPartition(worker_fct)
         job_end = time.time()
 
@@ -292,7 +305,9 @@ def _exception_handler(duration):
             experiment_json["state"] = "FAILED"
             experiment_json["duration"] = duration
             exp_ml_id = app_id + "_" + str(run_id)
-            experiment_utils._attach_experiment_xattr(exp_ml_id, experiment_json, "FULL_UPDATE")
+            experiment_utils._attach_experiment_xattr(
+                exp_ml_id, experiment_json, "FULL_UPDATE"
+            )
     except Exception as err:
         util._log(err)
 
@@ -307,7 +322,9 @@ def _exit_handler():
         if running and experiment_json is not None:
             experiment_json["status"] = "KILLED"
             exp_ml_id = app_id + "_" + str(run_id)
-            experiment_utils._attach_experiment_xattr(exp_ml_id, experiment_json, "FULL_UPDATE")
+            experiment_utils._attach_experiment_xattr(
+                exp_ml_id, experiment_json, "FULL_UPDATE"
+            )
     except Exception as err:
         util._log(err)
 
