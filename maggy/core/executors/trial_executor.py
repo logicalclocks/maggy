@@ -31,8 +31,17 @@ from maggy.core import rpc, exceptions
 from maggy.core.reporter import Reporter
 
 
-def _prepare_func(app_id, run_id, experiment_type, train_fn, server_addr, hb_interval, secret,
-                  optimization_key, log_dir):
+def prepare_function(
+    app_id,
+    run_id,
+    experiment_type,
+    train_fn,
+    server_addr,
+    hb_interval,
+    secret,
+    optimization_key,
+    log_dir,
+):
     def _wrapper_fun(_):
         """
         Wraps the user supplied training function in order to be passed to the

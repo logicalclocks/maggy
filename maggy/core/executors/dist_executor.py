@@ -20,6 +20,7 @@ import traceback
 import os
 import datetime
 import random
+import time
 
 import torch
 import torch.distributed as dist
@@ -41,7 +42,16 @@ torch.utils.data.DataLoader = (
 
 
 def prepare_function(
-    app_id, run_id, train_fn, server_addr, hb_interval, secret, log_dir, **kwargs
+    app_id,
+    run_id,
+    train_fn,
+    model,
+    train_set,
+    test_set,
+    server_addr,
+    hb_interval,
+    secret,
+    log_dir,
 ):
     """
     Wraps the user supplied training function in order to be passed to the Spark Executors.
@@ -76,9 +86,15 @@ def prepare_function(
         try:
             _register_with_servers(client, reporter, partition_id)
             tb_logdir, trial_log_file = _setup_logging(reporter, log_dir)
-
+            reporter.log("Awaiting worker reservations.")
             client.await_reservations()
+            reporter.log("Reservations complete, configuring PyTorch.")
             config = client.get_torch_config()
+            if not config:
+                reporter.log(
+                    "PyTorch registration failed, exiting from all tasks.", False
+                )
+                return
             addr, port = config["host_port"].split(":")
             torch_config = {
                 "MASTER_ADDR": addr,
@@ -91,29 +107,26 @@ def prepare_function(
 
             _setup_torch_env(torch_config)
             _init_cluster(timeout=60, random_seed=0)
-            rank = int(torch_config["RANK"])
-            model = torch.nn.parallel.DistributedDataParallel(kwargs["model"].cuda())
+            ddp_model = torch.nn.parallel.DistributedDataParallel(model.cuda())
 
             reporter.log("Starting distributed training.", True)
             # device = torch.device(torch.cuda.current_device())
             sig = inspect.signature(train_fn)
             if sig.parameters.get("reporter", None):
                 retval = train_fn(
-                    model=model,
-                    train_set=kwargs["train_set"],
-                    test_set=kwargs["test_set"],
+                    model=ddp_model,
+                    train_set=train_set,
+                    test_set=test_set,
                     reporter=reporter,
                 )
             else:
                 retval = train_fn(
-                    model=model,
-                    train_set=kwargs["train_set"],
-                    test_set=kwargs["test_set"],
+                    model=ddp_model, train_set=train_set, test_set=test_set,
                 )
-            if rank == 0:
-                retval = util._handle_return_val(
-                    retval, tb_logdir, "Metric", trial_log_file
-                )
+
+            retval = util._handle_return_val(
+                retval, tb_logdir, "Metric", trial_log_file
+            )
 
             reporter.log("Finished distributed training.", False)
             reporter.log("Final metric: {}".format(retval), False)
@@ -122,6 +135,9 @@ def prepare_function(
             reporter.log(traceback.format_exc(), False)
             raise
         finally:
+            time.sleep(
+                6
+            )  # Wait for Jupyter to catch latest log messages before shutdown.
             reporter.close_logger()
             client.stop()
             client.close()
@@ -155,7 +171,7 @@ def _register_with_servers(client, reporter, partition_id):
     """
     client_addr = client.client_addr
     host_port = (
-        client_addr[0] + ":" + "8081"
+        client_addr[0] + ":" + "8080"
     )  # TODO: Change 8080 to open port within NCCL specs.
     exec_spec = {
         "partition_id": partition_id,

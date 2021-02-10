@@ -21,9 +21,11 @@ import os
 import json
 import numpy as np
 from pyspark import TaskContext
+from pyspark.sql import SparkSession
 
 from hops import util as hopsutil
 from hops import hdfs as hopshdfs
+from hops import constants as hopsconstants
 from hops.experiment_impl.util import experiment_utils
 
 from maggy import constants
@@ -243,5 +245,66 @@ def set_ml_id(app_id, run_id):
         app_id (int): Maggy App ID.
         run_id (int): Maggy experiment run ID.
     """
-    os.environ['HOME'] = os.getcwd()
-    os.environ['ML_ID'] = str(app_id) + '_' + str(run_id)
+    os.environ["HOME"] = os.getcwd()
+    os.environ["ML_ID"] = str(app_id) + "_" + str(run_id)
+
+
+def populate_experiment(
+    model_name, function, exp_type, description, app_id, direction, optimization_key
+):
+    job_name = None
+    if hopsconstants.ENV_VARIABLES.JOB_NAME_ENV_VAR in os.environ:
+        job_name = os.environ[hopsconstants.ENV_VARIABLES.JOB_NAME_ENV_VAR]
+
+    kernel_id = None
+    if hopsconstants.ENV_VARIABLES.KERNEL_ID_ENV_VAR in os.environ:
+        kernel_id = os.environ[hopsconstants.ENV_VARIABLES.KERNEL_ID_ENV_VAR]
+
+    if model_name == "no-name" and job_name:
+        model_name = job_name
+
+    return {
+        "id": os.environ["ML_ID"],
+        "name": model_name,
+        "projectName": hopshdfs.project_name(),
+        "description": description,
+        "state": "RUNNING",
+        "function": function,
+        "experimentType": exp_type,
+        "appId": app_id,
+        "direction": direction,
+        "optimizationKey": optimization_key,
+        "jobName": job_name,
+        "kernelId": kernel_id,
+    }
+
+
+def find_spark():
+    return SparkSession.builder.getOrCreate()
+
+
+def seconds_to_milliseconds(time):
+    return int(round(time * 1000))
+
+
+def get_experiments_dir():
+    """
+    Gets the root folder where the experiments are writing their results
+    Returns:
+        The folder where the experiments are writing results
+    """
+    assert hopshdfs.exists(
+        hopshdfs.project_path() + "Experiments"
+    ), "Your project is missing a dataset named Experiments, please create it."
+    return hopshdfs.project_path() + "Experiments"
+
+
+def get_logdir(app_id, run_id):
+    """
+    Args:
+        app_id: app_id for experiment
+        run_id: run_id for experiment
+    Returns:
+        The folder where a particular experiment is writing results
+    """
+    return get_experiments_dir() + "/" + str(app_id) + "_" + str(run_id)
