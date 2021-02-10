@@ -5,8 +5,14 @@ from maggy.core.environment.abstractenvironment import AbstractEnvironment
 import os
 import socket
 import maggy.util as util
+import pyspark
+import uuid
+import tensorflow as tf
 
 class BaseEnvironment(AbstractEnvironment):
+    """
+    Environment implemented for maggy usage on Databricks.
+    """
 
     def __init__(self, *args):
         self.log_dir = "/dbfs/maggy_log/"
@@ -140,3 +146,39 @@ class BaseEnvironment(AbstractEnvironment):
             raise RuntimeError(
                 "Failed to find some of the spark.databricks properties."
             )
+
+    def _build_summary_json(self, logdir):
+        pass
+
+    def _convert_return_file_to_arr(self, return_file):
+        pass
+
+    def connect_hsfs(self, engine="training"):
+        pass
+
+    def create_tf_dataset(self, num_epochs, batch_size,
+                          training_dataset_version, training_dataset_name,
+                          ablated_feature, label_name, training_dataset_path):
+
+
+        spark_df = pyspark.read.csv(training_dataset_path, header="true", inferSchema="true")
+
+
+        feature_names = spark_df.schema.names
+
+        if ablated_feature is not None:
+            feature_names.remove(ablated_feature)
+
+        name_uuid = str(uuid.uuid4())
+        path = '/ml/'+ training_dataset_name + '/df-{}.tfrecord'.format(name_uuid)
+        spark_df.write.format("tfrecords").mode("overwrite").save(path)
+
+        return self.load_tf_dataset(path)
+
+    def load_tf_dataset(self,path):
+        filenames = [("/dbfs" + path + "/" + name) for name in os.listdir("/dbfs" + path) if name.startswith("part")]
+        dataset = tf.data.TFRecordDataset(filenames)
+        return dataset
+
+    def connect_hsfs(self,engine='engine'):
+        pass

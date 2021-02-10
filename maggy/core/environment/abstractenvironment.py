@@ -1,7 +1,11 @@
 from abc import ABC, abstractmethod
 
 
-class AbstractEnvironment(ABC,):
+class AbstractEnvironment(ABC):
+    """
+    Abstract class for environment definition.
+    Define all the methods within this class to use a custom environment.
+    """
     def __init__(self, *args):
         pass
 
@@ -122,4 +126,16 @@ class AbstractEnvironment(ABC,):
 
     @abstractmethod
     def get_executors(self, sc):
+        pass
+
+    @abstractmethod
+    def _build_summary_json(self,logdir):
+        pass
+
+    @abstractmethod
+    def _convert_return_file_to_arr(self, return_file):
+        pass
+
+    @abstractmethod
+    def connect_hsfs(self,engine="training"):
         pass

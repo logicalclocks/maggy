@@ -18,7 +18,6 @@ from maggy.ablation.ablator import AbstractAblator
 from maggy.core.exceptions import NotSupportedError
 from maggy.core.exceptions import BadArgumentsError
 from maggy.trial import Trial
-import hsfs
 import json
 from maggy.core.environment_singleton import environment_singleton
 
@@ -54,7 +53,7 @@ class LOCO(AbstractAblator):
             if dataset_type == "tfrecord":
 
                 def create_tf_dataset(num_epochs, batch_size):
-                    conn = hsfs.connection(engine="training")
+                    conn = environment_singleton().connect_hsfs(engine="training")
                     fs = conn.get_feature_store()
 
                     td = fs.get_training_dataset(

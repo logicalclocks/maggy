@@ -5,6 +5,7 @@ from hops import util as hopsutil
 from hops.experiment_impl.util import experiment_utils
 from hops import hdfs as hopshdfs
 from hops import constants
+import hsfs
 from maggy import tensorboard
 from maggy import util
 
@@ -16,7 +17,10 @@ from maggy.core.environment.abstractenvironment import AbstractEnvironment
 
 
 class HopsEnvironment(AbstractEnvironment):
-
+    """
+    This class implements AbstractEnvironment.
+    The methods implemented mainly recall the libraries developed on maggy.
+    """
 
     def __init__(self, *args):
         self.constants = constants
@@ -172,8 +176,8 @@ class HopsEnvironment(AbstractEnvironment):
     def isdir(self, dir_path, project=None):
         return hopshdfs.isdir(dir_path, project=project)
 
-    def ls(self, dir_path,recursive=False,project=None):
-        return hopshdfs.ls(dir_path,recursive=recursive,project=project)
+    def ls(self, dir_path,recursive=False,exclude_nn_addr=None):
+        return hopshdfs.ls(dir_path,recursive=recursive,exclude_nn_addr=exclude_nn_addr)
 
     def delete(self, path, recursive=False):
         return hopshdfs.delete(path,recursive=recursive)
@@ -196,3 +200,17 @@ class HopsEnvironment(AbstractEnvironment):
                 please select your mode as either Experiment, Parallel \
                 Experiments or Distributed Training."
             )
+
+    def _build_summary_json(self, logdir):
+        return util._build_summary_json(logdir)
+
+    def _convert_return_file_to_arr(self, return_file):
+        return experiment_utils._convert_return_file_to_arr(return_file)
+
+    def load(self, hparams_file):
+        return hopshdfs.load(hparams_file)
+
+    def connect_hsfs(self,engine='training'):
+        return hsfs.connection(engine=engine)
+
+

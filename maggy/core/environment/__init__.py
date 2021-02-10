@@ -4,7 +4,7 @@ import json
 from maggy import util
 
 AbstractEnvironment = abstractenvironment.AbstractEnvironment
-
+# check which environment to use
 if "REST_ENDPOINT" in os.environ:
     print("You are running maggy on Hopsworks.")
 
@@ -14,7 +14,7 @@ if "REST_ENDPOINT" in os.environ:
     __all__ = ["AbstractEnvironment", "HopsEnvironment"]
 
 else:
-    print("You are running maggy spark-only configuration.")
+    print("You are running maggy without hopsworks.")
     BaseEnvironment = baseenvironment.BaseEnvironment
 
     __all__ = ["AbstractEnvironment", "BaseEnvironment"]

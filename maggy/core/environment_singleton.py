@@ -1,11 +1,15 @@
 import os
 import json
+
 # in case importing in %%local
 try:
     from pyspark.sql import SparkSession
 except:
     pass
 
+"""
+return an instance of the environment to be used by maggy within a session.
+"""
 def environment_singleton():
         global environmentInstance
         if not 'environmentInstance' in globals():
