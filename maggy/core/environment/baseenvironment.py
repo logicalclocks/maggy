@@ -1,21 +1,19 @@
-
-
-from maggy.core.environment.abstractenvironment import AbstractEnvironment
 import os
-import socket
+
 import maggy.util as util
+from maggy.core.environment.abstractenvironment import AbstractEnvironment
+
 
 class BaseEnvironment(AbstractEnvironment):
-
     def __init__(self, *args):
-        self.log_dir = os.path.join(os.getcwd(),'experiment_log')
+        self.log_dir = os.path.join(os.getcwd(), "experiment_log")
         if not os.path.exists(self.log_dir):
             os.mkdir(self.log_dir)
         self.constants = []
         pass
 
-    def set_ml_id(self, app_id = 0, run_id = 0):
-        os.environ['ML_ID'] = str(app_id) + '_' + str(run_id)
+    def set_ml_id(self, app_id=0, run_id=0):
+        os.environ["ML_ID"] = str(app_id) + "_" + str(run_id)
 
     def create_experiment_dir(self, app_id, run_id):
         pass
@@ -23,7 +21,17 @@ class BaseEnvironment(AbstractEnvironment):
     def get_logdir(self, app_id, run_id):
         return self.log_dir
 
-    def populate_experiment(self, model_name, function, type, hp, description, app_id, direction, optimization_key):
+    def populate_experiment(
+        self,
+        model_name,
+        function,
+        type,
+        hp,
+        description,
+        app_id,
+        direction,
+        optimization_key,
+    ):
         pass
 
     def attach_experiment_xattr(self, exp_ml_id, experiment_json, command):
@@ -32,7 +40,6 @@ class BaseEnvironment(AbstractEnvironment):
     def exists(self, hdfs_path, project=None):
         return os.path.exists(hdfs_path)
 
-
     def mkdir(self, hdfs_path, project=None):
         pass
 
@@ -40,7 +47,7 @@ class BaseEnvironment(AbstractEnvironment):
         return os.path.exists(dir_path)
 
     def ls(self, dir_path):
-        _ , dirnames, filenames = next(os.walk(dir_path))
+        _, dirnames, filenames = next(os.walk(dir_path))
 
         return dirnames + filenames
 
@@ -55,7 +62,7 @@ class BaseEnvironment(AbstractEnvironment):
         head_tail = os.path.split(hdfs_path)
         if not os.path.exists(head_tail[0]):
             os.mkdir(head_tail[0])
-        file = self.open_file(hdfs_path, flags='w+')
+        file = self.open_file(hdfs_path, flags="w+")
         file.write(data)
 
     def get_ip_address(self):
@@ -65,13 +72,17 @@ class BaseEnvironment(AbstractEnvironment):
     def get_constants(self):
         pass
 
-    def open_file(self, hdfs_path, project=None, flags='rw', buff_size=0):
+    def open_file(self, hdfs_path, project=None, flags="rw", buff_size=0):
         return open(hdfs_path, mode=flags)
 
-    def get_training_dataset_path(self, training_dataset, featurestore=None, training_dataset_version=1):
+    def get_training_dataset_path(
+        self, training_dataset, featurestore=None, training_dataset_version=1
+    ):
         pass
 
-    def get_training_dataset_tf_record_schema(self, training_dataset, training_dataset_version=1, featurestore=None):
+    def get_training_dataset_tf_record_schema(
+        self, training_dataset, training_dataset_version=1, featurestore=None
+    ):
         pass
 
     def get_featurestore_metadata(self, featurestore=None, update_cache=False):
@@ -83,7 +94,7 @@ class BaseEnvironment(AbstractEnvironment):
     def log_searchspace(self, app_id, run_id, searchspace):
         pass
 
-    def connect_host(self,server_sock, server_host_port, exp_driver):
+    def connect_host(self, server_sock, server_host_port, exp_driver):
         if not server_host_port:
             server_sock.bind(("", 0))
             host = self.get_ip_address()
@@ -111,17 +122,18 @@ class BaseEnvironment(AbstractEnvironment):
         # TODO retrieve project_name from databricks
         return ""
 
-    def finalize_experiment(self,
-            experiment_json,
-            metric,
-            app_id,
-            run_id,
-            state,
-            duration,
-            logdir,
-            best_logdir,
-            optimization_key
-                            ):
+    def finalize_experiment(
+        self,
+        experiment_json,
+        metric,
+        app_id,
+        run_id,
+        state,
+        duration,
+        logdir,
+        best_logdir,
+        optimization_key,
+    ):
         pass
 
     def str_or_byte(self, str):
@@ -129,8 +141,6 @@ class BaseEnvironment(AbstractEnvironment):
 
     def get_executors(self, sc):
         try:
-            return int(sc._conf.get('num-executors'))
+            return int(sc._conf.get("num-executors"))
         except:  # noqa: E722
-            raise RuntimeError(
-                "Failed to find spark properties."
-            )
+            raise RuntimeError("Failed to find spark properties.")

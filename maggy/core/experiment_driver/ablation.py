@@ -17,11 +17,11 @@
 import json
 
 from maggy import util
-from maggy.earlystop import NoStoppingRule
 from maggy.ablation.ablationstudy import AblationStudy
-from maggy.ablation.ablator.loco import LOCO
 from maggy.ablation.ablator import AbstractAblator
+from maggy.ablation.ablator.loco import LOCO
 from maggy.core.experiment_driver import base
+from maggy.earlystop import NoStoppingRule
 
 
 class Driver(base.Driver):

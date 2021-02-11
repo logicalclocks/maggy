@@ -6,6 +6,7 @@ class AbstractEnvironment(ABC):
     Abstract class for environment definition.
     Define all the methods within this class to use a custom environment.
     """
+
     def __init__(self, *args):
         pass
 
@@ -22,7 +23,17 @@ class AbstractEnvironment(ABC):
         pass
 
     @abstractmethod
-    def populate_experiment(self, model_name, function, type, hp, description, app_id, direction, optimization_key):
+    def populate_experiment(
+        self,
+        model_name,
+        function,
+        type,
+        hp,
+        description,
+        app_id,
+        direction,
+        optimization_key,
+    ):
         pass
 
     @abstractmethod
@@ -50,15 +61,19 @@ class AbstractEnvironment(ABC):
         pass
 
     @abstractmethod
-    def open_file(self, hdfs_path, project=None, flags='rw', buff_size=0):
+    def open_file(self, hdfs_path, project=None, flags="rw", buff_size=0):
         pass
 
     @abstractmethod
-    def get_training_dataset_path(self,training_dataset, featurestore=None, training_dataset_version=1):
+    def get_training_dataset_path(
+        self, training_dataset, featurestore=None, training_dataset_version=1
+    ):
         pass
 
     @abstractmethod
-    def get_training_dataset_tf_record_schema(self,training_dataset, training_dataset_version=1, featurestore=None):
+    def get_training_dataset_tf_record_schema(
+        self, training_dataset, training_dataset_version=1, featurestore=None
+    ):
         pass
 
     @abstractmethod
@@ -74,7 +89,7 @@ class AbstractEnvironment(ABC):
         pass
 
     @abstractmethod
-    def connect_host(self,server_sock,server_host_port, exp_driver):
+    def connect_host(self, server_sock, server_host_port, exp_driver):
         pass
 
     @abstractmethod
@@ -82,7 +97,7 @@ class AbstractEnvironment(ABC):
         pass
 
     @abstractmethod
-    def ls(self, dir_path,recursive=False,project=None):
+    def ls(self, dir_path, recursive=False, project=None):
         pass
 
     @abstractmethod
@@ -94,7 +109,7 @@ class AbstractEnvironment(ABC):
         pass
 
     @abstractmethod
-    def project_path(self,project=None,exclude_nn_addr=False):
+    def project_path(self, project=None, exclude_nn_addr=False):
         pass
 
     @abstractmethod
@@ -107,16 +122,16 @@ class AbstractEnvironment(ABC):
 
     @abstractmethod
     def finalize_experiment(
-            self,
-            experiment_json,
-            metric,
-            app_id,
-            run_id,
-            state,
-            duration,
-            logdir,
-            best_logdir,
-            optimization_key,
+        self,
+        experiment_json,
+        metric,
+        app_id,
+        run_id,
+        state,
+        duration,
+        logdir,
+        best_logdir,
+        optimization_key,
     ):
         pass
 
@@ -129,7 +144,7 @@ class AbstractEnvironment(ABC):
         pass
 
     @abstractmethod
-    def _build_summary_json(self,logdir):
+    def _build_summary_json(self, logdir):
         pass
 
     @abstractmethod
@@ -137,5 +152,5 @@ class AbstractEnvironment(ABC):
         pass
 
     @abstractmethod
-    def connect_hsfs(self,engine="training"):
+    def connect_hsfs(self, engine="training"):
         pass

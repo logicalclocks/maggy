@@ -14,16 +14,14 @@
 #   limitations under the License.
 #
 
+import numpy as np
+import time
 from abc import ABC, abstractmethod
 from datetime import datetime
-import time
-
-import numpy as np
-
-from maggy.trial import Trial
-from maggy.pruner import Hyperband
 
 from maggy.core.environment_singleton import environment_singleton
+from maggy.pruner import Hyperband
+from maggy.trial import Trial
 
 
 class AbstractOptimizer(ABC):
@@ -53,6 +51,7 @@ class AbstractOptimizer(ABC):
         self.sampling_time_start = 0.0
 
         self.env = environment_singleton()
+
     @abstractmethod
     def initialize(self):
         """

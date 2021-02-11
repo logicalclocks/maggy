@@ -1,7 +1,6 @@
-from maggy.core.environment import abstractenvironment, baseenvironment
 import os
-import json
-from maggy import util
+
+from maggy.core.environment import abstractenvironment, baseenvironment
 
 AbstractEnvironment = abstractenvironment.AbstractEnvironment
 # check which environment to use
@@ -9,6 +8,7 @@ if "REST_ENDPOINT" in os.environ:
     print("You are running maggy on Hopsworks.")
 
     from maggy.core.environment import hopsenvironment
+
     HopsEnvironment = hopsenvironment.HopsEnvironment
 
     __all__ = ["AbstractEnvironment", "HopsEnvironment"]
@@ -18,5 +18,3 @@ else:
     BaseEnvironment = baseenvironment.BaseEnvironment
 
     __all__ = ["AbstractEnvironment", "BaseEnvironment"]
-
-

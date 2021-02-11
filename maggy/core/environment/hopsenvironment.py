@@ -1,19 +1,14 @@
-
-
-
-from hops import util as hopsutil
-from hops.experiment_impl.util import experiment_utils
-from hops import hdfs as hopshdfs
-from hops import constants
 import hsfs
-from maggy import tensorboard
-from maggy import util
-
 import json
 import os
 
+from hops import constants
+from hops import hdfs as hopshdfs
+from hops import util as hopsutil
+from hops.experiment_impl.util import experiment_utils
+from maggy import tensorboard
+from maggy import util
 from maggy.core.environment.abstractenvironment import AbstractEnvironment
-
 
 
 class HopsEnvironment(AbstractEnvironment):
@@ -25,18 +20,36 @@ class HopsEnvironment(AbstractEnvironment):
     def __init__(self, *args):
         self.constants = constants
 
-
     def set_ml_id(self, app_id, run_id):
-        return experiment_utils._set_ml_id(app_id,run_id)
+        return experiment_utils._set_ml_id(app_id, run_id)
 
     def create_experiment_dir(self, app_id, run_id):
-        return experiment_utils._create_experiment_dir(app_id,run_id)
+        return experiment_utils._create_experiment_dir(app_id, run_id)
 
     def get_logdir(self, app_id, run_id):
-        return experiment_utils._get_logdir(app_id,run_id)
+        return experiment_utils._get_logdir(app_id, run_id)
 
-    def populate_experiment(self, model_name, function, type, hp, description, app_id, direction, optimization_key):
-        return experiment_utils._populate_experiment(model_name, function, type, hp, description, app_id, direction, optimization_key)
+    def populate_experiment(
+        self,
+        model_name,
+        function,
+        type,
+        hp,
+        description,
+        app_id,
+        direction,
+        optimization_key,
+    ):
+        return experiment_utils._populate_experiment(
+            model_name,
+            function,
+            type,
+            hp,
+            description,
+            app_id,
+            direction,
+            optimization_key,
+        )
 
     def attach_experiment_xattr(self, ml_id, json_data, op_type):
         return experiment_utils._attach_experiment_xattr(ml_id, json_data, op_type)
@@ -51,39 +64,55 @@ class HopsEnvironment(AbstractEnvironment):
         return hopshdfs.mkdir(hdfs_path, project=project)
 
     def dump(self, data, hdfs_path):
-        return hopshdfs.dump(data,hdfs_path)
+        return hopshdfs.dump(data, hdfs_path)
 
-    def send_request(self, method, resource, data=None, headers=None, stream=False, files=None):
-        return hopsutil.send_request(method, resource, data=data, headers=headers, stream=stream, files=files)
+    def send_request(
+        self, method, resource, data=None, headers=None, stream=False, files=None
+    ):
+        return hopsutil.send_request(
+            method, resource, data=data, headers=headers, stream=stream, files=files
+        )
 
     def get_constants(self):
         return self.constants
 
-    def open_file(self, hdfs_path, project=None, flags='rw', buff_size=0):
-        return hopshdfs.open_file(hdfs_path, project=project, flags=flags, buff_size=buff_size)
+    def open_file(self, hdfs_path, project=None, flags="rw", buff_size=0):
+        return hopshdfs.open_file(
+            hdfs_path, project=project, flags=flags, buff_size=buff_size
+        )
 
+    def get_training_dataset_path(
+        self, training_dataset, featurestore=None, training_dataset_version=1
+    ):
+        return featurestore.get_training_dataset_path(
+            training_dataset,
+            featurestore=None,
+            training_dataset_version=training_dataset_version,
+        )
 
-    def get_training_dataset_path(self, training_dataset, featurestore=None, training_dataset_version=1):
-        return featurestore.get_training_dataset_path(training_dataset, featurestore=None,
-                                                      training_dataset_version=training_dataset_version)
-
-
-    def get_training_dataset_tf_record_schema(self, training_dataset, training_dataset_version=1, featurestore=None):
-        return featurestore.get_training_dataset_tf_record_schema(training_dataset,
-                                                                  training_dataset_version=training_dataset_version,
-                                                                  featurestore=featurestore)
-
+    def get_training_dataset_tf_record_schema(
+        self, training_dataset, training_dataset_version=1, featurestore=None
+    ):
+        return featurestore.get_training_dataset_tf_record_schema(
+            training_dataset,
+            training_dataset_version=training_dataset_version,
+            featurestore=featurestore,
+        )
 
     def get_featurestore_metadata(self, featurestore=None, update_cache=False):
-        return featurestore.get_featurestore_metadata(featurestore=featurestore, update_cache=update_cache)
+        return featurestore.get_featurestore_metadata(
+            featurestore=featurestore, update_cache=update_cache
+        )
 
     def init_ml_tracking(self, app_id, run_id):
         tensorboard._register(experiment_utils._get_logdir(app_id, run_id))
 
     def log_searchspace(self, app_id, run_id, searchspace):
-        tensorboard._write_hparams_config(experiment_utils._get_logdir(app_id,run_id), searchspace)
+        tensorboard._write_hparams_config(
+            experiment_utils._get_logdir(app_id, run_id), searchspace
+        )
 
-    def connect_host(self,server_sock,server_host_port, exp_driver):
+    def connect_host(self, server_sock, server_host_port, exp_driver):
         if not server_host_port:
             server_sock.bind(("", 0))
             # hostname may not be resolvable but IP address probably will be
@@ -141,31 +170,28 @@ class HopsEnvironment(AbstractEnvironment):
         return user
 
     def project_name(self):
-        #TODO implement
-        pass
-
+        return hopshdfs.project_name()
 
     def finalize_experiment(
-            self,
-            experiment_json,
-            metric,
-            app_id,
-            run_id,
-            state,
-            duration,
-            logdir,
-            best_logdir,
-            optimization_key,
+        self,
+        experiment_json,
+        metric,
+        app_id,
+        run_id,
+        state,
+        duration,
+        logdir,
+        best_logdir,
+        optimization_key,
     ):
-        """Attaches the experiment outcome as xattr metadata to the app directory.
-        """
+        """Attaches the experiment outcome as xattr metadata to the app directory."""
         outputs = self._build_summary_json(logdir)
 
         if outputs:
             self.dump(outputs, logdir + "/.summary.json")
 
         if best_logdir:
-            experiment_json["bestDir"] = best_logdir[len(self.project_path()):]
+            experiment_json["bestDir"] = best_logdir[len(self.project_path()) :]
         experiment_json["optimizationKey"] = optimization_key
         experiment_json["metric"] = metric
         experiment_json["state"] = state
@@ -176,16 +202,18 @@ class HopsEnvironment(AbstractEnvironment):
     def isdir(self, dir_path, project=None):
         return hopshdfs.isdir(dir_path, project=project)
 
-    def ls(self, dir_path,recursive=False,exclude_nn_addr=None):
-        return hopshdfs.ls(dir_path,recursive=recursive,exclude_nn_addr=exclude_nn_addr)
+    def ls(self, dir_path, recursive=False, exclude_nn_addr=None):
+        return hopshdfs.ls(
+            dir_path, recursive=recursive, exclude_nn_addr=exclude_nn_addr
+        )
 
     def delete(self, path, recursive=False):
-        return hopshdfs.delete(path,recursive=recursive)
+        return hopshdfs.delete(path, recursive=recursive)
 
     def _upload_file_output(self, retval, hdfs_exec_logdir):
-        return experiment_utils._upload_file_output(retval,hdfs_exec_logdir)
+        return experiment_utils._upload_file_output(retval, hdfs_exec_logdir)
 
-    def project_path(self,project=None,exclude_nn_addr=False):
+    def project_path(self, project=None, exclude_nn_addr=False):
         return hopshdfs.project_path(project=project, exclude_nn_addr=exclude_nn_addr)
 
     def str_or_byte(self, str):
@@ -210,7 +238,5 @@ class HopsEnvironment(AbstractEnvironment):
     def load(self, hparams_file):
         return hopshdfs.load(hparams_file)
 
-    def connect_hsfs(self,engine='training'):
+    def connect_hsfs(self, engine="training"):
         return hsfs.connection(engine=engine)
-
-

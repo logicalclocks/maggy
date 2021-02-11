@@ -36,6 +36,7 @@ class AbstractPruner(ABC):
         self.fd = None
 
         self.env = environment_singleton()
+
     @abstractmethod
     def pruning_routine(self):
         """

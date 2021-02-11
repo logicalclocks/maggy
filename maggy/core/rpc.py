@@ -14,21 +14,23 @@
 #   limitations under the License.
 #
 
-import threading
-import struct
-from pyspark import cloudpickle
-import time
-import select
-import socket
 import secrets
 
-from maggy.trial import Trial
+import select
+import socket
+import struct
+import threading
+import time
+from pyspark import cloudpickle
+
 from maggy.core.environment_singleton import environment_singleton
+from maggy.trial import Trial
 
 MAX_RETRIES = 3
 BUFSIZE = 1024 * 2
 
 server_host_port = None
+
 
 class Reservations(object):
     """Thread-safe store for worker reservations.
@@ -332,7 +334,9 @@ class Server(MessageSocket):
 
         server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        server_sock, server_host_port = env.connect_host(server_sock, server_host_port, exp_driver)
+        server_sock, server_host_port = env.connect_host(
+            server_sock, server_host_port, exp_driver
+        )
 
         def _listen(self, sock, driver):
             CONNECTIONS = []
@@ -473,9 +477,7 @@ class Client(MessageSocket):
 
     def start_heartbeat(self, reporter):
         def _heartbeat(self, report):
-
             while not self.done:
-
                 with report.lock:
                     metric, step, logs = report.get_data()
                     data = {"value": metric, "step": step}

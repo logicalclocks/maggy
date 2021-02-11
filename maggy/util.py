@@ -16,24 +16,23 @@
 
 """Utility helper module for maggy experiments.
 """
-import math
-import os
 import json
+import math
 import numpy as np
+import os
 from pyspark import TaskContext
-
-from maggy.core.environment_singleton import environment_singleton
 
 from maggy import constants
 from maggy.core import exceptions
-from maggy import util
+from maggy.core.environment_singleton import environment_singleton
+
 DEBUG = True
 
 # in case importing in %%local
 try:
     from pyspark.sql import SparkSession
     from pyspark import SparkConf
-except:
+except ImportError:
     pass
 
 
@@ -62,7 +61,6 @@ def num_executors(sc):
     return env.get_executors(sc)
 
 
-
 def get_partition_attempt_id():
     """Returns partitionId and attemptNumber of the task context, when invoked
     on a spark executor.
@@ -77,7 +75,6 @@ def get_partition_attempt_id():
 
 
 def _progress_bar(done, total):
-
     done_ratio = done / total
     progress = math.floor(done_ratio * 30)
 
@@ -119,22 +116,21 @@ def _finalize_experiment(
     best_logdir,
     optimization_key,
 ):
-
-    environment_singleton().finalize_experiment(experiment_json,
-                                                metric,
-                                                app_id,
-                                                run_id,
-                                                state,
-                                                duration,
-                                                logdir,
-                                                best_logdir,
-                                                optimization_key
-                                                )
+    environment_singleton().finalize_experiment(
+        experiment_json,
+        metric,
+        app_id,
+        run_id,
+        state,
+        duration,
+        logdir,
+        best_logdir,
+        optimization_key,
+    )
 
 
 def _build_summary_json(logdir):
-    """Builds the summary json to be read by the experiments service.
-    """
+    """Builds the summary json to be read by the experiments service."""
     combinations = []
     env = environment_singleton()
     for trial in env.ls(logdir):
@@ -150,8 +146,7 @@ def _build_summary_json(logdir):
 
 
 def _load_hparams(hparams_file):
-    """Loads the HParams configuration from a hparams file of a trial.
-    """
+    """Loads the HParams configuration from a hparams file of a trial."""
     env = environment_singleton()
 
     hparams_file_contents = env.load(hparams_file)
@@ -161,8 +156,7 @@ def _load_hparams(hparams_file):
 
 
 def _handle_return_val(return_val, log_dir, optimization_key, log_file):
-    """Handles the return value of the user defined training function.
-    """
+    """Handles the return value of the user defined training function."""
     env = environment_singleton()
 
     env._upload_file_output(return_val, log_dir)
@@ -205,8 +199,7 @@ def _handle_return_val(return_val, log_dir, optimization_key, log_file):
 
 
 def _clean_dir(clean_dir, keep=[]):
-    """Deletes all files in a directory but keeps a few.
-    """
+    """Deletes all files in a directory but keeps a few."""
     env = environment_singleton()
 
     if not env.isdir(clean_dir):
@@ -242,13 +235,17 @@ def _find_spark(conf=None):
     """
     Returns: SparkSession
     """
-    #sp = SparkSession.builder.getOrCreate()
-    #sp.stop()
+    # sp = SparkSession.builder.getOrCreate()
+    # sp.stop()
 
     conf = SparkConf()
     conf.set("num-executors", "1")
 
-    return SparkSession.builder.getOrCreate() if not conf else SparkSession.builder.config(conf=conf).getOrCreate()
+    return (
+        SparkSession.builder.getOrCreate()
+        if not conf
+        else SparkSession.builder.config(conf=conf).getOrCreate()
+    )
 
 
 def _seconds_to_milliseconds(time):
@@ -256,6 +253,7 @@ def _seconds_to_milliseconds(time):
     Returns: time converted from seconds to milliseconds
     """
     return int(round(time * 1000))
+
 
 def _time_diff(t0, t1):
     """
@@ -269,10 +267,10 @@ def _time_diff(t0, t1):
 
     millis = _seconds_to_milliseconds(t1) - _seconds_to_milliseconds(t0)
     millis = int(millis)
-    seconds=(millis/1000)%60
+    seconds = (millis / 1000) % 60
     seconds = int(seconds)
-    minutes=(millis/(1000*60))%60
+    minutes = (millis / (1000 * 60)) % 60
     minutes = int(minutes)
-    hours=(millis/(1000*60*60))%24
+    hours = (millis / (1000 * 60 * 60)) % 24
 
     return "%d hours, %d minutes, %d seconds" % (hours, minutes, seconds)

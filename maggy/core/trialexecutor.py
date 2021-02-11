@@ -18,18 +18,21 @@
 Module to produce the wrapper function to be executed by the executors.
 """
 
+import traceback
+
 import builtins as __builtin__
 import inspect
 import json
-import traceback
-
-#from hops import hdfs as hopshdfs
-#from hops.experiment_impl.util import experiment_utils
 
 from maggy import util, tensorboard
 from maggy.core import rpc, exceptions
-from maggy.core.reporter import Reporter
 from maggy.core.environment_singleton import environment_singleton
+from maggy.core.reporter import Reporter
+
+
+# from hops import hdfs as hopshdfs
+# from hops.experiment_impl.util import experiment_utils
+
 
 def _prepare_func(
     app_id,
