@@ -338,7 +338,13 @@ class AbstractOptimizer(ABC):
         :rtype: Trial
         """
         # validations
-        allowed_sample_type_values = ["random", "random_forced", "model", "promoted"]
+        allowed_sample_type_values = [
+            "random",
+            "random_forced",
+            "model",
+            "promoted",
+            "grid",
+        ]
         if sample_type not in allowed_sample_type_values:
             raise ValueError(
                 "expected sample_type to be in {}, got {}".format(

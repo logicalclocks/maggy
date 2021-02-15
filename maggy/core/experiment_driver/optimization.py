@@ -18,7 +18,7 @@ import json
 
 from maggy import util
 from maggy.searchspace import Searchspace
-from maggy.optimizer import AbstractOptimizer, RandomSearch, Asha, SingleRun
+from maggy.optimizer import AbstractOptimizer, RandomSearch, Asha, SingleRun, GridSearch
 from maggy.earlystop import AbstractEarlyStop, MedianStoppingRule, NoStoppingRule
 from maggy.optimizer import bayes
 from maggy.core.experiment_driver import base
@@ -71,6 +71,9 @@ class Driver(base.Driver):
         elif isinstance(optimizer, str):
             if optimizer.lower() == "randomsearch":
                 self.controller = RandomSearch()
+            elif optimizer.lower() == "gridsearch":
+                self.controller = GridSearch()
+                self.num_trials = self.controller.get_num_trials(searchspace)
             elif optimizer.lower() == "asha":
                 self.controller = Asha()
             elif optimizer.lower() == "tpe":
