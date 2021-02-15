@@ -26,15 +26,7 @@ class GridSearch(AbstractOptimizer):
         self.config_buffer = []
 
     def initialize(self):
-        if (
-            Searchspace.DOUBLE in self.searchspace.names().values()
-            and Searchspace.INTEGER in self.searchspace.names().values()
-        ):
-            raise NotImplementedError(
-                "Searchspace can only contain `discrete` or `categorical`"
-                "hyperparameters for grid search."
-            )
-
+        self.__class__._validate_searchspace(self.searchspace)
         # create all trials ahead of time
         self.config_buffer = self._grid_params(self.searchspace)
 
@@ -47,15 +39,7 @@ class GridSearch(AbstractOptimizer):
         the flow of things the same as for other optimizers, where the user sets only
         the number of trials to evaluate.
         """
-        if (
-            Searchspace.DOUBLE in searchspace.names().values()
-            and Searchspace.INTEGER in searchspace.names().values()
-        ):
-            raise NotImplementedError(
-                "Searchspace can only contain `discrete` or `categorical`"
-                "hyperparameters for grid search."
-            )
-
+        cls._validate_searchspace(searchspace)
         return len(cls._grid_params(searchspace))
 
     def get_suggestion(self, trial=None):
@@ -93,3 +77,14 @@ class GridSearch(AbstractOptimizer):
         ):
             return_list.append(searchspace.list_to_dict(hparams))
         return return_list
+
+    @classmethod
+    def _validate_searchspace(cls, searchspace):
+        if (
+            Searchspace.DOUBLE in searchspace.names().values()
+            and Searchspace.INTEGER in searchspace.names().values()
+        ):
+            raise NotImplementedError(
+                "Searchspace can only contain `discrete` or `categorical`"
+                "hyperparameters for grid search."
+            )
