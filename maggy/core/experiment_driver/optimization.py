@@ -73,6 +73,7 @@ class Driver(base.Driver):
                 self.controller = RandomSearch()
             elif optimizer.lower() == "gridsearch":
                 self.controller = GridSearch()
+                # number of trials need to be determined depending on searchspace of user
                 self.num_trials = self.controller.get_num_trials(searchspace)
             elif optimizer.lower() == "asha":
                 self.controller = Asha()

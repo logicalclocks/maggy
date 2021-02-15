@@ -35,10 +35,18 @@ class GridSearch(AbstractOptimizer):
                 "hyperparameters for grid search."
             )
 
+        # create all trials ahead of time
         self.config_buffer = self._grid_params(self.searchspace)
 
     @classmethod
     def get_num_trials(cls, searchspace):
+        """For grid search the number of trials is determined by the size of the
+        cartisian product, depending on the user-set number of parameters and values
+
+        This methos is duplicating part of the code in the `initialize()` mainly to keep
+        the flow of things the same as for other optimizers, where the user sets only
+        the number of trials to evaluate.
+        """
         if (
             Searchspace.DOUBLE in searchspace.names().values()
             and Searchspace.INTEGER in searchspace.names().values()
