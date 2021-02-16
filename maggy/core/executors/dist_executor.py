@@ -33,11 +33,11 @@ from hops.experiment_impl.util import experiment_utils
 from maggy import util, tensorboard
 from maggy.core import rpc
 from maggy.core.reporter import Reporter
-from maggy.distributed.patching import MaggyDataLoader
+from maggy.distributed.patching import MaggyPetaDataLoader
 
 
 torch.utils.data.DataLoader = (
-    MaggyDataLoader  # Patch data loader to always be distributed.
+    MaggyPetaDataLoader  # Patch data loader to always be distributed.
 )
 
 
@@ -81,18 +81,23 @@ def prepare_function(
         log_file = log_dir + "/executor_" + str(partition_id) + ".log"
 
         reporter = Reporter(log_file, partition_id, 0, __builtin__.print)
-        _setup_maggy_print(reporter)
+        builtin_print = __builtin__.print
 
+        def maggy_print(*args, **kwargs):
+            builtin_print(*args, **kwargs)
+            reporter.log(" ".join(str(x) for x in args), True)
+
+        __builtin__.print = maggy_print
         try:
             _register_with_servers(client, reporter, partition_id)
             tb_logdir, trial_log_file = _setup_logging(reporter, log_dir)
-            reporter.log("Awaiting worker reservations.")
+            reporter.log("Awaiting worker reservations.", True)
             client.await_reservations()
-            reporter.log("Reservations complete, configuring PyTorch.")
+            reporter.log("Reservations complete, configuring PyTorch.", True)
             config = client.get_torch_config()
             if not config:
                 reporter.log(
-                    "PyTorch registration failed, exiting from all tasks.", False
+                    "PyTorch registration failed, exiting from all tasks.", True
                 )
                 return
             addr, port = config["host_port"].split(":")
@@ -102,6 +107,7 @@ def prepare_function(
                 "WORLD_SIZE": str(config["num_executors"]),
                 "RANK": str(partition_id),
                 "NCCL_BLOCKING_WAIT": "1",
+                "NCCL_DEBUG_INFO": "INFO",
             }
             reporter.log(f"Torch config is {torch_config}")
 
@@ -110,7 +116,6 @@ def prepare_function(
             ddp_model = torch.nn.parallel.DistributedDataParallel(model.cuda())
 
             reporter.log("Starting distributed training.", True)
-            # device = torch.device(torch.cuda.current_device())
             sig = inspect.signature(train_fn)
             if sig.parameters.get("reporter", None):
                 retval = train_fn(
@@ -128,8 +133,8 @@ def prepare_function(
                 retval, tb_logdir, "Metric", trial_log_file
             )
 
-            reporter.log("Finished distributed training.", False)
-            reporter.log("Final metric: {}".format(retval), False)
+            reporter.log("Finished distributed training.", True)
+            reporter.log("Final metric: {}".format(retval), True)
             client.finalize_metric(retval, reporter)
         except:  # noqa: E722
             reporter.log(traceback.format_exc(), False)
@@ -143,22 +148,6 @@ def prepare_function(
             client.close()
 
     return wrapper_function
-
-
-def _setup_maggy_print(reporter):
-    """Modifies printing in the train function to also write to the logger.
-
-    Args:
-        reporter (Reporter): Reporter object responsible for logging.
-    """
-    builtin_print = __builtin__.print
-
-    def maggy_print(*args, **kwargs):
-        """Maggy custom print() function."""
-        builtin_print(*args, **kwargs)
-        reporter.log(" ".join(str(x) for x in args), True)
-
-    __builtin__.print = maggy_print
 
 
 def _register_with_servers(client, reporter, partition_id):
@@ -215,13 +204,7 @@ def _setup_torch_env(torch_config):
     Args:
         torch_config (dict): Dictionary containing the values of the variables.
     """
-    for env_variable in [
-        "MASTER_ADDR",
-        "MASTER_PORT",
-        "WORLD_SIZE",
-        "RANK",
-        "NCCL_BLOCKING_WAIT",
-    ]:
+    for env_variable in torch_config.keys():
         os.environ[env_variable] = str(torch_config[env_variable])
 
 
