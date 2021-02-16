@@ -115,7 +115,7 @@ def lagom(
         raise RuntimeError("An experiment is currently running.")
 
     job_start = time.time()
-    sc = util._find_spark().sparkContext
+    sc = util.find_spark().sparkContext
     exp_driver = None
 
     env = environment_singleton()
@@ -126,7 +126,7 @@ def lagom(
         global run_id
         app_id = str(sc.applicationId)
 
-        app_id, run_id = util._validate_ml_id(app_id, run_id)
+        app_id, run_id = util.validate_ml_id(app_id, run_id)
 
         # start run
         running = True
@@ -212,9 +212,7 @@ def lagom(
             exp_ml_id, experiment_json, "INIT"
         )
 
-        util._log(
-            "Started Maggy Experiment: {0}, {1}, run {2}".format(name, app_id, run_id)
-        )
+        util.log("Started Maggy Experiment: {0}, {1}, run {2}".format(name, app_id, run_id))
 
         exp_driver.init(job_start)
 
@@ -239,24 +237,15 @@ def lagom(
         result = exp_driver.finalize(job_end)
         best_logdir = env.get_logdir(app_id, run_id) + "/" + result["best_id"]
 
-        util._finalize_experiment(
-            experiment_json,
-            float(result["best_val"]),
-            app_id,
-            run_id,
-            "FINISHED",
-            exp_driver.duration,
-            env.get_logdir(app_id, run_id),
-            best_logdir,
-            optimization_key,
-        )
+        util.finalize_experiment(experiment_json, float(result["best_val"]), app_id, run_id, "FINISHED",
+                                 exp_driver.duration, env.get_logdir(app_id, run_id), best_logdir, optimization_key)
 
-        util._log("Finished Experiment")
+        util.log("Finished Experiment")
 
         return result
 
     except:  # noqa: E722
-        _exception_handler(util._seconds_to_milliseconds(time.time() - job_start))
+        _exception_handler(util.seconds_to_milliseconds(time.time() - job_start))
         if exp_driver:
             if experiment_type == "optimization":
                 # close logfiles of optimizer
@@ -299,7 +288,7 @@ def _exception_handler(duration):
             exp_ml_id = app_id + "_" + str(run_id)
             env.attach_experiment_xattr(exp_ml_id, experiment_json, "FULL_UPDATE")
     except Exception as err:
-        util._log(err)
+        util.log(err)
 
 
 def _exit_handler():
@@ -316,7 +305,7 @@ def _exit_handler():
             exp_ml_id = app_id + "_" + str(run_id)
             env.attach_experiment_xattr(exp_ml_id, experiment_json, "FULL_UPDATE")
     except Exception as err:
-        util._log(err)
+        util.log(err)
 
 
 atexit.register(_exit_handler)

@@ -81,7 +81,7 @@ class BaseEnvironment(AbstractEnvironment):
         file.write(data)
 
     def get_ip_address(self):
-        sc = util._find_spark().sparkContext
+        sc = util.find_spark().sparkContext
         return sc._conf.get("spark.driver.host")
 
     def get_constants(self):

@@ -121,7 +121,7 @@ def _prepare_func(
 
                 # If trial is repeated, delete trial directory, except log file
                 if env.exists(tb_logdir):
-                    util._clean_dir(tb_logdir, [trial_log_file])
+                    util.clean_dir(tb_logdir, [trial_log_file])
                 else:
                     env.mkdir(tb_logdir)
 
@@ -152,9 +152,7 @@ def _prepare_func(
                     else:
                         retval = train_fn(**parameters)
 
-                    retval = util._handle_return_val(
-                        retval, tb_logdir, optimization_key, trial_log_file
-                    )
+                    retval = util.handle_return_val(retval, tb_logdir, optimization_key, trial_log_file)
 
                 except exceptions.EarlyStopException as e:
                     retval = e.metric

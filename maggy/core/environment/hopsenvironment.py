@@ -136,7 +136,7 @@ class HopsEnvironment(AbstractEnvironment):
             port = server_sock.getsockname()[1]
             server_host_port = (host, port)
             # register this driver with Hopsworks
-            sc = util._find_spark().sparkContext
+            sc = util.find_spark().sparkContext
             app_id = str(sc.applicationId)
 
             hopscons = self.get_constants()
@@ -167,11 +167,11 @@ class HopsEnvironment(AbstractEnvironment):
 
                 if (response.status_code // 100) != 2:
                     print("No connection to Hopsworks for logging.")
-                    exp_driver._log("No connection to Hopsworks for logging.")
+                    exp_driver.log("No connection to Hopsworks for logging.")
             except Exception as e:
                 print("Connection failed to Hopsworks. No logging.")
-                exp_driver._log(e)
-                exp_driver._log("Connection failed to Hopsworks. No logging.")
+                exp_driver.log(e)
+                exp_driver.log("Connection failed to Hopsworks. No logging.")
         else:
             server_sock.bind(server_host_port)
 
@@ -246,7 +246,7 @@ class HopsEnvironment(AbstractEnvironment):
             )
 
     def _build_summary_json(self, logdir):
-        return util._build_summary_json(logdir)
+        return util.build_summary_json(logdir)
 
     def _convert_return_file_to_arr(self, return_file):
         return experiment_utils._convert_return_file_to_arr(return_file)

@@ -104,11 +104,9 @@ class Driver(ABC):
     def finalize(self, job_end):
         self.job_end = job_end
 
-        self.duration = util._seconds_to_milliseconds(
-            self.job_end - self.job_start
-        )
+        self.duration = util.seconds_to_milliseconds(self.job_end - self.job_start)
 
-        self.duration_str = util._time_diff(self.job_start, self.job_end)
+        self.duration_str = util.time_diff(self.job_start, self.job_end)
 
         results = self.prep_results()
 
@@ -119,7 +117,7 @@ class Driver(ABC):
             json.dumps(self.result, default=util.json_default_numpy),
             self.log_dir + "/result.json",
         )
-        sc = util._find_spark().sparkContext
+        sc = util.find_spark().sparkContext
         self.env.dump(self.json(sc), self.log_dir + "/maggy.json")
 
         return self.result
@@ -182,12 +180,10 @@ class Driver(ABC):
                                                 self.direction,
                                             )
                                         except Exception as e:
-                                            self._log(e)
+                                            self.log(e)
                                             to_stop = None
                                         if to_stop is not None:
-                                            self._log(
-                                                "Trials to stop: {}".format(to_stop)
-                                            )
+                                            self.log("Trials to stop: {}".format(to_stop))
                                             self.get_trial(to_stop).set_early_stop()
 
                     # 2. BLACKLIST the trial
@@ -214,9 +210,7 @@ class Driver(ABC):
                         with trial.lock:
                             trial.status = Trial.FINALIZED
                             trial.final_metric = msg["data"]
-                            trial.duration = util._seconds_to_milliseconds(
-                                time.time() - trial.start
-                            )
+                            trial.duration = util.seconds_to_milliseconds(time.time() - trial.start)
 
                         # move trial to the finalized ones
                         self._final_store.append(trial)
@@ -226,7 +220,7 @@ class Driver(ABC):
                         self._update_result(trial)
                         # keep for later in case tqdm doesn't work
                         self.maggy_log = self._update_maggy_log()
-                        self._log(self.maggy_log)
+                        self.log(self.maggy_log)
 
                         self.env.dump(
                             trial.to_json(),
@@ -308,7 +302,7 @@ class Driver(ABC):
             except Exception as exc:
                 # Exception can't be propagated to parent thread
                 # therefore log the exception and fail experiment
-                self._log(exc)
+                self.log(exc)
                 self.exception = exc
                 self.server.stop()
 

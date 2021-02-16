@@ -358,12 +358,8 @@ class Server(MessageSocket):
                             if not secrets.compare_digest(
                                 msg["secret"], exp_driver._secret
                             ):
-                                exp_driver._log(
-                                    "SERVER secret: {}".format(exp_driver._secret)
-                                )
-                                exp_driver._log(
-                                    "ERROR: wrong secret {}".format(msg["secret"])
-                                )
+                                exp_driver.log("SERVER secret: {}".format(exp_driver._secret))
+                                exp_driver.log("ERROR: wrong secret {}".format(msg["secret"]))
                                 raise Exception
 
                             self._handle_message(sock, msg, driver)

@@ -36,7 +36,7 @@ except ImportError:
     pass
 
 
-def _log(msg):
+def log(msg):
     """
     Generic log function (in case logging is changed from stdout later)
 
@@ -74,7 +74,7 @@ def get_partition_attempt_id():
     return task_context.partitionId(), task_context.attemptNumber()
 
 
-def _progress_bar(done, total):
+def progress_bar(done, total):
     done_ratio = done / total
     progress = math.floor(done_ratio * 30)
 
@@ -105,7 +105,7 @@ def json_default_numpy(obj):
         )
 
 
-def _finalize_experiment(
+def finalize_experiment(
     experiment_json,
     metric,
     app_id,
@@ -129,7 +129,7 @@ def _finalize_experiment(
     )
 
 
-def _build_summary_json(logdir):
+def build_summary_json(logdir):
     """Builds the summary json to be read by the experiments service."""
     combinations = []
     env = environment_singleton()
@@ -155,7 +155,7 @@ def _load_hparams(hparams_file):
     return hparams
 
 
-def _handle_return_val(return_val, log_dir, optimization_key, log_file):
+def handle_return_val(return_val, log_dir, optimization_key, log_file):
     """Handles the return value of the user defined training function."""
     env = environment_singleton()
 
@@ -198,7 +198,7 @@ def _handle_return_val(return_val, log_dir, optimization_key, log_file):
     return opt_val
 
 
-def _clean_dir(clean_dir, keep=[]):
+def clean_dir(clean_dir, keep=[]):
     """Deletes all files in a directory but keeps a few."""
     env = environment_singleton()
 
@@ -212,7 +212,7 @@ def _clean_dir(clean_dir, keep=[]):
             env.delete(path, recursive=True)
 
 
-def _validate_ml_id(app_id, run_id):
+def validate_ml_id(app_id, run_id):
     """Validates if there was an experiment run previously from the same app id
     but from a different experiment (e.g. hops-util-py vs. maggy) module.
     """
@@ -231,7 +231,7 @@ def _validate_ml_id(app_id, run_id):
     return app_id, run_id
 
 
-def _find_spark(conf=None):
+def find_spark(conf=None):
     """
     Returns: SparkSession
     """
@@ -248,14 +248,14 @@ def _find_spark(conf=None):
     )
 
 
-def _seconds_to_milliseconds(time):
+def seconds_to_milliseconds(time):
     """
     Returns: time converted from seconds to milliseconds
     """
     return int(round(time * 1000))
 
 
-def _time_diff(t0, t1):
+def time_diff(t0, t1):
     """
     Args:
         :t0: start time in seconds
@@ -265,7 +265,7 @@ def _time_diff(t0, t1):
 
     """
 
-    millis = _seconds_to_milliseconds(t1) - _seconds_to_milliseconds(t0)
+    millis = seconds_to_milliseconds(t1) - seconds_to_milliseconds(t0)
     millis = int(millis)
     seconds = (millis / 1000) % 60
     seconds = int(seconds)
