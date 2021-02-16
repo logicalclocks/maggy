@@ -24,7 +24,7 @@ from datetime import datetime
 from maggy import constants
 from maggy.core import exceptions
 
-from maggy.core.environment_singleton import environment_singleton
+from maggy.core.environment.singleton import EnvSing
 
 
 class Reporter(object):
@@ -45,23 +45,23 @@ class Reporter(object):
         self.task_attempt = task_attempt
         self.print_executor = print_executor
 
-        self.env = environment_singleton()
-
         # Open executor log file descriptor
         # This log is for all maggy system related log messages
-        if not self.env.exists(log_file):
-            self.env.dump("", log_file)
-        self.fd = self.env.open_file(log_file, flags="w+")
+        env = EnvSing.get_instance()
+        if not env.exists(log_file):
+            env.dump("", log_file)
+        self.fd = env.open_file(log_file, flags="w+")
         self.trial_fd = None
 
     def init_logger(self, trial_log_file):
         """Initializes the trial log file
         """
         self.trial_log_file = trial_log_file
+        env = EnvSing.get_instance()
         # Open trial log file descriptor
-        if not self.env.exists(self.trial_log_file):
-            self.env.dump("", self.trial_log_file)
-        self.trial_fd = self.env.open_file(self.trial_log_file, flags="w+")
+        if not env.exists(self.trial_log_file):
+            env.dump("", self.trial_log_file)
+        self.trial_fd = env.open_file(self.trial_log_file, flags="w+")
 
     def close_logger(self):
         """Savely closes the file descriptors of the log files.
@@ -111,18 +111,19 @@ class Reporter(object):
         :type verbose: bool, optional
         """
         with self.lock:
+            env = EnvSing.get_instance()
             try:
                 msg = (datetime.now().isoformat() + " ({0}/{1}): {2} \n").format(
                     self.partition_id, self.task_attempt, log_msg
                 )
                 if jupyter:
                     jupyter_log = str(self.partition_id) + ": " + log_msg
-                    self.trial_fd.write(environment_singleton().str_or_byte(msg))
+                    self.trial_fd.write(env.str_or_byte(msg))
                     self.logs = self.logs + jupyter_log + "\n"
                 else:
-                    self.fd.write(environment_singleton().str_or_byte(msg))
+                    self.fd.write(env.str_or_byte(msg))
                     if self.trial_fd:
-                        self.trial_fd.write(environment_singleton().str_or_byte(msg))
+                        self.trial_fd.write(env.str_or_byte(msg))
                     self.print_executor(msg)
             # Throws ValueError when operating on closed HDFS file object
             # Throws AttributeError when calling file ops on NoneType object

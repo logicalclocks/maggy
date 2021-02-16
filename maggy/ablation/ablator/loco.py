@@ -17,7 +17,7 @@
 import json
 
 from maggy.ablation.ablator import AbstractAblator
-from maggy.core.environment_singleton import environment_singleton
+from maggy.core.environment.singleton import EnvSing
 from maggy.core.exceptions import BadArgumentsError
 from maggy.core.exceptions import NotSupportedError
 from maggy.trial import Trial
@@ -27,7 +27,6 @@ class LOCO(AbstractAblator):
     def __init__(self, ablation_study, final_store):
         super().__init__(ablation_study, final_store)
         self.base_dataset_generator = self.get_dataset_generator(ablated_feature=None)
-        self.env = environment_singleton()
 
     def get_number_of_trials(self):
         # the final ' + 1 ' is for the base (reference) trial with all the components
@@ -54,7 +53,7 @@ class LOCO(AbstractAblator):
             if dataset_type == "tfrecord":
 
                 def create_tf_dataset(num_epochs, batch_size):
-                    conn = environment_singleton().connect_hsfs(engine="training")
+                    conn = EnvSing.get_instance().connect_hsfs(engine="training")
                     fs = conn.get_feature_store()
 
                     td = fs.get_training_dataset(

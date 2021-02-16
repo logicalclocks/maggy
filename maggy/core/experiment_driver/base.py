@@ -21,13 +21,12 @@ maggy.
 import queue
 import threading
 import json
-import os
 import secrets
 import time
 from abc import ABC, abstractmethod
 from datetime import datetime
 
-from maggy.core.environment_singleton import environment_singleton
+from maggy.core.environment.singleton import EnvSing
 
 from maggy import util
 from maggy.core import rpc
@@ -78,11 +77,11 @@ class Driver(ABC):
                 )
             )
 
-        self.env = environment_singleton()
+        env = EnvSing.get_instance()
         # Open File desc for HDFS to log
-        if not self.env.exists(self.log_file):
-            self.env.dump("", self.log_file)
-        self.fd = self.env.open_file(self.log_file, flags="w+")
+        if not env.exists(self.log_file):
+            env.dump("", self.log_file)
+        self.fd = env.open_file(self.log_file, flags="w")
 
         # overwritten for optimization
         self.es_interval = None
@@ -113,12 +112,12 @@ class Driver(ABC):
         print(results)
         self._log(results)
 
-        self.env.dump(
+        EnvSing.get_instance().dump(
             json.dumps(self.result, default=util.json_default_numpy),
             self.log_dir + "/result.json",
         )
         sc = util.find_spark().sparkContext
-        self.env.dump(self.json(sc), self.log_dir + "/maggy.json")
+        EnvSing.get_instance().dump(self.json(sc), self.log_dir + "/maggy.json")
 
         return self.result
 
@@ -222,7 +221,7 @@ class Driver(ABC):
                         self.maggy_log = self._update_maggy_log()
                         self.log(self.maggy_log)
 
-                        self.env.dump(
+                        EnvSing.get_instance().dump(
                             trial.to_json(),
                             self.log_dir + "/" + trial.trial_id + "/trial.json",
                         )
@@ -325,12 +324,12 @@ class Driver(ABC):
         """Get all relevant experiment information in JSON format.
         """
         user = None
-        cons = self.env.get_constants()
+        cons = EnvSing.get_instance().get_constants()
 
-        user = environment_singleton().get_user()
+        user = EnvSing.get_instance().get_user()
 
         experiment_json = {
-            "project": self.env.project_name(),
+            "project": EnvSing.get_instance().project_name(),
             "user": user,
             "name": self.name,
             "module": "maggy",
@@ -453,4 +452,4 @@ class Driver(ABC):
         """Logs a string to the maggy driver log file.
         """
         msg = datetime.now().isoformat() + ": " + str(log_msg)
-        self.fd.write(environment_singleton().str_or_byte(msg + "\n"))
+        self.fd.write(EnvSing.get_instance().str_or_byte(msg + "\n"))

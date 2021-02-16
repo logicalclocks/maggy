@@ -26,7 +26,7 @@ import json
 
 from maggy import util, tensorboard
 from maggy.core import rpc, exceptions
-from maggy.core.environment_singleton import environment_singleton
+from maggy.core.environment.singleton import EnvSing
 from maggy.core.reporter import Reporter
 
 
@@ -56,7 +56,8 @@ def _prepare_func(
         Returns:
 
         """
-        env = environment_singleton()
+        env = EnvSing.get_instance()
+
         env.set_ml_id(app_id, run_id)
 
         # get task context information to determine executor identifier

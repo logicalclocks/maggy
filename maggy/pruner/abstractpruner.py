@@ -17,7 +17,7 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
 
-from maggy.core.environment_singleton import environment_singleton
+from maggy.core.environment.singleton import EnvSing
 
 
 class AbstractPruner(ABC):
@@ -34,8 +34,6 @@ class AbstractPruner(ABC):
         # logger variables
         self.log_file = None
         self.fd = None
-
-        self.env = environment_singleton()
 
     @abstractmethod
     def pruning_routine(self):
@@ -77,18 +75,19 @@ class AbstractPruner(ABC):
         :param exp_dir: path of experiment directory
         :rtype exp_dir: str
         """
-
+        env = EnvSing.get_instance()
         # configure logger
         self.log_file = exp_dir + "/pruner.log"
-        if not self.env.exists(self.log_file):
-            self.env.dump("", self.log_file)
-        self.fd = self.env.open_file(self.log_file, flags="w")
+
+        if not env.exists(self.log_file):
+            env.dump("", self.log_file)
+        self.fd = env.open_file(self.log_file, flags="w")
         self._log("Initialized Pruner Logger")
 
     def _log(self, msg):
         if self.fd and not self.fd.closed:
             msg = datetime.now().isoformat() + ": " + str(msg)
-            self.fd.write(environment_singleton().str_or_byte(msg + "\n"))
+            self.fd.write(EnvSing.get_instance().str_or_byte(msg + "\n"))
 
     def _close_log(self):
         if not self.fd.closed:

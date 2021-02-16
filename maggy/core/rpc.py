@@ -23,7 +23,7 @@ import threading
 import time
 from pyspark import cloudpickle
 
-from maggy.core.environment_singleton import environment_singleton
+from maggy.core.environment.singleton import EnvSing
 from maggy.trial import Trial
 
 MAX_RETRIES = 3
@@ -50,8 +50,6 @@ class Reservations(object):
         self.lock = threading.RLock()
         self.reservations = {}
         self.check_done = False
-
-        self.env = environment_singleton()
 
     def add(self, meta):
         """
@@ -330,11 +328,10 @@ class Server(MessageSocket):
             address of the Server as a tuple of (host, port)
         """
         global server_host_port
-        env = environment_singleton()
 
         server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        server_sock, server_host_port = env.connect_host(
+        server_sock, server_host_port = EnvSing.get_instance().connect_host(
             server_sock, server_host_port, exp_driver
         )
 
@@ -400,7 +397,7 @@ class Client(MessageSocket):
         self.server_addr = server_addr
         self.done = False
         self.client_addr = (
-            environment_singleton().get_ip_address(),
+            EnvSing.get_instance().get_ip_address(),
             self.sock.getsockname()[1],
         )
         self.partition_id = partition_id

@@ -14,28 +14,26 @@
 #   limitations under the License.
 #
 
-from abc import ABC, abstractmethod
+import os
 
+import maggy.util as util
 
-class AbstractEnvironment(ABC):
-    """
-    Abstract class for environment definition.
-    Define all the methods within this class to use a custom environment.
-    """
+class BaseEnv():
+    def __init__(self, *args):
+        self.log_dir = os.path.join(os.getcwd(), "experiment_log")
+        if not os.path.exists(self.log_dir):
+            os.mkdir(self.log_dir)
+        self.constants = []
 
-    @abstractmethod
-    def set_ml_id(self, app_id, run_id):
-        pass
+    def set_ml_id(self, app_id=0, run_id=0):
+        os.environ["ML_ID"] = str(app_id) + "_" + str(run_id)
 
-    @abstractmethod
     def create_experiment_dir(self, app_id, run_id):
         pass
 
-    @abstractmethod
     def get_logdir(self, app_id, run_id):
-        pass
+        return self.log_dir
 
-    @abstractmethod
     def populate_experiment(
         self,
         model_name,
@@ -49,91 +47,94 @@ class AbstractEnvironment(ABC):
     ):
         pass
 
-    @abstractmethod
     def attach_experiment_xattr(self, exp_ml_id, experiment_json, command):
         pass
 
-    @abstractmethod
     def exists(self, hdfs_path, project=None):
-        pass
+        return os.path.exists(hdfs_path)
 
-    @abstractmethod
     def mkdir(self, hdfs_path, project=None):
         pass
 
-    @abstractmethod
+    def isdir(self, dir_path):
+        return os.path.isdir(dir_path)
+
+    def ls(self, dir_path):
+        _, dirnames, filenames = next(os.walk(dir_path))
+
+        return dirnames + filenames
+
+    def delete(self, path, recursive=False):
+        if self.exists(path):
+            if os.path.isdir(path):
+                os.rmdir(path)
+            elif os.path.isfile(path):
+                os.remove(path)
+
     def dump(self, data, hdfs_path):
-        pass
+        head_tail = os.path.split(hdfs_path)
+        if not os.path.exists(head_tail[0]):
+            os.mkdir(head_tail[0])
+        file = self.open_file(hdfs_path, flags="w+")
+        file.write(data)
 
-    @abstractmethod
     def get_ip_address(self):
-        pass
+        sc = util.find_spark().sparkContext
+        return sc._conf.get("spark.driver.host")
 
-    @abstractmethod
     def get_constants(self):
         pass
 
-    @abstractmethod
     def open_file(self, hdfs_path, project=None, flags="rw", buff_size=0):
-        pass
+        return open(hdfs_path, mode=flags)
 
-    @abstractmethod
     def get_training_dataset_path(
         self, training_dataset, featurestore=None, training_dataset_version=1
     ):
         pass
 
-    @abstractmethod
     def get_training_dataset_tf_record_schema(
         self, training_dataset, training_dataset_version=1, featurestore=None
     ):
         pass
 
-    @abstractmethod
     def get_featurestore_metadata(self, featurestore=None, update_cache=False):
         pass
 
-    @abstractmethod
     def init_ml_tracking(self, app_id, run_id):
         pass
 
-    @abstractmethod
     def log_searchspace(self, app_id, run_id, searchspace):
         pass
 
-    @abstractmethod
     def connect_host(self, server_sock, server_host_port, exp_driver):
-        pass
+        if not server_host_port:
+            server_sock.bind(("", 0))
+            host = self.get_ip_address()
+            port = server_sock.getsockname()[1]
+            server_host_port = (host, port)
 
-    @abstractmethod
-    def isdir(self, dir_path, project=None):
-        pass
+        else:
+            server_sock.bind(server_host_port)
 
-    @abstractmethod
-    def ls(self, dir_path, recursive=False, project=None):
-        pass
+        server_sock.listen(10)
 
-    @abstractmethod
-    def delete(self, path, recursive=False):
-        pass
+        return server_sock, server_host_port
 
-    @abstractmethod
     def _upload_file_output(self, retval, hdfs_exec_logdir):
         pass
 
-    @abstractmethod
-    def project_path(self, project=None, exclude_nn_addr=False):
-        pass
+    def project_path(self):
+        return os.getcwd()
 
-    @abstractmethod
     def get_user(self):
-        pass
+        # TODO retrieve user info from databricks
+        return ""
 
-    @abstractmethod
     def project_name(self):
-        pass
+        # TODO retrieve project_name from databricks
+        return ""
 
-    @abstractmethod
     def finalize_experiment(
         self,
         experiment_json,
@@ -148,22 +149,11 @@ class AbstractEnvironment(ABC):
     ):
         pass
 
-    @abstractmethod
     def str_or_byte(self, str):
-        pass
+        return str
 
-    @abstractmethod
     def get_executors(self, sc):
-        pass
-
-    @abstractmethod
-    def _build_summary_json(self, logdir):
-        pass
-
-    @abstractmethod
-    def _convert_return_file_to_arr(self, return_file):
-        pass
-
-    @abstractmethod
-    def connect_hsfs(self, engine="training"):
-        pass
+        try:
+            return int(sc._conf.get("num-executors"))
+        except:  # noqa: E722
+            raise RuntimeError("Failed to find spark properties.")

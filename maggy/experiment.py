@@ -31,7 +31,7 @@ import time
 
 from maggy import util
 from maggy.core import trialexecutor
-from maggy.core.environment_singleton import environment_singleton
+from maggy.core.environment.singleton import EnvSing
 from maggy.core.experiment_driver import optimization, ablation
 
 app_id = None
@@ -118,7 +118,7 @@ def lagom(
     sc = util.find_spark().sparkContext
     exp_driver = None
 
-    env = environment_singleton()
+    env = EnvSing.get_instance()
 
     try:
         global app_id
@@ -278,7 +278,6 @@ def _exception_handler(duration):
     :type duration: int
     """
     try:
-        env = environment_singleton()
 
         global running
         global experiment_json
@@ -286,7 +285,7 @@ def _exception_handler(duration):
             experiment_json["state"] = "FAILED"
             experiment_json["duration"] = duration
             exp_ml_id = app_id + "_" + str(run_id)
-            env.attach_experiment_xattr(exp_ml_id, experiment_json, "FULL_UPDATE")
+            EnvSing.get_instance().attach_experiment_xattr(exp_ml_id, experiment_json, "FULL_UPDATE")
     except Exception as err:
         util.log(err)
 
@@ -296,14 +295,13 @@ def _exit_handler():
     Handles jobs killed by the user.
     """
     try:
-        env = environment_singleton()
 
         global running
         global experiment_json
         if running and experiment_json is not None:
             experiment_json["status"] = "KILLED"
             exp_ml_id = app_id + "_" + str(run_id)
-            env.attach_experiment_xattr(exp_ml_id, experiment_json, "FULL_UPDATE")
+            EnvSing.get_instance().attach_experiment_xattr(exp_ml_id, experiment_json, "FULL_UPDATE")
     except Exception as err:
         util.log(err)
 

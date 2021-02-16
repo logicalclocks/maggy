@@ -24,7 +24,7 @@ from pyspark import TaskContext
 
 from maggy import constants
 from maggy.core import exceptions
-from maggy.core.environment_singleton import environment_singleton
+from maggy.core.environment.singleton import EnvSing
 
 DEBUG = True
 
@@ -57,8 +57,7 @@ def num_executors(sc):
     :rtype: int
     """
 
-    env = environment_singleton()
-    return env.get_executors(sc)
+    return EnvSing.get_instance().get_executors(sc)
 
 
 def get_partition_attempt_id():
@@ -116,7 +115,7 @@ def finalize_experiment(
     best_logdir,
     optimization_key,
 ):
-    environment_singleton().finalize_experiment(
+    EnvSing.get_instance().finalize_experiment(
         experiment_json,
         metric,
         app_id,
@@ -132,7 +131,7 @@ def finalize_experiment(
 def build_summary_json(logdir):
     """Builds the summary json to be read by the experiments service."""
     combinations = []
-    env = environment_singleton()
+    env = EnvSing.get_instance()
     for trial in env.ls(logdir):
         if env.isdir(trial):
             return_file = trial + "/.outputs.json"
@@ -147,9 +146,8 @@ def build_summary_json(logdir):
 
 def _load_hparams(hparams_file):
     """Loads the HParams configuration from a hparams file of a trial."""
-    env = environment_singleton()
 
-    hparams_file_contents = env.load(hparams_file)
+    hparams_file_contents = EnvSing.get_instance().load(hparams_file)
     hparams = json.loads(hparams_file_contents)
 
     return hparams
@@ -157,7 +155,7 @@ def _load_hparams(hparams_file):
 
 def handle_return_val(return_val, log_dir, optimization_key, log_file):
     """Handles the return value of the user defined training function."""
-    env = environment_singleton()
+    env = EnvSing.get_instance()
 
     env._upload_file_output(return_val, log_dir)
 
@@ -200,7 +198,7 @@ def handle_return_val(return_val, log_dir, optimization_key, log_file):
 
 def clean_dir(clean_dir, keep=[]):
     """Deletes all files in a directory but keeps a few."""
-    env = environment_singleton()
+    env = EnvSing.get_instance()
 
     if not env.isdir(clean_dir):
         raise ValueError(
