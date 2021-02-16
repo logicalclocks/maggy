@@ -95,6 +95,9 @@ class Driver(base.Driver):
         elif isinstance(optimizer, AbstractOptimizer):
             self.controller = optimizer
             print("Custom Optimizer initialized.")
+
+            if isinstance(optimizer, GridSearch):
+                self.num_trials = self.controller.get_num_trials(searchspace)
         else:
             raise Exception(
                 "The experiment's optimizer should either be an string indicating the name "
