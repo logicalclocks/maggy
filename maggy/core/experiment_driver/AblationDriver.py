@@ -25,9 +25,21 @@ from maggy.core.experiment_driver.Driver import Driver
 
 
 class AblationDriver(Driver):
-    def __init__(self, ablator, ablation_study, name, description, direction, num_executors,
-                 hb_interval, log_dir):
-        super().__init__(name, description, direction, num_executors, hb_interval, log_dir)
+    def __init__(
+        self,
+        ablator,
+        ablation_study,
+        name,
+        description,
+        direction,
+        num_executors,
+        hb_interval,
+        log_dir,
+    ):
+        super().__init__(
+            name, description, direction, num_executors, hb_interval, log_dir
+        )
+        self.exp_type = "ablation"
         # set up an ablation study experiment
         self.earlystop_check = NoStoppingRule.earlystop_check
 
@@ -38,7 +50,9 @@ class AblationDriver(Driver):
                 "The experiment's ablation study configuration should be an instance of "
                 "maggy.ablation.AblationStudy, "
                 "but it is {0} (of type '{1}').".format(
-                    str(ablation_study), type(ablation_study).__name__))
+                    str(ablation_study), type(ablation_study).__name__
+                )
+            )
 
         if isinstance(ablator, str):
             if ablator.lower() == "loco":
@@ -50,7 +64,9 @@ class AblationDriver(Driver):
                     "The experiment's ablation study policy should either be a string ('loco') "
                     "or a custom policy that is an instance of maggy.ablation.ablation.AbstractAblator, "
                     "but it is {0} (of type '{1}').".format(
-                        str(ablator), type(ablator).__name__))
+                        str(ablator), type(ablator).__name__
+                    )
+                )
         elif isinstance(ablator, AbstractAblator):
             self.controller = ablator
             print("Custom Ablator initialized. \n")
@@ -58,7 +74,10 @@ class AblationDriver(Driver):
             raise Exception(
                 "The experiment's ablation study policy should either be a string ('loco') "
                 "or a custom policy that is an instance of maggy.ablation.ablation.AbstractAblator, "
-                "but it is {0} (of type '{1}').".format(str(ablator), type(ablator).__name__))
+                "but it is {0} (of type '{1}').".format(
+                    str(ablator), type(ablator).__name__
+                )
+            )
 
         self.result = {"best_val": "n.a.", "num_trials": 0, "early_stopped": "n.a"}
 

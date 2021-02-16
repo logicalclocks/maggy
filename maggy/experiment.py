@@ -134,7 +134,6 @@ def lagom(
     job_start = time.time()
     sc = hopsutil._find_spark().sparkContext
     exp_driver = None
-
     try:
         global app_id
         global experiment_json
@@ -235,7 +234,6 @@ def lagom(
         exp_driver.init(job_start)
 
         server_addr = exp_driver.server_addr
-
         # Force execution on executor, since GPU is located on executor
         exp_executor = Executor(exp_driver)
         worker_fct = exp_executor.prepare_function(
