@@ -1,3 +1,19 @@
+#
+#   Copyright 2020 Logical Clocks AB
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+#
+
 import os
 
 import maggy.util as util
@@ -10,7 +26,6 @@ class BaseEnvironment(AbstractEnvironment):
         if not os.path.exists(self.log_dir):
             os.mkdir(self.log_dir)
         self.constants = []
-        pass
 
     def set_ml_id(self, app_id=0, run_id=0):
         os.environ["ML_ID"] = str(app_id) + "_" + str(run_id)
@@ -44,7 +59,7 @@ class BaseEnvironment(AbstractEnvironment):
         pass
 
     def isdir(self, dir_path):
-        return os.path.exists(dir_path)
+        return os.path.isdir(dir_path)
 
     def ls(self, dir_path):
         _, dirnames, filenames = next(os.walk(dir_path))
