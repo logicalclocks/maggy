@@ -20,6 +20,7 @@ import traceback
 import os
 import datetime
 import random
+import socket
 
 import torch
 import torch.distributed as dist
@@ -154,9 +155,8 @@ def _register_with_servers(client, reporter, partition_id):
         partition_id (int): Executors partition ID from Sparks RDD.
     """
     client_addr = client.client_addr
-    host_port = (
-        client_addr[0] + ":" + "8081"
-    )  # TODO: Change 8080 to open port within NCCL specs.
+    port = _get_open_port()
+    host_port = client_addr[0] + ":" + str(port)
     exec_spec = {
         "partition_id": partition_id,
         "task_attempt": 0,
@@ -165,6 +165,14 @@ def _register_with_servers(client, reporter, partition_id):
     }
     client.register(exec_spec)
     client.start_heartbeat(reporter)
+
+
+def _get_open_port():
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.bind(("", 0))  # Bind to 0 lets OS choose a free socket.
+    port = sock.getsockname()[1]
+    sock.close()
+    return port
 
 
 def _setup_logging(reporter, log_dir):

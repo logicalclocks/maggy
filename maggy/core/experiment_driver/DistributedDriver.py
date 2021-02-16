@@ -15,10 +15,8 @@
 #
 
 import threading
-import random
 import queue
 
-from numpy import argmin
 from pyspark.sql import SparkSession
 
 from maggy.core.experiment_driver.Driver import Driver
@@ -47,6 +45,8 @@ class DistributedDriver(Driver):
         """
         super().__init__(name, description, "max", num_executors, hb_interval, log_dir)
         self.server_addr = None
+        self.num_trials = 1
+        self.result = {"best_val": "n.a.", "num_trials": 1, "early_stopped": 0}
         self.job_start = None
         self.executor_addresses = {}
         self.spark_context = SparkSession.builder.getOrCreate().sparkContext
@@ -64,6 +64,7 @@ class DistributedDriver(Driver):
     def _start_worker(self):
         """Starts threaded worker to digest message queue.
         """
+
         def _digest_queue(self):
             try:
                 while not self.worker_done:
@@ -81,6 +82,7 @@ class DistributedDriver(Driver):
                 self.exception = exc
                 self.server.stop()
                 raise
+
         threading.Thread(target=_digest_queue, args=(self,), daemon=True).start()
 
     def finalize(self, job_end):
