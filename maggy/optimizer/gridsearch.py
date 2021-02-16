@@ -26,7 +26,7 @@ class GridSearch(AbstractOptimizer):
         self.config_buffer = []
 
     def initialize(self):
-        self.__class__._validate_searchspace(self.searchspace)
+        self._validate_searchspace(self.searchspace)
         # create all trials ahead of time
         self.config_buffer = self._grid_params(self.searchspace)
 
@@ -35,7 +35,7 @@ class GridSearch(AbstractOptimizer):
         """For grid search the number of trials is determined by the size of the
         cartisian product, depending on the user-set number of parameters and values
 
-        This methos is duplicating part of the code in the `initialize()` mainly to keep
+        This method is duplicating part of the code in the `initialize()` mainly to keep
         the flow of things the same as for other optimizers, where the user sets only
         the number of trials to evaluate.
         """
@@ -46,7 +46,7 @@ class GridSearch(AbstractOptimizer):
         # sampling routine for randomsearch + pruner
         if self.pruner:
             raise NotImplementedError(
-                "Grid search in combination with trial pruning"
+                "Grid search in combination with trial pruning "
                 "is currently not supported."
             )
         elif self.config_buffer:
@@ -69,8 +69,8 @@ class GridSearch(AbstractOptimizer):
     def finalize_experiment(self, trials):
         return
 
-    @classmethod
-    def _grid_params(cls, searchspace):
+    @staticmethod
+    def _grid_params(searchspace):
         return_list = []
         for hparams in itertools.product(
             *[item["values"] for item in searchspace.items()]
@@ -78,13 +78,13 @@ class GridSearch(AbstractOptimizer):
             return_list.append(searchspace.list_to_dict(hparams))
         return return_list
 
-    @classmethod
-    def _validate_searchspace(cls, searchspace):
+    @staticmethod
+    def _validate_searchspace(searchspace):
         if (
             Searchspace.DOUBLE in searchspace.names().values()
-            and Searchspace.INTEGER in searchspace.names().values()
+            or Searchspace.INTEGER in searchspace.names().values()
         ):
             raise NotImplementedError(
-                "Searchspace can only contain `discrete` or `categorical`"
+                "Searchspace can only contain `discrete` or `categorical` "
                 "hyperparameters for grid search."
             )
