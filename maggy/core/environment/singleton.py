@@ -29,16 +29,16 @@ class EnvSing(object):
         if "REST_ENDPOINT" in os.environ:
             print("You are running maggy on Hopsworks.")
 
-            from maggy.core.environment import HopsEnvironment
+            from maggy.core.environment import hopsworks
 
-            EnvSing.obj = HopsEnvironment()
+            EnvSing.obj = hopsworks.HopsworksEnv()
 
         else:
             print("You are running maggy without hopsworks.")
 
-            from maggy.core.environment import BaseEnvironment
+            from maggy.core.environment import base
 
-            EnvSing.obj = BaseEnvironment()
+            EnvSing.obj = base.BaseEnv()
 
         if EnvSing.obj is None:
             raise NotImplementedError("environment_instance is None, environment not initialised.")
