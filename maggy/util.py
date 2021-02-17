@@ -18,8 +18,9 @@
 """
 import json
 import math
-import numpy as np
 import os
+
+import numpy as np
 from pyspark import TaskContext
 
 from maggy import constants
