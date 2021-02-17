@@ -18,10 +18,11 @@
 """
 import json
 import math
+import numpy as np
 import os
 
-from pyspark import TaskContext
 import numpy as np
+from pyspark import TaskContext
 
 from maggy import constants
 from maggy.core import exceptions
