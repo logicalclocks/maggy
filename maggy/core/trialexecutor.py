@@ -30,10 +30,6 @@ from maggy.core.environment.singleton import EnvSing
 from maggy.core.reporter import Reporter
 
 
-# from hops import hdfs as hopshdfs
-# from hops.experiment_impl.util import experiment_utils
-
-
 def _prepare_func(
     app_id,
     run_id,

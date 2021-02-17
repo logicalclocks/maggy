@@ -234,12 +234,6 @@ def find_spark(conf=None):
     """
     Returns: SparkSession
     """
-    # sp = SparkSession.builder.getOrCreate()
-    # sp.stop()
-
-    conf = SparkConf()
-    conf.set("num-executors", "1")
-
     return (
         SparkSession.builder.getOrCreate()
         if not conf
