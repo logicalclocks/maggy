@@ -39,11 +39,9 @@ class Executor:
             exp_driver (Union[OptimizationDriver, AblationDriver, DistributedDriver]): Experiment
             driver for the patching function.
         """
-        assert type(exp_driver) in [
-            OptimizationDriver,
-            AblationDriver,
-            DistributedDriver,
-        ], f"Experiment driver type {type(exp_driver)} unsupported by Executor."
+        assert isinstance(
+            exp_driver, (OptimizationDriver, AblationDriver, DistributedDriver)
+        ), f"Experiment driver type {type(exp_driver)} unsupported by Executor."
         self.exp_driver = exp_driver
 
     def prepare_function(

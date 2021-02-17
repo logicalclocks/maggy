@@ -28,8 +28,6 @@ import torch.distributed as dist
 import numpy as np
 
 from hops import hdfs as hopshdfs
-from hops.experiment_impl.util import experiment_utils
-
 from maggy import util, tensorboard
 from maggy.core import rpc
 from maggy.core.reporter import Reporter
@@ -66,7 +64,7 @@ def prepare_function(
             _ (object): Necessary sink for the iterator given by Spark to the function upon foreach
                 calls. Can safely be disregarded.
         """
-        experiment_utils._set_ml_id(app_id, run_id)
+        util.set_ml_id(app_id, run_id)
         partition_id, _ = util.get_partition_attempt_id()
         client = rpc.Client(server_addr, partition_id, 0, hb_interval, secret)
         log_file = log_dir + "/executor_" + str(partition_id) + ".log"

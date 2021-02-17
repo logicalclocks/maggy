@@ -17,8 +17,6 @@
 import threading
 import queue
 
-from pyspark.sql import SparkSession
-
 from maggy.core.experiment_driver.Driver import Driver
 
 
@@ -28,9 +26,6 @@ class DistributedDriver(Driver):
     Attributes:
         server_addr (Union[str, None]): Address of the RPC server.
         job_start (Union[float, None]): Start time of the job.
-        executor_addresses (dict): Contains the addresses and ports of the workers after successful
-            reservation. Initially empty.
-        spark_context (SparkContext): SparkContext of the current session.
     """
 
     def __init__(self, name, description, num_executors, hb_interval, log_dir):
@@ -48,8 +43,6 @@ class DistributedDriver(Driver):
         self.num_trials = 1
         self.result = {"best_val": "n.a.", "num_trials": 1, "early_stopped": 0}
         self.job_start = None
-        self.executor_addresses = {}
-        self.spark_context = SparkSession.builder.getOrCreate().sparkContext
 
     def init(self, job_start):
         """Starts the server and worker to prepare for worker registration.

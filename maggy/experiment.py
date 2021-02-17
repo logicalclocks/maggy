@@ -144,7 +144,7 @@ def lagom(
 
         # start run
         running = True
-        experiment_utils._set_ml_id(app_id, run_id)
+        util.set_ml_id(app_id, run_id)
 
         # create experiment dir
         experiment_utils._create_experiment_dir(app_id, run_id)
@@ -155,7 +155,6 @@ def lagom(
 
         # start experiment driver
         if experiment_type == "optimization":
-
             assert num_trials > 0, "number of trials should be greater " + "than zero"
             tensorboard._write_hparams_config(
                 experiment_utils._get_logdir(app_id, run_id), searchspace
@@ -163,7 +162,6 @@ def lagom(
 
             if num_executors > num_trials:
                 num_executors = num_trials
-
             exp_driver = OptimizationDriver(
                 searchspace=searchspace,
                 optimizer=optimizer,
@@ -178,7 +176,6 @@ def lagom(
                 description=description,
                 log_dir=experiment_utils._get_logdir(app_id, run_id),
             )
-
         elif experiment_type == "ablation":
             exp_driver = AblationDriver(
                 ablation_study=ablation_study,
@@ -239,6 +236,7 @@ def lagom(
         worker_fct = exp_executor.prepare_function(
             app_id, run_id, train_fn, server_addr, hb_interval, optimization_key
         )
+
         nodeRDD.foreachPartition(worker_fct)
         job_end = time.time()
 
