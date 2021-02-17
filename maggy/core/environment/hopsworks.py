@@ -14,10 +14,10 @@
 #   limitations under the License.
 #
 
-import hsfs
 import json
 import os
 
+import hsfs
 from hops import constants
 from hops import hdfs as hopshdfs
 from hops import util as hopsutil

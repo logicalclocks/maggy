@@ -14,10 +14,11 @@
 #   limitations under the License.
 #
 
-import numpy as np
 import time
 from abc import ABC, abstractmethod
 from datetime import datetime
+
+import numpy as np
 
 from maggy.core.environment.singleton import EnvSing
 from maggy.pruner import Hyperband
