@@ -64,7 +64,7 @@ class AbstractEnv(ABC):
         pass
 
     @abstractmethod
-    def open_file(self, hdfs_path, project=None, flags='rw', buff_size=0):
+    def open_file(self, hdfs_path, project=None, flags='r', buff_size=0):
         pass
 
     @abstractmethod

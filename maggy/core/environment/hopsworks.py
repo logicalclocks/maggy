@@ -89,7 +89,7 @@ class HopsworksEnv(AbstractEnv):
     def get_constants(self):
         return hopsconstants
 
-    def open_file(self, hdfs_path, project=None, flags="rw", buff_size=0):
+    def open_file(self, hdfs_path, project=None, flags="r", buff_size=0):
         return hopshdfs.open_file(
             hdfs_path, project=project, flags=flags, buff_size=buff_size
         )
