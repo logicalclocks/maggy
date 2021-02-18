@@ -50,7 +50,7 @@ class Reporter(object):
         env = EnvSing.get_instance()
         if not env.exists(log_file):
             env.dump("", log_file)
-        self.fd = env.open_file(log_file, flags="w+")
+        self.fd = env.open_file(log_file, flags="w")
         self.trial_fd = None
 
     def init_logger(self, trial_log_file):
@@ -61,7 +61,7 @@ class Reporter(object):
         # Open trial log file descriptor
         if not env.exists(self.trial_log_file):
             env.dump("", self.trial_log_file)
-        self.trial_fd = env.open_file(self.trial_log_file, flags="w+")
+        self.trial_fd = env.open_file(self.trial_log_file, flags="w")
 
     def close_logger(self):
         """Savely closes the file descriptors of the log files.
