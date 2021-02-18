@@ -23,11 +23,10 @@ import inspect
 import json
 import traceback
 
-from hops import hdfs as hopshdfs
-
 from maggy import util, tensorboard
 from maggy.core import rpc, exceptions
 from maggy.core.reporter import Reporter
+from maggy.core.environment.singleton import EnvSing
 
 
 def _prepare_func(
