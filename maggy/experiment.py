@@ -158,10 +158,6 @@ def lagom(
 
             assert num_trials > 0, "number of trials should be greater than zero"
             env.log_searchspace(app_id, run_id, searchspace)
-            assert num_trials > 0, "number of trials should be greater " + "than zero"
-            tensorboard._write_hparams_config(
-                env.get_logdir(app_id, run_id), searchspace
-            )
 
             if num_executors > num_trials:
                 num_executors = num_trials
