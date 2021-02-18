@@ -32,8 +32,11 @@ from hops import util as hopsutil
 from hops.experiment_impl.util import experiment_utils
 
 from maggy import util, tensorboard
-from maggy.core import trialexecutor
-from maggy.core.experiment_driver import optimization, ablation
+from maggy.distributed.distributed_lagom import distributed_lagom
+from maggy.core.executors.Executor import Executor
+from maggy.core.experiment_driver.OptimizationDriver import OptimizationDriver
+from maggy.core.experiment_driver.AblationDriver import AblationDriver
+
 
 app_id = None
 running = False
@@ -57,6 +60,7 @@ def lagom(
     es_interval=1,
     es_min=10,
     description="",
+    **kwargs,
 ):
     """Launches a maggy experiment, which depending on `experiment_type` can
     either be a hyperparameter optimization or an ablation study experiment.
@@ -114,11 +118,22 @@ def lagom(
     global running
     if running:
         raise RuntimeError("An experiment is currently running.")
-
+    if experiment_type == "distributed_training":
+        for kwarg in ("model", "train_set", "test_set"):
+            assert (
+                kwarg in kwargs.keys()
+            ), f"Distributed training requires {kwarg} as argument!"
+        result = distributed_lagom(
+            train_fn,
+            name=name,
+            hb_interval=hb_interval,
+            description=description,
+            **kwargs,
+        )
+        return result
     job_start = time.time()
     sc = hopsutil._find_spark().sparkContext
     exp_driver = None
-
     try:
         global app_id
         global experiment_json
@@ -129,7 +144,7 @@ def lagom(
 
         # start run
         running = True
-        experiment_utils._set_ml_id(app_id, run_id)
+        util.set_ml_id(app_id, run_id)
 
         # create experiment dir
         experiment_utils._create_experiment_dir(app_id, run_id)
@@ -140,7 +155,6 @@ def lagom(
 
         # start experiment driver
         if experiment_type == "optimization":
-
             assert num_trials > 0, "number of trials should be greater " + "than zero"
             tensorboard._write_hparams_config(
                 experiment_utils._get_logdir(app_id, run_id), searchspace
@@ -148,8 +162,7 @@ def lagom(
 
             if num_executors > num_trials:
                 num_executors = num_trials
-
-            exp_driver = optimization.Driver(
+            exp_driver = OptimizationDriver(
                 searchspace=searchspace,
                 optimizer=optimizer,
                 direction=direction,
@@ -163,9 +176,8 @@ def lagom(
                 description=description,
                 log_dir=experiment_utils._get_logdir(app_id, run_id),
             )
-
         elif experiment_type == "ablation":
-            exp_driver = ablation.Driver(
+            exp_driver = AblationDriver(
                 ablation_study=ablation_study,
                 ablator=ablator,
                 name=name,
@@ -178,8 +190,7 @@ def lagom(
             # using exp_driver.num_executor since
             # it has been set using ablator.get_number_of_trials()
             # in experiment.py
-            if num_executors > exp_driver.num_executors:
-                num_executors = exp_driver.num_executors
+            num_executors = min(num_executors, exp_driver.num_executors)
 
         else:
             running = False
@@ -209,7 +220,9 @@ def lagom(
         )
 
         exp_ml_id = app_id + "_" + str(run_id)
-        experiment_json = experiment_utils._attach_experiment_xattr(exp_ml_id, experiment_json, "INIT")
+        experiment_json = experiment_utils._attach_experiment_xattr(
+            exp_ml_id, experiment_json, "INIT"
+        )
 
         util._log(
             "Started Maggy Experiment: {0}, {1}, run {2}".format(name, app_id, run_id)
@@ -218,21 +231,13 @@ def lagom(
         exp_driver.init(job_start)
 
         server_addr = exp_driver.server_addr
-
         # Force execution on executor, since GPU is located on executor
-        nodeRDD.foreachPartition(
-            trialexecutor._prepare_func(
-                app_id,
-                run_id,
-                experiment_type,
-                train_fn,
-                server_addr,
-                hb_interval,
-                exp_driver._secret,
-                optimization_key,
-                experiment_utils._get_logdir(app_id, run_id),
-            )
+        exp_executor = Executor(exp_driver)
+        worker_fct = exp_executor.prepare_function(
+            app_id, run_id, train_fn, server_addr, hb_interval, optimization_key
         )
+
+        nodeRDD.foreachPartition(worker_fct)
         job_end = time.time()
 
         result = exp_driver.finalize(job_end)
@@ -281,8 +286,6 @@ def lagom(
         running = False
         sc.setJobGroup("", "")
 
-    return result
-
 
 def _exception_handler(duration):
     """
@@ -298,7 +301,9 @@ def _exception_handler(duration):
             experiment_json["state"] = "FAILED"
             experiment_json["duration"] = duration
             exp_ml_id = app_id + "_" + str(run_id)
-            experiment_utils._attach_experiment_xattr(exp_ml_id, experiment_json, "FULL_UPDATE")
+            experiment_utils._attach_experiment_xattr(
+                exp_ml_id, experiment_json, "FULL_UPDATE"
+            )
     except Exception as err:
         util._log(err)
 
@@ -313,7 +318,9 @@ def _exit_handler():
         if running and experiment_json is not None:
             experiment_json["status"] = "KILLED"
             exp_ml_id = app_id + "_" + str(run_id)
-            experiment_utils._attach_experiment_xattr(exp_ml_id, experiment_json, "FULL_UPDATE")
+            experiment_utils._attach_experiment_xattr(
+                exp_ml_id, experiment_json, "FULL_UPDATE"
+            )
     except Exception as err:
         util._log(err)
 

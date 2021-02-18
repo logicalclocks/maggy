@@ -24,7 +24,6 @@ import json
 import traceback
 
 from hops import hdfs as hopshdfs
-from hops.experiment_impl.util import experiment_utils
 
 from maggy import util, tensorboard
 from maggy.core import rpc, exceptions
@@ -42,18 +41,16 @@ def _prepare_func(
     optimization_key,
     log_dir,
 ):
-    def _wrapper_fun(iter):
+    def _wrapper_fun(_):
         """
         Wraps the user supplied training function in order to be passed to the
         Spark Executors.
 
         Args:
-            iter:
-
-        Returns:
-
+            _ (object): Necessary sink for the iterator given by Spark to the function upon foreach
+                calls. Can safely be disregarded.
         """
-        experiment_utils._set_ml_id(app_id, run_id)
+        util.set_ml_id(app_id, run_id)
 
         # get task context information to determine executor identifier
         partition_id, task_attempt = util.get_partition_attempt_id()

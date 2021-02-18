@@ -21,10 +21,10 @@ from maggy.earlystop import NoStoppingRule
 from maggy.ablation.ablationstudy import AblationStudy
 from maggy.ablation.ablator.loco import LOCO
 from maggy.ablation.ablator import AbstractAblator
-from maggy.core.experiment_driver import base
+from maggy.core.experiment_driver.Driver import Driver
 
 
-class Driver(base.Driver):
+class AblationDriver(Driver):
     def __init__(
         self,
         ablator,
@@ -39,6 +39,7 @@ class Driver(base.Driver):
         super().__init__(
             name, description, direction, num_executors, hb_interval, log_dir
         )
+        self.exp_type = "ablation"
         # set up an ablation study experiment
         self.earlystop_check = NoStoppingRule.earlystop_check
 
@@ -57,8 +58,7 @@ class Driver(base.Driver):
             if ablator.lower() == "loco":
                 self.controller = LOCO(ablation_study, self._final_store)
                 self.num_trials = self.controller.get_number_of_trials()
-                if self.num_executors > self.num_trials:
-                    self.num_executors = self.num_trials
+                self.num_executors = min(self.num_executors, self.num_trials)
             else:
                 raise Exception(
                     "The experiment's ablation study policy should either be a string ('loco') "
