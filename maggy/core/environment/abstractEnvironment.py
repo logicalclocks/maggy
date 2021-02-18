@@ -104,7 +104,7 @@ class AbstractEnv(ABC):
         pass
 
     @abstractmethod
-    def _upload_file_output(self, retval, hdfs_exec_logdir):
+    def upload_file_output(self, retval, hdfs_exec_logdir):
         pass
 
     @abstractmethod
@@ -143,11 +143,11 @@ class AbstractEnv(ABC):
         pass
 
     @abstractmethod
-    def _build_summary_json(self, logdir):
+    def build_summary_json(self, logdir):
         pass
 
     @abstractmethod
-    def _convert_return_file_to_arr(self, return_file):
+    def convert_return_file_to_arr(self, return_file):
         pass
 
     @abstractmethod

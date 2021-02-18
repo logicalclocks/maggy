@@ -18,15 +18,15 @@
 Module to produce the wrapper function to be executed by the executors.
 """
 
-import traceback
-
 import builtins as __builtin__
 import inspect
 import json
+import traceback
+
+from hops import hdfs as hopshdfs
 
 from maggy import util, tensorboard
 from maggy.core import rpc, exceptions
-from maggy.core.environment.singleton import EnvSing
 from maggy.core.reporter import Reporter
 
 
@@ -41,16 +41,14 @@ def _prepare_func(
     optimization_key,
     log_dir,
 ):
-    def _wrapper_fun(iter):
+    def _wrapper_fun(_):
         """
         Wraps the user supplied training function in order to be passed to the
         Spark Executors.
 
         Args:
-            iter:
-
-        Returns:
-
+            _ (object): Necessary sink for the iterator given by Spark to the function upon foreach
+                calls. Can safely be disregarded.
         """
         env = EnvSing.get_instance()
 

@@ -16,12 +16,12 @@
 
 """Utility helper module for maggy experiments.
 """
-import json
 import math
 import os
-
+import json
 import numpy as np
 from pyspark import TaskContext
+from pyspark.sql import SparkSession
 
 from maggy import constants
 from maggy.core import exceptions
@@ -29,12 +29,6 @@ from maggy.core.environment.singleton import EnvSing
 
 DEBUG = True
 
-# in case importing in %%local
-try:
-    from pyspark.sql import SparkSession
-    from pyspark import SparkConf
-except ImportError:
-    pass
 
 
 def log(msg):
@@ -230,16 +224,21 @@ def validate_ml_id(app_id, run_id):
     return app_id, run_id
 
 
-def find_spark(conf=None):
+def set_ml_id(app_id, run_id):
+    """Sets the environment variables 'HOME' and 'ML_ID' to register the experiment.
+
+    Args:
+        app_id (int): Maggy App ID.
+        run_id (int): Maggy experiment run ID.
+    """
+    os.environ['HOME'] = os.getcwd()
+    os.environ['ML_ID'] = str(app_id) + '_' + str(run_id)
+
+def find_spark():
     """
     Returns: SparkSession
     """
-    return (
-        SparkSession.builder.getOrCreate()
-        if not conf
-        else SparkSession.builder.config(conf=conf).getOrCreate()
-    )
-
+    return SparkSession.builder.getOrCreate()
 
 def seconds_to_milliseconds(time):
     """
@@ -247,15 +246,12 @@ def seconds_to_milliseconds(time):
     """
     return int(round(time * 1000))
 
-
 def time_diff(t0, t1):
     """
     Args:
         :t0: start time in seconds
         :t1: end time in seconds
-
     Returns: string with time difference (i.e. t1-t0)
-
     """
 
     millis = seconds_to_milliseconds(t1) - seconds_to_milliseconds(t0)

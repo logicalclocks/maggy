@@ -21,10 +21,19 @@ from maggy.searchspace import Searchspace
 from maggy.optimizer import AbstractOptimizer, RandomSearch, Asha, SingleRun
 from maggy.earlystop import AbstractEarlyStop, MedianStoppingRule, NoStoppingRule
 from maggy.optimizer import bayes
-from maggy.core.experiment_driver import base
+from maggy.core.experiment_driver.Driver import Driver
 
 
-class Driver(base.Driver):
+class OptimizationDriver(Driver):
+    controller_dict = {
+        "randomsearch": RandomSearch,
+        "asha": Asha,
+        "TPE": bayes.TPE,
+        "gp": bayes.GP,
+        "none": SingleRun,
+        "faulty_none": None,
+    }
+
     def __init__(
         self,
         num_trials,
@@ -45,91 +54,15 @@ class Driver(base.Driver):
         super().__init__(
             name, description, direction, num_executors, hb_interval, log_dir
         )
-
         # CONTEXT-SPECIFIC EXPERIMENT SETUP
+        self.exp_type = "optimization"
         self.num_trials = num_trials
-
-        if isinstance(searchspace, Searchspace):
-            self.searchspace = searchspace
-        elif searchspace is None:
-            self.searchspace = Searchspace()
-        else:
-            raise Exception(
-                "The experiment's search space should be an instance of maggy.Searchspace, "
-                "but it is {0} (of type '{1}').".format(
-                    str(searchspace), type(searchspace).__name__
-                )
-            )
-
-        if optimizer is None:
-            if len(self.searchspace.names()) == 0:
-                self.controller = SingleRun()
-            else:
-                raise Exception(
-                    "Searchspace has to be empty or None to use without optimizer"
-                )
-        elif isinstance(optimizer, str):
-            if optimizer.lower() == "randomsearch":
-                self.controller = RandomSearch()
-            elif optimizer.lower() == "asha":
-                self.controller = Asha()
-            elif optimizer.lower() == "tpe":
-                self.controller = bayes.TPE()
-            elif optimizer.lower() == "gp":
-                self.controller = bayes.GP()
-            elif optimizer.lower() == "none":
-                if len(self.searchspace.names()) == 0:
-                    self.controller = SingleRun()
-                else:
-                    raise Exception(
-                        "Searchspace has to be empty or None to use without Optimizer."
-                    )
-            else:
-                raise Exception(
-                    "Unknown Optimizer. Can't initialize experiment driver."
-                )
-        elif isinstance(optimizer, AbstractOptimizer):
-            self.controller = optimizer
-            print("Custom Optimizer initialized.")
-        else:
-            raise Exception(
-                "The experiment's optimizer should either be an string indicating the name "
-                "of an implemented optimizer (such as 'randomsearch') or an instance of "
-                "maggy.optimizer.AbstractOptimizer, "
-                "but it is {0} (of type '{1}').".format(
-                    str(optimizer), type(optimizer).__name__
-                )
-            )
-
+        self.searchspace = self._init_searchspace(searchspace)
+        self.controller = self._init_controller(optimizer, self.searchspace)
         # if optimizer has pruner, num trials is determined by pruner
         if self.controller.pruner:
             self.num_trials = self.controller.pruner.num_trials()
-
-        if isinstance(es_policy, str):
-            if es_policy.lower() == "median":
-                self.earlystop_check = MedianStoppingRule.earlystop_check
-            elif es_policy.lower() == "none":
-                self.earlystop_check = NoStoppingRule.earlystop_check
-            else:
-                raise Exception(
-                    "The experiment's early stopping policy should either be a string ('median' or 'none') "
-                    "or a custom policy that is an instance of maggy.earlystop.AbstractEarlyStop, "
-                    "but it is {0} (of type '{1}').".format(
-                        str(es_policy), type(es_policy).__name__
-                    )
-                )
-        elif isinstance(es_policy, AbstractEarlyStop):
-            self.earlystop_check = es_policy.earlystop_check
-            print("Custom Early Stopping policy initialized.")
-        else:
-            raise Exception(
-                "The experiment's early stopping policy should either be a string ('median' or 'none') "
-                "or a custom policy that is an instance of maggy.earlystop.AbstractEarlyStop, "
-                "but it is {0} (of type '{1}').".format(
-                    str(es_policy), type(es_policy).__name__
-                )
-            )
-
+        self.earlystop_check = self._init_earlystop_check(es_policy)
         self.es_interval = es_interval
         self.es_min = es_min
 
@@ -189,3 +122,68 @@ class Driver(base.Driver):
             + str(self.result["best_val"])
         )
         return log
+
+    @staticmethod
+    def _init_searchspace(searchspace):
+        assert isinstance(searchspace, Searchspace) or searchspace is None, (
+            "The experiment's search space should be an instance of maggy.Searchspace, but it is "
+            "{0} (of type '{1}').".format(str(searchspace), type(searchspace).__name__)
+        )
+        return searchspace if isinstance(searchspace, Searchspace) else Searchspace()
+
+    @staticmethod
+    def _init_controller(optimizer, searchspace):
+        optimizer = (
+            "none" if optimizer is None else optimizer
+        )  # Convert None key to usable string.
+        if optimizer == "none" and not searchspace.names():
+            optimizer = "faulty_none"
+        if isinstance(optimizer, str):
+            try:
+                return OptimizationDriver.controller_dict[optimizer.lower()]()
+            except KeyError as exc:
+                raise Exception(
+                    "Unknown Optimizer. Can't initialize experiment driver."
+                ) from exc
+            except TypeError as exc:
+                raise Exception(
+                    "Searchspace has to be empty or None to use without Optimizer."
+                ) from exc
+        elif isinstance(optimizer, AbstractOptimizer):
+            print("Custom Optimizer initialized.")
+            return optimizer
+        else:
+            raise Exception(
+                "The experiment's optimizer should either be an string indicating the name "
+                "of an implemented optimizer (such as 'randomsearch') or an instance of "
+                "maggy.optimizer.AbstractOptimizer, "
+                "but it is {0} (of type '{1}').".format(
+                    str(optimizer), type(optimizer).__name__
+                )
+            )
+
+    @staticmethod
+    def _init_earlystop_check(es_policy):
+        assert isinstance(
+            es_policy, (str, AbstractEarlyStop)
+        ), "The experiment's early stopping policy should either be a string ('median' or 'none') \
+            or a custom policy that is an instance of maggy.earlystop.AbstractEarlyStop, but it is \
+            {0} (of type '{1}').".format(
+            str(es_policy), type(es_policy).__name__
+        )
+        if isinstance(es_policy, str):
+            assert es_policy.lower() in [
+                "median",
+                "none",
+            ], "The experiment's early stopping policy\
+                should either be a string ('median' or 'none') or a custom policy that is an \
+                instance of maggy.earlystop.AbstractEarlyStop, but it is {0} \
+                (of type '{1}').".format(
+                str(es_policy), type(es_policy).__name__
+            )
+            rule = (
+                MedianStoppingRule if es_policy.lower() == "median" else NoStoppingRule
+            )
+            return rule.earlystop_check
+        print("Custom Early Stopping policy initialized.")
+        return es_policy.earlystop_check

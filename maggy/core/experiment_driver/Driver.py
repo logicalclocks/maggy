@@ -40,13 +40,12 @@ class Driver(ABC):
 
     SECRET_BYTES = 8
 
-    def __init__(
-        self, name, description, direction, num_executors, hb_interval, log_dir
-    ):
+    def __init__(self, name, description, direction, num_executors, hb_interval, log_dir):
         global driver_secret
 
         # COMMON EXPERIMENT SETUP
         # Functionality inits
+        self.exp_type = None
         self._final_store = []
         self._trial_store = {}
         self.num_executors = num_executors

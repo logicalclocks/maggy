@@ -198,7 +198,7 @@ class HopsworksEnv(AbstractEnv):
         optimization_key,
     ):
         """Attaches the experiment outcome as xattr metadata to the app directory."""
-        outputs = self._build_summary_json(logdir)
+        outputs = self.build_summary_json(logdir)
 
         if outputs:
             self.dump(outputs, logdir + "/.summary.json")
@@ -223,7 +223,7 @@ class HopsworksEnv(AbstractEnv):
     def delete(self, path, recursive=False):
         return hopshdfs.delete(path, recursive=recursive)
 
-    def _upload_file_output(self, retval, hdfs_exec_logdir):
+    def upload_file_output(self, retval, hdfs_exec_logdir):
         return experiment_utils._upload_file_output(retval, hdfs_exec_logdir)
 
     def project_path(self, project=None, exclude_nn_addr=False):
@@ -242,10 +242,10 @@ class HopsworksEnv(AbstractEnv):
                 Experiments or Distributed Training."
             )
 
-    def _build_summary_json(self, logdir):
+    def build_summary_json(self, logdir):
         return util.build_summary_json(logdir)
 
-    def _convert_return_file_to_arr(self, return_file):
+    def convert_return_file_to_arr(self, return_file):
         return experiment_utils._convert_return_file_to_arr(return_file)
 
     def load(self, hparams_file):
