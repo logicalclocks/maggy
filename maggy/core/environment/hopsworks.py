@@ -18,23 +18,20 @@ import json
 import os
 
 import hsfs
-from hops import constants
+from hops import constants as hopsconstants
 from hops import hdfs as hopshdfs
 from hops import util as hopsutil
 from hops.experiment_impl.util import experiment_utils
 from maggy import tensorboard
 from maggy import util
-from maggy.core.environment.base import BaseEnv
+from maggy.core.environment.abstractEnvironment import AbstractEnv
 
 
-class HopsworksEnv(BaseEnv):
+class HopsworksEnv(AbstractEnv):
     """
     This class implements AbstractEnvironment.
     The methods implemented mainly recall the libraries developed on maggy.
     """
-
-    def __init__(self, *args):
-        self.constants = constants
 
     def set_ml_id(self, app_id, run_id):
         return experiment_utils._set_ml_id(app_id, run_id)
@@ -90,7 +87,7 @@ class HopsworksEnv(BaseEnv):
         )
 
     def get_constants(self):
-        return self.constants
+        return hopsconstants
 
     def open_file(self, hdfs_path, project=None, flags="rw", buff_size=0):
         return hopshdfs.open_file(
@@ -181,8 +178,8 @@ class HopsworksEnv(BaseEnv):
 
     def get_user(self):
         user = None
-        if self.constants.ENV_VARIABLES.HOPSWORKS_USER_ENV_VAR in os.environ:
-            user = os.environ[self.constants.ENV_VARIABLES.HOPSWORKS_USER_ENV_VAR]
+        if hopsconstants.ENV_VARIABLES.HOPSWORKS_USER_ENV_VAR in os.environ:
+            user = os.environ[hopsconstants.ENV_VARIABLES.HOPSWORKS_USER_ENV_VAR]
         return user
 
     def project_name(self):

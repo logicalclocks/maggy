@@ -27,18 +27,15 @@ class EnvSing(object):
 
         # check hopsworks availability
         if "REST_ENDPOINT" in os.environ:
-            print("You are running maggy on Hopsworks.")
+            print("You are running Maggy on Hopsworks.")
 
             from maggy.core.environment import hopsworks
 
             EnvSing.obj = hopsworks.HopsworksEnv()
 
         else:
-            print("You are running maggy without hopsworks.")
+            raise NotImplementedError("Running Maggy out from Hopsworks is not supported.")
 
-            from maggy.core.environment import base
-
-            EnvSing.obj = base.BaseEnv()
 
         if EnvSing.obj is None:
             raise NotImplementedError("environment_instance is None, environment not initialised.")
