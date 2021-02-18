@@ -234,3 +234,14 @@ def _validate_ml_id(app_id, run_id):
     if prev_app_id == app_id and int(prev_run_id) >= run_id:
         return app_id, (int(prev_run_id) + 1)
     return app_id, run_id
+
+
+def set_ml_id(app_id, run_id):
+    """Sets the environment variables 'HOME' and 'ML_ID' to register the experiment.
+
+    Args:
+        app_id (int): Maggy App ID.
+        run_id (int): Maggy experiment run ID.
+    """
+    os.environ['HOME'] = os.getcwd()
+    os.environ['ML_ID'] = str(app_id) + '_' + str(run_id)
