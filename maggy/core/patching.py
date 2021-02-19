@@ -17,11 +17,24 @@
 import os
 
 import torch
-import petastorm
+from petastorm.reader import make_reader, make_batch_reader
 from petastorm.pytorch import DataLoader as PetastormDataLoader
 
+from hops import hdfs
 
-class MaggyDataLoader(torch.utils.data.DataLoader):
+
+def MaggyDataLoader(dataset, *args, **kwargs):
+    """Factory function for Maggy data loaders.
+
+    Breach of naming convention intentional to emphasize the fact that the factory returns a
+    DataLoader object.
+    """
+    if isinstance(dataset, torch.utils.data.Dataset) or dataset is None:
+        return MaggyTorchDataLoader(dataset, *args, **kwargs)
+    return MaggyPetaDataLoader(dataset, *args, **kwargs)
+
+
+class MaggyTorchDataLoader(torch.utils.data.DataLoader):
     def __init__(
         self,
         dataset,
@@ -37,13 +50,9 @@ class MaggyDataLoader(torch.utils.data.DataLoader):
         worker_init_fn=None,
         multiprocessing_context=None,
         generator=None,
-        *,
-        prefetch_factor=2,
-        persistent_workers=False
+        **_,
     ):
-        num_workers = int(
-            os.environ["WORLD_SIZE"]
-        )  # Expected to be set by maggy startup.
+        num_workers = int(os.environ["WORLD_SIZE"])  # Is set at lagom startup.
         sampler = torch.utils.data.distributed.DistributedSampler(dataset=dataset)
         super().__init__(
             dataset,
@@ -70,43 +79,20 @@ class MaggyDataLoader(torch.utils.data.DataLoader):
 
     def __next__(self):
         data = self.iterator.__next__()
-        for idx, _ in enumerate(
-            data
-        ):  # Explicit use of index to avoid simply making copies.
-            data[idx] = data[
-                idx
-            ].cuda()  # Distributed training requires cuda to be available.
-        return data
+        return to_cuda(data)
 
 
 class MaggyPetaDataLoader(PetastormDataLoader):
-    def __init__(
-        self,
-        dataset,
-        batch_size=1,
-        shuffle=False,
-        sampler=None,
-        batch_sampler=None,
-        num_workers=0,
-        collate_fn=None,
-        pin_memory=False,
-        drop_last=False,
-        timeout=0,
-        worker_init_fn=None,
-        multiprocessing_context=None,
-        generator=None,
-        *,
-        prefetch_factor=2,
-        persistent_workers=False
-    ):
-        num_workers = int(
-            os.environ["WORLD_SIZE"]
-        )  # Expected to be set by maggy startup.
+    def __init__(self, dataset, batch_size=1, **_):
+        num_workers = int(os.environ["WORLD_SIZE"])  # Is set at lagom startup.
         rank = int(os.environ["RANK"])
-        batch_reader = petastorm.reader.make_batch_reader(
-            dataset, cur_shard=rank, shard_count=num_workers
-        )
-        super().__init__(batch_reader, batch_size=batch_size)
+        is_peta_ds = hdfs.exists(dataset.rstrip("/") + "/_common_metadata")
+        # Make reader only compatible with petastorm dataset.
+        ds_type = "Petastorm" if is_peta_ds else "Parquet"
+        print(f"{ds_type} dataset detected in folder {dataset}")
+        reader_factory = make_reader if is_peta_ds else make_batch_reader
+        reader = reader_factory(dataset, cur_shard=rank, shard_count=num_workers)
+        super().__init__(reader, batch_size=batch_size)
         self.iterator = None
 
     def __iter__(self):
@@ -117,6 +103,20 @@ class MaggyPetaDataLoader(PetastormDataLoader):
 
     def __next__(self):
         data = self.iterator.__next__()
+        return to_cuda(data)
+
+
+def to_cuda(data):
+    """Recurses into data, transfers tensors to GPU."""
+    if isinstance(data, dict):
         for key in data.keys():
-            data[key] = data[key].cuda()  # Distributed training requires cuda.
+            data[key] = to_cuda(data[key])
         return data
+    if isinstance(data, list):
+        for idx, _ in enumerate(data):
+            temp = to_cuda(data[idx])
+            data[idx] = temp
+        return data
+    if isinstance(data, torch.Tensor):
+        return data.cuda()
+    raise ValueError(f"Type {type(data)} currently not supported!")

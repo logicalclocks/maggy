@@ -284,11 +284,11 @@ class Server(MessageSocket):
 
                 if (response.status_code // 100) != 2:
                     print("No connection to Hopsworks for logging.")
-                    exp_driver._log("No connection to Hopsworks for logging.")
+                    exp_driver.log("No connection to Hopsworks for logging.")
             except Exception as e:
                 print("Connection failed to Hopsworks. No logging.")
-                exp_driver._log(e)
-                exp_driver._log("Connection failed to Hopsworks. No logging.")
+                exp_driver.log(e)
+                exp_driver.log("Connection failed to Hopsworks. No logging.")
         else:
             server_sock.bind(server_host_port)
         server_sock.listen(10)
@@ -312,10 +312,10 @@ class Server(MessageSocket):
                             if not secrets.compare_digest(
                                 msg["secret"], exp_driver._secret
                             ):
-                                exp_driver._log(
+                                exp_driver.log(
                                     "SERVER secret: {}".format(exp_driver._secret)
                                 )
-                                exp_driver._log(
+                                exp_driver.log(
                                     "ERROR: wrong secret {}".format(msg["secret"])
                                 )
                                 raise Exception

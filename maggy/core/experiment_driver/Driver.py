@@ -45,9 +45,13 @@ class Driver(ABC):
         self.server = rpc.Server(self.num_executors)
         self.server_addr = None
         self.job_start = None
-        self._secret = (
-            DRIVER_SECRET if DRIVER_SECRET else self._generate_secret(self.SECRET_BYTES)
+
+        DRIVER_SECRET = (
+            self._generate_secret(self.SECRET_BYTES)
+            if DRIVER_SECRET is None
+            else DRIVER_SECRET
         )
+        self._secret = DRIVER_SECRET
         # Logging related initialization
         self._message_q = queue.Queue()
         self.message_callbacks = {}
@@ -89,7 +93,7 @@ class Driver(ABC):
                             msg
                         )  # Execute registered callbacks.
             except Exception as exc:  # pylint: disable=broad-except
-                self._log(exc)
+                self.log(exc)
                 self.exception = exc
                 self.server.stop()
                 raise
@@ -116,9 +120,9 @@ class Driver(ABC):
     def stop(self):
         """Stop the Driver's worker thread and server."""
         self.worker_done = True
-        self.server.stop()
         self.log_file_handle.flush()
         self.log_file_handle.close()
+        self.server.stop()
 
     def log(self, log_msg):
         """Logs a string to the maggy driver log file.

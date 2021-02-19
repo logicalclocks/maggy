@@ -76,5 +76,6 @@ def lagom_distributed(train_fn, config, APP_ID, RUN_ID):
             "Total training time: {:.0f} h, {:.0f} min, {:.0f} s".format(hour, mon, sec)
         )
     finally:
+        time.sleep(6)
         if exp_driver:
             exp_driver.stop()
