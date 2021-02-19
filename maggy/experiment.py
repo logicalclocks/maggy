@@ -28,7 +28,7 @@ import os
 import atexit
 import time
 
-from maggy import util, tensorboard
+from maggy import util
 from maggy.distributed.distributed_lagom import distributed_lagom
 from maggy.core.executors.Executor import Executor
 from maggy.core.experiment_driver.OptimizationDriver import OptimizationDriver
