@@ -30,7 +30,6 @@ from maggy.core.environment.singleton import EnvSing
 DEBUG = True
 
 
-
 def log(msg):
     """
     Generic log function (in case logging is changed from stdout later)
@@ -234,17 +233,20 @@ def set_ml_id(app_id, run_id):
     os.environ['HOME'] = os.getcwd()
     os.environ['ML_ID'] = str(app_id) + '_' + str(run_id)
 
+
 def find_spark():
     """
     Returns: SparkSession
     """
     return SparkSession.builder.getOrCreate()
 
+
 def seconds_to_milliseconds(time):
     """
     Returns: time converted from seconds to milliseconds
     """
     return int(round(time * 1000))
+
 
 def time_diff(t0, t1):
     """
