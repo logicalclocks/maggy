@@ -23,7 +23,7 @@ class EnvSing(object):
 
     def __new__(cls, *args, **kwargs):
         if EnvSing.obj is not None:
-            raise Exception('A Test Singleton instance already exists')
+            raise Exception("A Test Singleton instance already exists")
 
         # check hopsworks availability
         if "REST_ENDPOINT" in os.environ:
@@ -34,16 +34,20 @@ class EnvSing(object):
             EnvSing.obj = hopsworks.HopsworksEnv()
 
         else:
-            raise NotImplementedError("Running Maggy out from Hopsworks is not supported.")
-
+            raise NotImplementedError(
+                "Running Maggy out from Hopsworks is not supported."
+            )
 
         if EnvSing.obj is None:
-            raise NotImplementedError("environment_instance is None, environment not initialised.")
+            raise NotImplementedError(
+                "environment_instance is None, environment not initialised."
+            )
 
     @staticmethod
     def get_instance():
         """
         return an instance of the environment to be used by maggy within a session.
         """
-        if EnvSing.obj is None: EnvSing()
+        if EnvSing.obj is None:
+            EnvSing()
         return EnvSing.obj

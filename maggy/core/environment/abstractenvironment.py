@@ -36,7 +36,17 @@ class AbstractEnv(ABC):
         pass
 
     @abstractmethod
-    def populate_experiment(self, model_name, function, type, hp, description, app_id, direction, optimization_key):
+    def populate_experiment(
+        self,
+        model_name,
+        function,
+        type,
+        hp,
+        description,
+        app_id,
+        direction,
+        optimization_key,
+    ):
         pass
 
     @abstractmethod
@@ -64,15 +74,19 @@ class AbstractEnv(ABC):
         pass
 
     @abstractmethod
-    def open_file(self, hdfs_path, project=None, flags='r', buff_size=0):
+    def open_file(self, hdfs_path, project=None, flags="r", buff_size=0):
         pass
 
     @abstractmethod
-    def get_training_dataset_path(self, training_dataset, featurestore=None, training_dataset_version=1):
+    def get_training_dataset_path(
+        self, training_dataset, featurestore=None, training_dataset_version=1
+    ):
         pass
 
     @abstractmethod
-    def get_training_dataset_tf_record_schema(self, training_dataset, training_dataset_version=1, featurestore=None):
+    def get_training_dataset_tf_record_schema(
+        self, training_dataset, training_dataset_version=1, featurestore=None
+    ):
         pass
 
     @abstractmethod
@@ -121,16 +135,16 @@ class AbstractEnv(ABC):
 
     @abstractmethod
     def finalize_experiment(
-            self,
-            experiment_json,
-            metric,
-            app_id,
-            run_id,
-            state,
-            duration,
-            logdir,
-            best_logdir,
-            optimization_key,
+        self,
+        experiment_json,
+        metric,
+        app_id,
+        run_id,
+        state,
+        duration,
+        logdir,
+        best_logdir,
+        optimization_key,
     ):
         pass
 

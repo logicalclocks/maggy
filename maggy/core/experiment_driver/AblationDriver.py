@@ -21,8 +21,8 @@ from maggy.earlystop import NoStoppingRule
 from maggy.ablation.ablationstudy import AblationStudy
 from maggy.ablation.ablator.loco import LOCO
 from maggy.ablation.ablator import AbstractAblator
-
 from maggy.core.experiment_driver.Driver import Driver
+
 
 class AblationDriver(Driver):
     def __init__(

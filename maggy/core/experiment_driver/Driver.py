@@ -26,12 +26,11 @@ import time
 from abc import ABC, abstractmethod
 from datetime import datetime
 
-from maggy.core.environment.singleton import EnvSing
-
 from maggy import util
 from maggy.core import rpc
 from maggy.trial import Trial
 from maggy.earlystop import NoStoppingRule
+from maggy.core.environment.singleton import EnvSing
 
 driver_secret = None
 
@@ -40,7 +39,9 @@ class Driver(ABC):
 
     SECRET_BYTES = 8
 
-    def __init__(self, name, description, direction, num_executors, hb_interval, log_dir):
+    def __init__(
+        self, name, description, direction, num_executors, hb_interval, log_dir
+    ):
         global driver_secret
 
         # COMMON EXPERIMENT SETUP
@@ -181,7 +182,9 @@ class Driver(ABC):
                                             self.log(e)
                                             to_stop = None
                                         if to_stop is not None:
-                                            self.log("Trials to stop: {}".format(to_stop))
+                                            self.log(
+                                                "Trials to stop: {}".format(to_stop)
+                                            )
                                             self.get_trial(to_stop).set_early_stop()
 
                     # 2. BLACKLIST the trial
@@ -208,7 +211,9 @@ class Driver(ABC):
                         with trial.lock:
                             trial.status = Trial.FINALIZED
                             trial.final_metric = msg["data"]
-                            trial.duration = util.seconds_to_milliseconds(time.time() - trial.start)
+                            trial.duration = util.seconds_to_milliseconds(
+                                time.time() - trial.start
+                            )
 
                         # move trial to the finalized ones
                         self._final_store.append(trial)
@@ -323,8 +328,6 @@ class Driver(ABC):
         """Get all relevant experiment information in JSON format.
         """
         user = None
-        cons = EnvSing.get_instance().get_constants()
-
         user = EnvSing.get_instance().get_user()
 
         experiment_json = {

@@ -22,9 +22,10 @@ from hops import constants as hopsconstants
 from hops import hdfs as hopshdfs
 from hops import util as hopsutil
 from hops.experiment_impl.util import experiment_utils
+
 from maggy import tensorboard
 from maggy import util
-from maggy.core.environment.abstractEnvironment import AbstractEnv
+from maggy.core.environment.abstractenvironment import AbstractEnv
 
 
 class HopsworksEnv(AbstractEnv):
