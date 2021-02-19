@@ -21,6 +21,7 @@ from maggy.core.experiment_driver.AblationDriver import AblationDriver
 from maggy.core.experiment_driver.DistributedDriver import DistributedDriver
 from maggy.core.environment.singleton import EnvSing
 
+
 class Executor:
     """Wrapper class around the different executor functions.
 
