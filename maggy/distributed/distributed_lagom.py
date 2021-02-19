@@ -18,13 +18,11 @@ import os
 import atexit
 import time
 
-from hops import util as hopsutil
-from hops.experiment_impl.util import experiment_utils
 
 from maggy import util, tensorboard
 from maggy.core.experiment_driver.DistributedDriver import DistributedDriver
 from maggy.core.executors.Executor import Executor
-
+from maggy.core.environment.singleton import EnvSing
 
 APP_ID = None
 RUNNING = False
@@ -37,7 +35,7 @@ def distributed_lagom(train_fn, name, hb_interval, description, **kwargs):
     if RUNNING:
         raise RuntimeError("An experiment is currently running.")
     job_start = time.time()
-    spark_context = hopsutil._find_spark().sparkContext
+    spark_context = util.find_spark().sparkContext
     exp_driver = None
 
     try:
@@ -54,7 +52,7 @@ def distributed_lagom(train_fn, name, hb_interval, description, **kwargs):
             description=description,
             num_executors=num_executors,
             hb_interval=hb_interval,
-            log_dir=experiment_utils._get_logdir(APP_ID, RUN_ID),
+            log_dir=EnvSing.get_instance()._get_logdir(APP_ID, RUN_ID),
         )
 
         # Create a spark rdd partitioned into single integers, one for each executor. Allows
@@ -63,7 +61,7 @@ def distributed_lagom(train_fn, name, hb_interval, description, **kwargs):
         spark_context.setJobGroup(
             os.environ["ML_ID"], "{0} | distributed_learning".format(name)
         )
-        EXPERIMENT_JSON = experiment_utils._populate_experiment(
+        EXPERIMENT_JSON = EnvSing.get_instance().populate_experiment(
             name,
             "distributed_learning",
             "MAGGY",
@@ -74,12 +72,12 @@ def distributed_lagom(train_fn, name, hb_interval, description, **kwargs):
             "metric",
         )
         exp_ml_id = APP_ID + "_" + str(RUN_ID)
-        EXPERIMENT_JSON = experiment_utils._attach_experiment_xattr(
+        EXPERIMENT_JSON = EnvSing.get_instance().attach_experiment_xattr(
             exp_ml_id, EXPERIMENT_JSON, "INIT"
         )
         # Initialize the experiment: Start the connection server (driver init call), prepare the
         # training function and execute it on each partition.
-        util._log(
+        util.log(
             "Started Maggy Experiment: {0}, {1}, run {2}".format(name, APP_ID, RUN_ID)
         )
 
@@ -97,7 +95,7 @@ def distributed_lagom(train_fn, name, hb_interval, description, **kwargs):
 
     except Exception:  # noqa: E722
         _exception_handler(
-            experiment_utils._seconds_to_milliseconds(time.time() - job_start)
+            EnvSing.get_instance().seconds_to_milliseconds(time.time() - job_start)
         )
         if exp_driver and exp_driver.exception:
             raise exp_driver.exception
@@ -116,12 +114,12 @@ def distributed_lagom(train_fn, name, hb_interval, description, **kwargs):
 
 def register_environment(app_id, run_id, running, spark_context):
     app_id = str(spark_context.applicationId)
-    app_id, run_id = util._validate_ml_id(app_id, run_id)
+    app_id, run_id = util.validate_ml_id(app_id, run_id)
     running = True
     util.set_ml_id(app_id, run_id)
     # Create experiment directory.
-    experiment_utils._create_experiment_dir(app_id, run_id)
-    tensorboard._register(experiment_utils._get_logdir(app_id, run_id))
+    EnvSing.get_instance().create_experiment_dir(app_id, run_id)
+    tensorboard._register(EnvSing.get_instance().get_logdir(app_id, run_id))
     return app_id, run_id, running
 
 
@@ -139,11 +137,11 @@ def _exception_handler(duration):
             EXPERIMENT_JSON["state"] = "FAILED"
             EXPERIMENT_JSON["duration"] = duration
             exp_ml_id = APP_ID + "_" + str(RUN_ID)
-            experiment_utils._attach_experiment_xattr(
+            EnvSing.get_instance().attach_experiment_xattr(
                 exp_ml_id, EXPERIMENT_JSON, "FULL_UPDATE"
             )
     except Exception as err:  # pylint: disable=broad-except
-        util._log(err)
+        util.log(err)
 
 
 def _exit_handler():
@@ -156,11 +154,11 @@ def _exit_handler():
         if RUNNING and EXPERIMENT_JSON is not None:
             EXPERIMENT_JSON["status"] = "KILLED"
             exp_ml_id = APP_ID + "_" + str(RUN_ID)
-            experiment_utils._attach_experiment_xattr(
+            EnvSing.get_instance().attach_experiment_xattr(
                 exp_ml_id, EXPERIMENT_JSON, "FULL_UPDATE"
             )
     except Exception as err:  # pylint: disable=broad-except
-        util._log(err)
+        util.log(err)
 
 
 atexit.register(_exit_handler)

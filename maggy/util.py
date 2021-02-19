@@ -21,18 +21,16 @@ import os
 import json
 import numpy as np
 from pyspark import TaskContext
-
-from hops import util as hopsutil
-from hops import hdfs as hopshdfs
-from hops.experiment_impl.util import experiment_utils
+from pyspark.sql import SparkSession
 
 from maggy import constants
 from maggy.core import exceptions
+from maggy.core.environment.singleton import EnvSing
 
 DEBUG = True
 
 
-def _log(msg):
+def log(msg):
     """
     Generic log function (in case logging is changed from stdout later)
 
@@ -52,15 +50,8 @@ def num_executors(sc):
     :return: Number of configured executors for Jupyter
     :rtype: int
     """
-    sc = hopsutil._find_spark().sparkContext
-    try:
-        return int(sc._conf.get("spark.dynamicAllocation.maxExecutors"))
-    except:  # noqa: E722
-        raise RuntimeError(
-            "Failed to find spark.dynamicAllocation.maxExecutors property, \
-            please select your mode as either Experiment, Parallel \
-            Experiments or Distributed Training."
-        )
+
+    return EnvSing.get_instance().get_executors(sc)
 
 
 def get_partition_attempt_id():
@@ -76,8 +67,7 @@ def get_partition_attempt_id():
     return task_context.partitionId(), task_context.attemptNumber()
 
 
-def _progress_bar(done, total):
-
+def progress_bar(done, total):
     done_ratio = done / total
     progress = math.floor(done_ratio * 30)
 
@@ -108,7 +98,7 @@ def json_default_numpy(obj):
         )
 
 
-def _finalize_experiment(
+def finalize_experiment(
     experiment_json,
     metric,
     app_id,
@@ -119,34 +109,29 @@ def _finalize_experiment(
     best_logdir,
     optimization_key,
 ):
-    """Attaches the experiment outcome as xattr metadata to the app directory.
-    """
-    outputs = _build_summary_json(logdir)
-
-    if outputs:
-        hopshdfs.dump(outputs, logdir + "/.summary.json")
-
-    if best_logdir:
-        experiment_json["bestDir"] = best_logdir[len(hopshdfs.project_path()) :]
-    experiment_json["optimizationKey"] = optimization_key
-    experiment_json["metric"] = metric
-    experiment_json["state"] = state
-    experiment_json["duration"] = duration
-    exp_ml_id = app_id + "_" + str(run_id)
-    experiment_utils._attach_experiment_xattr(exp_ml_id, experiment_json, "FULL_UPDATE")
+    EnvSing.get_instance().finalize_experiment(
+        experiment_json,
+        metric,
+        app_id,
+        run_id,
+        state,
+        duration,
+        logdir,
+        best_logdir,
+        optimization_key,
+    )
 
 
-def _build_summary_json(logdir):
-    """Builds the summary json to be read by the experiments service.
-    """
+def build_summary_json(logdir):
+    """Builds the summary json to be read by the experiments service."""
     combinations = []
-
-    for trial in hopshdfs.ls(logdir):
-        if hopshdfs.isdir(trial):
+    env = EnvSing.get_instance()
+    for trial in env.ls(logdir):
+        if env.isdir(trial):
             return_file = trial + "/.outputs.json"
             hparams_file = trial + "/.hparams.json"
-            if hopshdfs.exists(return_file) and hopshdfs.exists(hparams_file):
-                metric_arr = experiment_utils._convert_return_file_to_arr(return_file)
+            if env.exists(return_file) and env.exists(hparams_file):
+                metric_arr = env._convert_return_file_to_arr(return_file)
                 hparams_dict = _load_hparams(hparams_file)
                 combinations.append({"parameters": hparams_dict, "outputs": metric_arr})
 
@@ -154,18 +139,19 @@ def _build_summary_json(logdir):
 
 
 def _load_hparams(hparams_file):
-    """Loads the HParams configuration from a hparams file of a trial.
-    """
-    hparams_file_contents = hopshdfs.load(hparams_file)
+    """Loads the HParams configuration from a hparams file of a trial."""
+
+    hparams_file_contents = EnvSing.get_instance().load(hparams_file)
     hparams = json.loads(hparams_file_contents)
 
     return hparams
 
 
-def _handle_return_val(return_val, log_dir, optimization_key, log_file):
-    """Handles the return value of the user defined training function.
-    """
-    experiment_utils._upload_file_output(return_val, log_dir)
+def handle_return_val(return_val, log_dir, optimization_key, log_file):
+    """Handles the return value of the user defined training function."""
+    env = EnvSing.get_instance()
+
+    env._upload_file_output(return_val, log_dir)
 
     # Return type validation
     if not optimization_key:
@@ -193,31 +179,32 @@ def _handle_return_val(return_val, log_dir, optimization_key, log_file):
     # for key, value in return_val.items():
     #    return_val[key] = value if isinstance(value, str) else str(value)
 
-    return_val["log"] = log_file.replace(hopshdfs.project_path(), "")
+    return_val["log"] = log_file.replace(env.project_path(), "")
 
     return_file = log_dir + "/.outputs.json"
-    hopshdfs.dump(json.dumps(return_val, default=json_default_numpy), return_file)
+    env.dump(json.dumps(return_val, default=json_default_numpy), return_file)
 
     metric_file = log_dir + "/.metric"
-    hopshdfs.dump(json.dumps(opt_val, default=json_default_numpy), metric_file)
+    env.dump(json.dumps(opt_val, default=json_default_numpy), metric_file)
 
     return opt_val
 
 
-def _clean_dir(clean_dir, keep=[]):
-    """Deletes all files in a directory but keeps a few.
-    """
-    if not hopshdfs.isdir(clean_dir):
+def clean_dir(clean_dir, keep=[]):
+    """Deletes all files in a directory but keeps a few."""
+    env = EnvSing.get_instance()
+
+    if not env.isdir(clean_dir):
         raise ValueError(
             "{} is not a directory. Use `hops.hdfs.delete()` to delete single "
             "files.".format(clean_dir)
         )
-    for path in hopshdfs.ls(clean_dir):
+    for path in env.ls(clean_dir):
         if path not in keep:
-            hopshdfs.delete(path, recursive=True)
+            env.delete(path, recursive=True)
 
 
-def _validate_ml_id(app_id, run_id):
+def validate_ml_id(app_id, run_id):
     """Validates if there was an experiment run previously from the same app id
     but from a different experiment (e.g. hops-util-py vs. maggy) module.
     """
@@ -245,3 +232,36 @@ def set_ml_id(app_id, run_id):
     """
     os.environ['HOME'] = os.getcwd()
     os.environ['ML_ID'] = str(app_id) + '_' + str(run_id)
+
+
+def find_spark():
+    """
+    Returns: SparkSession
+    """
+    return SparkSession.builder.getOrCreate()
+
+
+def seconds_to_milliseconds(time):
+    """
+    Returns: time converted from seconds to milliseconds
+    """
+    return int(round(time * 1000))
+
+
+def time_diff(t0, t1):
+    """
+    Args:
+        :t0: start time in seconds
+        :t1: end time in seconds
+    Returns: string with time difference (i.e. t1-t0)
+    """
+
+    millis = seconds_to_milliseconds(t1) - seconds_to_milliseconds(t0)
+    millis = int(millis)
+    seconds = (millis / 1000) % 60
+    seconds = int(seconds)
+    minutes = (millis / (1000 * 60)) % 60
+    minutes = int(minutes)
+    hours = (millis / (1000 * 60 * 60)) % 24
+
+    return "%d hours, %d minutes, %d seconds" % (hours, minutes, seconds)

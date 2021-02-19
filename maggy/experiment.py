@@ -28,15 +28,12 @@ import os
 import atexit
 import time
 
-from hops import util as hopsutil
-from hops.experiment_impl.util import experiment_utils
-
-from maggy import util, tensorboard
+from maggy import util
 from maggy.distributed.distributed_lagom import distributed_lagom
 from maggy.core.executors.Executor import Executor
 from maggy.core.experiment_driver.OptimizationDriver import OptimizationDriver
 from maggy.core.experiment_driver.AblationDriver import AblationDriver
-
+from maggy.core.environment.singleton import EnvSing
 
 app_id = None
 running = False
@@ -132,33 +129,35 @@ def lagom(
         )
         return result
     job_start = time.time()
-    sc = hopsutil._find_spark().sparkContext
+    sc = util.find_spark().sparkContext
     exp_driver = None
+
+    env = EnvSing.get_instance()
+
     try:
         global app_id
         global experiment_json
         global run_id
         app_id = str(sc.applicationId)
 
-        app_id, run_id = util._validate_ml_id(app_id, run_id)
+        app_id, run_id = util.validate_ml_id(app_id, run_id)
 
         # start run
         running = True
-        util.set_ml_id(app_id, run_id)
+        env.set_ml_id(app_id, run_id)
 
         # create experiment dir
-        experiment_utils._create_experiment_dir(app_id, run_id)
+        env.create_experiment_dir(app_id, run_id)
 
-        tensorboard._register(experiment_utils._get_logdir(app_id, run_id))
+        env.init_ml_tracking(app_id, run_id)
 
         num_executors = util.num_executors(sc)
 
         # start experiment driver
         if experiment_type == "optimization":
-            assert num_trials > 0, "number of trials should be greater " + "than zero"
-            tensorboard._write_hparams_config(
-                experiment_utils._get_logdir(app_id, run_id), searchspace
-            )
+
+            assert num_trials > 0, "number of trials should be greater than zero"
+            env.log_searchspace(app_id, run_id, searchspace)
 
             if num_executors > num_trials:
                 num_executors = num_trials
@@ -174,7 +173,7 @@ def lagom(
                 es_interval=es_interval,
                 es_min=es_min,
                 description=description,
-                log_dir=experiment_utils._get_logdir(app_id, run_id),
+                log_dir=env.get_logdir(app_id, run_id),
             )
         elif experiment_type == "ablation":
             exp_driver = AblationDriver(
@@ -185,7 +184,7 @@ def lagom(
                 hb_interval=hb_interval,
                 description=description,
                 direction="max",
-                log_dir=experiment_utils._get_logdir(app_id, run_id),
+                log_dir=env.get_logdir(app_id, run_id),
             )
             # using exp_driver.num_executor since
             # it has been set using ablator.get_number_of_trials()
@@ -208,7 +207,7 @@ def lagom(
         # the type checks for optimizer and searchspace
         sc.setJobGroup(os.environ["ML_ID"], "{0} | {1}".format(name, exp_function))
 
-        experiment_json = experiment_utils._populate_experiment(
+        experiment_json = env.populate_experiment(
             name,
             exp_function,
             "MAGGY",
@@ -220,13 +219,11 @@ def lagom(
         )
 
         exp_ml_id = app_id + "_" + str(run_id)
-        experiment_json = experiment_utils._attach_experiment_xattr(
+        experiment_json = env.attach_experiment_xattr(
             exp_ml_id, experiment_json, "INIT"
         )
 
-        util._log(
-            "Started Maggy Experiment: {0}, {1}, run {2}".format(name, app_id, run_id)
-        )
+        util.log("Started Maggy Experiment: {0}, {1}, run {2}".format(name, app_id, run_id))
 
         exp_driver.init(job_start)
 
@@ -241,30 +238,17 @@ def lagom(
         job_end = time.time()
 
         result = exp_driver.finalize(job_end)
-        best_logdir = (
-            experiment_utils._get_logdir(app_id, run_id) + "/" + result["best_id"]
-        )
+        best_logdir = env.get_logdir(app_id, run_id) + "/" + result["best_id"]
 
-        util._finalize_experiment(
-            experiment_json,
-            float(result["best_val"]),
-            app_id,
-            run_id,
-            "FINISHED",
-            exp_driver.duration,
-            experiment_utils._get_logdir(app_id, run_id),
-            best_logdir,
-            optimization_key,
-        )
+        util.finalize_experiment(experiment_json, float(result["best_val"]), app_id, run_id, "FINISHED",
+                                 exp_driver.duration, env.get_logdir(app_id, run_id), best_logdir, optimization_key)
 
-        util._log("Finished Experiment")
+        util.log("Finished Experiment")
 
         return result
 
     except:  # noqa: E722
-        _exception_handler(
-            experiment_utils._seconds_to_milliseconds(time.time() - job_start)
-        )
+        _exception_handler(util.seconds_to_milliseconds(time.time() - job_start))
         if exp_driver:
             if experiment_type == "optimization":
                 # close logfiles of optimizer
@@ -295,17 +279,18 @@ def _exception_handler(duration):
     :type duration: int
     """
     try:
+
         global running
         global experiment_json
         if running and experiment_json is not None:
             experiment_json["state"] = "FAILED"
             experiment_json["duration"] = duration
             exp_ml_id = app_id + "_" + str(run_id)
-            experiment_utils._attach_experiment_xattr(
+            EnvSing.get_instance().attach_experiment_xattr(
                 exp_ml_id, experiment_json, "FULL_UPDATE"
             )
     except Exception as err:
-        util._log(err)
+        util.log(err)
 
 
 def _exit_handler():
@@ -318,11 +303,11 @@ def _exit_handler():
         if running and experiment_json is not None:
             experiment_json["status"] = "KILLED"
             exp_ml_id = app_id + "_" + str(run_id)
-            experiment_utils._attach_experiment_xattr(
+            EnvSing.get_instance().attach_experiment_xattr(
                 exp_ml_id, experiment_json, "FULL_UPDATE"
             )
     except Exception as err:
-        util._log(err)
+        util.log(err)
 
 
 atexit.register(_exit_handler)

@@ -123,7 +123,7 @@ class AblationDriver(Driver):
             + str(self.result["num_trials"])
             + "/"
             + str(self.num_trials)
-            + util._progress_bar(self.result["num_trials"], self.num_trials)
+            + util.progress_bar(self.result["num_trials"], self.num_trials)
             + " - BEST Excludes"
             + json.dumps(self.result["best_config"])
             + " - metric "

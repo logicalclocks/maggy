@@ -115,7 +115,7 @@ class OptimizationDriver(Driver):
             + " ("
             + str(self.result["early_stopped"])
             + ") "
-            + util._progress_bar(self.result["num_trials"], self.num_trials)
+            + util.progress_bar(self.result["num_trials"], self.num_trials)
             + " - BEST "
             + json.dumps(self.result["best_config"])
             + " - metric "

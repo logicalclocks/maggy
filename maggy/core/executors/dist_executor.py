@@ -27,12 +27,11 @@ import torch.distributed as dist
 
 import numpy as np
 
-from hops import hdfs as hopshdfs
 from maggy import util, tensorboard
 from maggy.core import rpc
 from maggy.core.reporter import Reporter
 from maggy.distributed.patching import MaggyDataLoader
-
+from maggy.core.environment.singleton import EnvSing
 
 torch.utils.data.DataLoader = (
     MaggyDataLoader  # Patch data loader to always be distributed.
@@ -110,7 +109,7 @@ def prepare_function(
                     test_set=kwargs["test_set"],
                 )
             if rank == 0:
-                retval = util._handle_return_val(
+                retval = util.handle_return_val(
                     retval, tb_logdir, "Metric", trial_log_file
                 )
 
@@ -190,10 +189,10 @@ def _setup_logging(reporter, log_dir):
     trial_log_file = tb_logdir + "/output.log"
     reporter.set_trial_id(0)
     # If trial is repeated, delete trial directory, except log file
-    if hopshdfs.exists(tb_logdir):
-        util._clean_dir(tb_logdir, [trial_log_file])
+    if EnvSing.get_instance().exists(tb_logdir):
+        util.clean_dir(tb_logdir, [trial_log_file])
     else:
-        hopshdfs.mkdir(tb_logdir)
+        EnvSing.get_instance().mkdir(tb_logdir)
     reporter.init_logger(trial_log_file)
     tensorboard._register(tb_logdir)
     return tb_logdir, trial_log_file

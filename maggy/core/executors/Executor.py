@@ -14,12 +14,12 @@
 #   limitations under the License.
 #
 
-from hops.experiment_impl.util import experiment_utils
 
 from maggy.core.executors import trial_executor, dist_executor
 from maggy.core.experiment_driver.OptimizationDriver import OptimizationDriver
 from maggy.core.experiment_driver.AblationDriver import AblationDriver
 from maggy.core.experiment_driver.DistributedDriver import DistributedDriver
+from maggy.core.environment.singleton import EnvSing
 
 
 class Executor:
@@ -69,7 +69,7 @@ class Executor:
         Returns:
             Patched training function.
         """
-        log_dir = experiment_utils._get_logdir(app_id, run_id)
+        log_dir = EnvSing.get_instance().get_logdir(app_id, run_id)
         if self.exp_driver.exp_type in ["optimization", "ablation"]:
             return trial_executor._prepare_func(
                 app_id,

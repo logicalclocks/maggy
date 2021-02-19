@@ -21,21 +21,16 @@ maggy.
 import queue
 import threading
 import json
-import os
 import secrets
 import time
 from abc import ABC, abstractmethod
 from datetime import datetime
 
-from hops import constants as hopsconstants
-from hops import hdfs as hopshdfs
-from hops import util as hopsutil
-from hops.experiment_impl.util import experiment_utils
-
 from maggy import util
 from maggy.core import rpc
 from maggy.trial import Trial
 from maggy.earlystop import NoStoppingRule
+from maggy.core.environment.singleton import EnvSing
 
 driver_secret = None
 
@@ -44,7 +39,9 @@ class Driver(ABC):
 
     SECRET_BYTES = 8
 
-    def __init__(self, name, description, direction, num_executors, hb_interval, log_dir):
+    def __init__(
+        self, name, description, direction, num_executors, hb_interval, log_dir
+    ):
         global driver_secret
 
         # COMMON EXPERIMENT SETUP
@@ -80,10 +77,11 @@ class Driver(ABC):
                 )
             )
 
+        env = EnvSing.get_instance()
         # Open File desc for HDFS to log
-        if not hopshdfs.exists(self.log_file):
-            hopshdfs.dump("", self.log_file)
-        self.fd = hopshdfs.open_file(self.log_file, flags="w")
+        if not env.exists(self.log_file):
+            env.dump("", self.log_file)
+        self.fd = env.open_file(self.log_file, flags="w")
 
         # overwritten for optimization
         self.es_interval = None
@@ -105,23 +103,21 @@ class Driver(ABC):
     def finalize(self, job_end):
         self.job_end = job_end
 
-        self.duration = experiment_utils._seconds_to_milliseconds(
-            self.job_end - self.job_start
-        )
+        self.duration = util.seconds_to_milliseconds(self.job_end - self.job_start)
 
-        self.duration_str = experiment_utils._time_diff(self.job_start, self.job_end)
+        self.duration_str = util.time_diff(self.job_start, self.job_end)
 
         results = self.prep_results()
 
         print(results)
         self._log(results)
 
-        hopshdfs.dump(
+        EnvSing.get_instance().dump(
             json.dumps(self.result, default=util.json_default_numpy),
             self.log_dir + "/result.json",
         )
-        sc = hopsutil._find_spark().sparkContext
-        hopshdfs.dump(self.json(sc), self.log_dir + "/maggy.json")
+        sc = util.find_spark().sparkContext
+        EnvSing.get_instance().dump(self.json(sc), self.log_dir + "/maggy.json")
 
         return self.result
 
@@ -183,10 +179,10 @@ class Driver(ABC):
                                                 self.direction,
                                             )
                                         except Exception as e:
-                                            self._log(e)
+                                            self.log(e)
                                             to_stop = None
                                         if to_stop is not None:
-                                            self._log(
+                                            self.log(
                                                 "Trials to stop: {}".format(to_stop)
                                             )
                                             self.get_trial(to_stop).set_early_stop()
@@ -215,7 +211,7 @@ class Driver(ABC):
                         with trial.lock:
                             trial.status = Trial.FINALIZED
                             trial.final_metric = msg["data"]
-                            trial.duration = experiment_utils._seconds_to_milliseconds(
+                            trial.duration = util.seconds_to_milliseconds(
                                 time.time() - trial.start
                             )
 
@@ -227,9 +223,9 @@ class Driver(ABC):
                         self._update_result(trial)
                         # keep for later in case tqdm doesn't work
                         self.maggy_log = self._update_maggy_log()
-                        self._log(self.maggy_log)
+                        self.log(self.maggy_log)
 
-                        hopshdfs.dump(
+                        EnvSing.get_instance().dump(
                             trial.to_json(),
                             self.log_dir + "/" + trial.trial_id + "/trial.json",
                         )
@@ -309,7 +305,7 @@ class Driver(ABC):
             except Exception as exc:
                 # Exception can't be propagated to parent thread
                 # therefore log the exception and fail experiment
-                self._log(exc)
+                self.log(exc)
                 self.exception = exc
                 self.server.stop()
 
@@ -332,11 +328,10 @@ class Driver(ABC):
         """Get all relevant experiment information in JSON format.
         """
         user = None
-        if hopsconstants.ENV_VARIABLES.HOPSWORKS_USER_ENV_VAR in os.environ:
-            user = os.environ[hopsconstants.ENV_VARIABLES.HOPSWORKS_USER_ENV_VAR]
+        user = EnvSing.get_instance().get_user()
 
         experiment_json = {
-            "project": hopshdfs.project_name(),
+            "project": EnvSing.get_instance().project_name(),
             "user": user,
             "name": self.name,
             "module": "maggy",
@@ -459,4 +454,4 @@ class Driver(ABC):
         """Logs a string to the maggy driver log file.
         """
         msg = datetime.now().isoformat() + ": " + str(log_msg)
-        self.fd.write((msg + "\n").encode())
+        self.fd.write(EnvSing.get_instance().str_or_byte(msg + "\n"))
