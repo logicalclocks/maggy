@@ -21,7 +21,7 @@ from maggy.searchspace import Searchspace
 from maggy.optimizer import AbstractOptimizer, RandomSearch, Asha, SingleRun, GridSearch
 from maggy.earlystop import AbstractEarlyStop, MedianStoppingRule, NoStoppingRule
 from maggy.optimizer import bayes
-from maggy.core.experiment_driver import Driver
+from maggy.core.experiment_driver.Driver import Driver
 
 
 class OptimizationDriver(Driver):
