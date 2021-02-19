@@ -14,11 +14,12 @@
 #   limitations under the License.
 #
 
-from maggy.optimizer import abstractoptimizer, randomsearch, asha, singlerun
+from maggy.optimizer import abstractoptimizer, randomsearch, asha, singlerun, gridsearch
 
 AbstractOptimizer = abstractoptimizer.AbstractOptimizer
 RandomSearch = randomsearch.RandomSearch
 Asha = asha.Asha
 SingleRun = singlerun.SingleRun
+GridSearch = gridsearch.GridSearch
 
-__all__ = ["AbstractOptimizer", "RandomSearch", "Asha", "SingleRun"]
+__all__ = ["AbstractOptimizer", "RandomSearch", "Asha", "SingleRun", "GridSearch"]
