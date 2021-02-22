@@ -151,7 +151,7 @@ def handle_return_val(return_val, log_dir, optimization_key, log_file):
     """Handles the return value of the user defined training function."""
     env = EnvSing.get_instance()
 
-    env._upload_file_output(return_val, log_dir)
+    env.upload_file_output(return_val, log_dir)
 
     # Return type validation
     if not optimization_key:
