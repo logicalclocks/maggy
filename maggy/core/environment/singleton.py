@@ -33,6 +33,13 @@ class EnvSing(object):
 
             EnvSing.obj = hopsworks.HopsworksEnv()
 
+        elif os.environ.get('DATABRICKS_ROOT_CONDA_ENV') == 'databricks-ml':
+            print("You are running Maggy on Databricks.")
+
+            from maggy.core.environment import databricks
+
+            EnvSing.obj = databricks.DatabricksEnv()
+
         else:
             raise NotImplementedError(
                 "Running Maggy out from Hopsworks is not supported."
