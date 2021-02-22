@@ -30,7 +30,7 @@ import numpy as np
 from maggy import util, tensorboard
 from maggy.core import rpc
 from maggy.core.reporter import Reporter
-from maggy.distributed.patching import MaggyDataLoader
+from maggy.core.patching import MaggyDataLoader
 from maggy.core.environment.singleton import EnvSing
 
 torch.utils.data.DataLoader = (
@@ -81,8 +81,9 @@ def prepare_function(
         def maggy_print(*args, **kwargs):
             builtin_print(*args, **kwargs)
             reporter.log(" ".join(str(x) for x in args), True)
+
         __builtin__.print = maggy_print
-        
+
         try:
             _register_with_servers(client, reporter, partition_id)
             tb_logdir, trial_log_file = _setup_logging(reporter, log_dir)
@@ -124,9 +125,7 @@ def prepare_function(
                     model=ddp_model, train_set=train_set, test_set=test_set,
                 )
 
-            retval = util._handle_return_val(
-                retval, tb_logdir, "Metric", trial_log_file
-            )
+            retval = util.handle_return_val(retval, tb_logdir, "Metric", trial_log_file)
 
             reporter.log("Finished distributed training.", True)
             reporter.log("Final metric: {}".format(retval), True)
@@ -151,7 +150,7 @@ def _register_with_servers(client, reporter, partition_id):
     """
     client_addr = client.client_addr
     port = _get_open_port()
-    host_port = (client_addr[0] + ":" + str(port))
+    host_port = client_addr[0] + ":" + str(port)
     exec_spec = {
         "partition_id": partition_id,
         "task_attempt": 0,

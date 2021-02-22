@@ -25,7 +25,7 @@ from maggy.earlystop import AbstractEarlyStop, MedianStoppingRule, NoStoppingRul
 from maggy.optimizer import bayes
 from maggy.trial import Trial
 from maggy.core.experiment_driver.Driver import Driver
-from maggy.core.config import AblationConfig
+from maggy.experiment_config import AblationConfig
 from maggy.core.environment.singleton import EnvSing
 
 
@@ -106,11 +106,9 @@ class OptimizationDriver(Driver):
     def finalize(self, job_end):
         self.job_end = job_end
 
-        self.duration = EnvSing.get_instance().seconds_to_milliseconds(
-            self.job_end - self.job_start
-        )
+        self.duration = util.seconds_to_milliseconds(self.job_end - self.job_start)
 
-        self.duration_str = EnvSing.get_instance().time_diff(self.job_start, self.job_end)
+        self.duration_str = util.time_diff(self.job_start, self.job_end)
 
         results = self.prep_results()
 
@@ -121,7 +119,7 @@ class OptimizationDriver(Driver):
             json.dumps(self.result, default=util.json_default_numpy),
             self.log_dir + "/result.json",
         )
-        sc = EnvSing.get_instance().find_spark().sparkContext
+        sc = util.find_spark().sparkContext
         EnvSing.get_instance().dump(self.json(sc), self.log_dir + "/maggy.json")
 
         return self.result
@@ -330,9 +328,7 @@ class OptimizationDriver(Driver):
         with trial.lock:
             trial.status = Trial.FINALIZED
             trial.final_metric = msg["data"]
-            trial.duration = EnvSing.get_instance().seconds_to_milliseconds(
-                time.time() - trial.start
-            )
+            trial.duration = util.seconds_to_milliseconds(time.time() - trial.start)
 
         # move trial to the finalized ones
         self._final_store.append(trial)

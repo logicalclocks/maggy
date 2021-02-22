@@ -68,20 +68,18 @@ def lagom(train_fn, config):
         if RUNNING:
             raise RuntimeError("An experiment is currently running.")
         RUNNING = True
-        spark_context = EnvSing.get_instance().find_spark().sparkContext
+        spark_context = util.find_spark().sparkContext
         APP_ID = str(spark_context.applicationId)
         result = lagom_wrapper(config, train_fn)  # Singledispatch uses first arg.
         return result
     except:  # noqa: E722
-        _exception_handler(
-            EnvSing.get_instance().seconds_to_milliseconds(time.time() - job_start)
-        )
+        _exception_handler(util.seconds_to_milliseconds(time.time() - job_start))
         raise
     finally:
         # Clean up spark jobs
         RUN_ID += 1
         RUNNING = False
-        EnvSing.get_instance().find_spark().sparkContext.setJobGroup("", "")
+        util.find_spark().sparkContext.setJobGroup("", "")
 
 
 @singledispatch
