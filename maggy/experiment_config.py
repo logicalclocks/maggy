@@ -25,7 +25,6 @@ class LagomConfig:
 class OptimizationConfig(LagomConfig):
     def __init__(
         self,
-        name,
         num_trials,
         optimizer,
         searchspace,
@@ -34,6 +33,7 @@ class OptimizationConfig(LagomConfig):
         es_interval=1,
         es_min=10,
         es_policy="median",
+        name="HPOptimization",
         description="",
         hb_interval=1,
     ):
@@ -50,14 +50,29 @@ class OptimizationConfig(LagomConfig):
 
 
 class AblationConfig(LagomConfig):
-    def __init__(self, name, description, hb_interval, ablator, ablation_study):
+    def __init__(
+        self,
+        ablator,
+        ablation_study,
+        name="ablationStudy",
+        description="",
+        hb_interval=1,
+    ):
         super().__init__(name, description, hb_interval)
         self.ablator = ablator
         self.ablation_study = ablation_study
 
 
 class DistributedConfig(LagomConfig):
-    def __init__(self, name, model, train_set, test_set, hb_interval=1, description=""):
+    def __init__(
+        self,
+        model,
+        train_set,
+        test_set,
+        name="torchDist",
+        hb_interval=1,
+        description="",
+    ):
         super().__init__(name, description, hb_interval)
         self.model = model
         self.train_set = train_set

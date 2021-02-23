@@ -29,7 +29,7 @@ def lagom_ablation(train_fn, config, APP_ID, RUN_ID):
     exp_driver = None
     try:
         APP_ID, RUN_ID = util.register_environment(APP_ID, RUN_ID)
-        num_executors = min(util.num_executors(spark_context), exp_driver.num_executors)
+        num_executors = util.num_executors(spark_context)
         # Start experiment driver
         log_dir = EnvSing.get_instance().get_logdir(APP_ID, RUN_ID)
         exp_driver = AblationDriver(config, num_executors, log_dir)
@@ -46,7 +46,7 @@ def lagom_ablation(train_fn, config, APP_ID, RUN_ID):
             os.environ["ML_ID"], "{} | {}".format(config.name, exp_function)
         )
 
-        exp_json = util.populate_experiment(config, APP_ID, RUN_ID, exp_function)
+        exp_json = util.populate_experiment(config, APP_ID, RUN_ID)
         util.log(
             "Started Maggy Experiment: {0}, {1}, run {2}".format(
                 config.name, APP_ID, RUN_ID
@@ -64,7 +64,7 @@ def lagom_ablation(train_fn, config, APP_ID, RUN_ID):
             server_addr,
             config.hb_interval,
             exp_driver._secret,
-            config.optimization_key,
+            "N/A",
             log_dir,
         )
         node_rdd.foreachPartition(worker_fct)
@@ -84,7 +84,7 @@ def lagom_ablation(train_fn, config, APP_ID, RUN_ID):
             exp_driver.duration,
             EnvSing.get_instance().get_logdir(APP_ID, RUN_ID),
             best_logdir,
-            config.optimization_key,
+            "N/A",
         )
         util.log("Finished Experiment")
         return result

@@ -300,7 +300,7 @@ def populate_experiment(config, app_id, run_id, exp_function=None):
     """
     direction = config.direction if exp_function else "N/A"
     opt_key = config.optimization_key if exp_function else "N/A"
-    exp_function = exp_function if exp_function else "torch_dist"
+    exp_function = exp_function if exp_function else "N/A"
     experiment_json = EnvSing.get_instance().populate_experiment(
         config.name,
         exp_function,
