@@ -40,10 +40,7 @@ class OptimizationDriver(Driver):
     }
 
     def __init__(self, config, num_executors, log_dir):
-        # num_trials default 1
-        # direction default 'max'
         super().__init__(config, num_executors, log_dir)
-        # CONTEXT-SPECIFIC EXPERIMENT SETUP
         self._final_store = []
         self._trial_store = {}
         self.experiment_done = False

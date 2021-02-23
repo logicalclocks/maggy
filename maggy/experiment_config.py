@@ -52,8 +52,9 @@ class OptimizationConfig(LagomConfig):
 class AblationConfig(LagomConfig):
     def __init__(
         self,
-        ablator,
         ablation_study,
+        ablator="loco",
+        direction="max",
         name="ablationStudy",
         description="",
         hb_interval=1,
@@ -61,6 +62,7 @@ class AblationConfig(LagomConfig):
         super().__init__(name, description, hb_interval)
         self.ablator = ablator
         self.ablation_study = ablation_study
+        self.direction = direction
 
 
 class DistributedConfig(LagomConfig):
