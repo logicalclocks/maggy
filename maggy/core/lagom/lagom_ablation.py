@@ -1,5 +1,5 @@
 #
-#   Copyright 2020 Logical Clocks AB
+#   Copyright 2021 Logical Clocks AB
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -17,24 +17,21 @@
 import os
 import time
 
-from hops import util as hopsutil
-from hops.experiment_impl.util import experiment_utils
-
 from maggy import util
-from maggy.core.lagom import utils as lagom_utils
+from maggy.core.environment.singleton import EnvSing
 from maggy.core.experiment_driver.AblationDriver import AblationDriver
 from maggy.core.executors.trial_executor import prepare_function
 
 
 def lagom_ablation(train_fn, config, APP_ID, RUN_ID):
     job_start = time.time()
-    spark_context = hopsutil._find_spark().sparkContext
+    spark_context = util.find_spark().sparkContext
     exp_driver = None
     try:
-        APP_ID, RUN_ID = lagom_utils.register_environment(APP_ID, RUN_ID, spark_context)
-        num_executors = min(util.num_executors(spark_context), exp_driver.num_executors)
+        APP_ID, RUN_ID = util.register_environment(APP_ID, RUN_ID)
+        num_executors = util.num_executors(spark_context)
         # Start experiment driver
-        log_dir = experiment_utils._get_logdir(APP_ID, RUN_ID)
+        log_dir = EnvSing.get_instance().get_logdir(APP_ID, RUN_ID)
         exp_driver = AblationDriver(config, num_executors, log_dir)
         # Using exp_driver.num_executor since it has been reconfigured
         # using ablator.get_number_of_trials()
@@ -49,8 +46,8 @@ def lagom_ablation(train_fn, config, APP_ID, RUN_ID):
             os.environ["ML_ID"], "{} | {}".format(config.name, exp_function)
         )
 
-        exp_json = lagom_utils.populate_experiment(config, APP_ID, RUN_ID, exp_function)
-        util._log(
+        exp_json = util.populate_experiment(config, APP_ID, RUN_ID)
+        util.log(
             "Started Maggy Experiment: {0}, {1}, run {2}".format(
                 config.name, APP_ID, RUN_ID
             )
@@ -67,7 +64,7 @@ def lagom_ablation(train_fn, config, APP_ID, RUN_ID):
             server_addr,
             config.hb_interval,
             exp_driver._secret,
-            config.optimization_key,
+            "N/A",
             log_dir,
         )
         node_rdd.foreachPartition(worker_fct)
@@ -75,21 +72,21 @@ def lagom_ablation(train_fn, config, APP_ID, RUN_ID):
 
         result = exp_driver.finalize(job_end)
         best_logdir = (
-            experiment_utils._get_logdir(APP_ID, RUN_ID) + "/" + result["best_id"]
+            EnvSing.get_instance().get_logdir(APP_ID, RUN_ID) + "/" + result["best_id"]
         )
 
-        util._finalize_experiment(
+        util.finalize_experiment(
             exp_json,
             float(result["best_val"]),
             APP_ID,
             RUN_ID,
             "FINISHED",
             exp_driver.duration,
-            experiment_utils._get_logdir(APP_ID, RUN_ID),
+            EnvSing.get_instance().get_logdir(APP_ID, RUN_ID),
             best_logdir,
-            config.optimization_key,
+            "N/A",
         )
-        util._log("Finished Experiment")
+        util.log("Finished Experiment")
         return result
     except:  # noqa: E722
         if exp_driver and exp_driver.exception:

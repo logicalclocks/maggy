@@ -20,7 +20,7 @@ import torch
 from petastorm.reader import make_reader, make_batch_reader
 from petastorm.pytorch import DataLoader as PetastormDataLoader
 
-from hops import hdfs
+from maggy.core.environment.singleton import EnvSing
 
 
 def MaggyDataLoader(dataset, *args, **kwargs):
@@ -86,7 +86,9 @@ class MaggyPetaDataLoader(PetastormDataLoader):
     def __init__(self, dataset, batch_size=1, **_):
         num_workers = int(os.environ["WORLD_SIZE"])  # Is set at lagom startup.
         rank = int(os.environ["RANK"])
-        is_peta_ds = hdfs.exists(dataset.rstrip("/") + "/_common_metadata")
+        is_peta_ds = EnvSing.get_instance().exists(
+            dataset.rstrip("/") + "/_common_metadata"
+        )
         # Make reader only compatible with petastorm dataset.
         ds_type = "Petastorm" if is_peta_ds else "Parquet"
         print(f"{ds_type} dataset detected in folder {dataset}")

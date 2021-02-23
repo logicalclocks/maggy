@@ -17,7 +17,7 @@
 from abc import ABC, abstractmethod
 from datetime import datetime
 
-from hops import hdfs
+from maggy.core.environment.singleton import EnvSing
 
 
 class AbstractPruner(ABC):
@@ -75,18 +75,19 @@ class AbstractPruner(ABC):
         :param exp_dir: path of experiment directory
         :rtype exp_dir: str
         """
-
+        env = EnvSing.get_instance()
         # configure logger
         self.log_file = exp_dir + "/pruner.log"
-        if not hdfs.exists(self.log_file):
-            hdfs.dump("", self.log_file)
-        self.fd = hdfs.open_file(self.log_file, flags="w")
+
+        if not env.exists(self.log_file):
+            env.dump("", self.log_file)
+        self.fd = env.open_file(self.log_file, flags="w")
         self._log("Initialized Pruner Logger")
 
     def _log(self, msg):
         if self.fd and not self.fd.closed:
             msg = datetime.now().isoformat() + ": " + str(msg)
-            self.fd.write((msg + "\n").encode())
+            self.fd.write(EnvSing.get_instance().str_or_byte(msg + "\n"))
 
     def _close_log(self):
         if not self.fd.closed:

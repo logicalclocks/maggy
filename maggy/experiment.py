@@ -1,5 +1,5 @@
 #
-#   Copyright 2020 Logical Clocks AB
+#   Copyright 2021 Logical Clocks AB
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 
 """
 Experiment module used for running asynchronous optimization tasks.
-
 The programming model is that you wrap the code containing the model
 training inside a wrapper function.
 Inside that wrapper function provide all imports and parts that make up your
@@ -28,9 +27,8 @@ import atexit
 import time
 from functools import singledispatch
 
-from hops.experiment_impl.util import experiment_utils
-
 from maggy import util
+from maggy.core.environment.singleton import EnvSing
 from maggy.core.lagom.lagom_optimization import lagom_optimization
 from maggy.core.lagom.lagom_ablation import lagom_ablation
 from maggy.core.lagom.lagom_distributed import lagom_distributed
@@ -48,6 +46,20 @@ EXPERIMENT_JSON = {}
 
 
 def lagom(train_fn, config):
+    """Launches a maggy experiment, which depending on 'config' can either
+    be a hyperparameter optimization, an ablation study experiment or distributed
+    training. Given a search space, objective and a model training procedure `train_fn`
+    (black-box function), an experiment is the whole process of finding the
+    best hyperparameter combination in the search space, optimizing the
+    black-box function. Currently maggy supports random search and a median
+    stopping rule.
+    **lagom** is a Swedish word meaning "just the right amount".
+
+    :param train_fn: User defined experiment containing the model training.
+    :type train_fn: callable
+    :param config: An experiment configuration. For more information, see experiment_config.
+    :type config: OptimizationConfig | AblationConfig | DistributedConfig
+    """
     global APP_ID
     global RUNNING
     global RUN_ID
@@ -64,7 +76,7 @@ def lagom(train_fn, config):
         _exception_handler(util.seconds_to_milliseconds(time.time() - job_start))
         raise
     finally:
-        # cleanup spark jobs
+        # Clean up spark jobs
         RUN_ID += 1
         RUNNING = False
         util.find_spark().sparkContext.setJobGroup("", "")
@@ -98,7 +110,6 @@ def _(config, train_fn):
 def _exception_handler(duration):
     """
     Handles exceptions during execution of an experiment
-
     :param duration: duration of the experiment until exception in milliseconds
     :type duration: int
     """
@@ -109,11 +120,11 @@ def _exception_handler(duration):
             EXPERIMENT_JSON["state"] = "FAILED"
             EXPERIMENT_JSON["duration"] = duration
             exp_ml_id = APP_ID + "_" + str(RUN_ID)
-            experiment_utils._attach_experiment_xattr(
+            EnvSing.get_instance().attach_experiment_xattr(
                 exp_ml_id, EXPERIMENT_JSON, "FULL_UPDATE"
             )
     except Exception as err:
-        util._log(err)
+        util.log(err)
 
 
 def _exit_handler():
@@ -126,11 +137,11 @@ def _exit_handler():
         if RUNNING:
             EXPERIMENT_JSON["status"] = "KILLED"
             exp_ml_id = APP_ID + "_" + str(RUN_ID)
-            experiment_utils._attach_experiment_xattr(
+            EnvSing.get_instance().attach_experiment_xattr(
                 exp_ml_id, EXPERIMENT_JSON, "FULL_UPDATE"
             )
     except Exception as err:
-        util._log(err)
+        util.log(err)
 
 
 atexit.register(_exit_handler)

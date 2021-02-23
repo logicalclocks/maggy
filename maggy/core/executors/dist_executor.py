@@ -20,21 +20,18 @@ import traceback
 import os
 import datetime
 import random
-import time
+import socket
 
 import torch
 import torch.distributed as dist
 
 import numpy as np
 
-from hops import hdfs as hopshdfs
-from hops.experiment_impl.util import experiment_utils
-
 from maggy import util, tensorboard
 from maggy.core.rpc import Client
 from maggy.core.reporter import Reporter
 from maggy.core.patching import MaggyDataLoader
-
+from maggy.core.environment.singleton import EnvSing
 
 torch.utils.data.DataLoader = (
     MaggyDataLoader  # Patch data loader to always be distributed.
@@ -55,7 +52,6 @@ def prepare_function(
 ):
     """
     Wraps the user supplied training function in order to be passed to the Spark Executors.
-
     Args:
         app_id (int): Maggy application ID.
         run_id (int): Maggy run ID.
@@ -70,12 +66,11 @@ def prepare_function(
     def wrapper_function(_):
         """
         Patched function from prepare_function factory.
-
         Args:
             _ (object): Necessary sink for the iterator given by Spark to the function upon foreach
                 calls. Can safely be disregarded.
         """
-        experiment_utils._set_ml_id(app_id, run_id)
+        EnvSing.get_instance().set_ml_id(app_id, run_id)
         partition_id, _ = util.get_partition_attempt_id()
         client = Client(server_addr, partition_id, 0, hb_interval, secret)
         log_file = log_dir + "/executor_" + str(partition_id) + ".log"
@@ -88,6 +83,7 @@ def prepare_function(
             reporter.log(" ".join(str(x) for x in args), True)
 
         __builtin__.print = maggy_print
+
         try:
             _register_with_servers(client, reporter, partition_id)
             tb_logdir, trial_log_file = _setup_logging(reporter, log_dir)
@@ -129,9 +125,7 @@ def prepare_function(
                     model=ddp_model, train_set=train_set, test_set=test_set,
                 )
 
-            retval = util._handle_return_val(
-                retval, tb_logdir, "Metric", trial_log_file
-            )
+            retval = util.handle_return_val(retval, tb_logdir, "Metric", trial_log_file)
 
             reporter.log("Finished distributed training.", True)
             reporter.log("Final metric: {}".format(retval), True)
@@ -140,9 +134,6 @@ def prepare_function(
             reporter.log(traceback.format_exc(), False)
             raise
         finally:
-            time.sleep(
-                6
-            )  # Wait for Jupyter to catch latest log messages before shutdown.
             reporter.close_logger()
             client.stop()
             client.close()
@@ -152,16 +143,14 @@ def prepare_function(
 
 def _register_with_servers(client, reporter, partition_id):
     """Registers own address with server and starts heartbeat protocol.
-
     Args:
         client (Client): Client for communication with the server.
         reporter (Reporter): Reporter responsible for heartbeat.
         partition_id (int): Executors partition ID from Sparks RDD.
     """
     client_addr = client.client_addr
-    host_port = (
-        client_addr[0] + ":" + "8080"
-    )  # TODO: Change 8080 to open port within NCCL specs.
+    port = _get_open_port()
+    host_port = client_addr[0] + ":" + str(port)
     exec_spec = {
         "partition_id": partition_id,
         "task_attempt": 0,
@@ -172,13 +161,19 @@ def _register_with_servers(client, reporter, partition_id):
     client.start_heartbeat(reporter)
 
 
+def _get_open_port():
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.bind(("", 0))  # Bind to 0 lets OS choose a free socket.
+    port = sock.getsockname()[1]
+    sock.close()
+    return port
+
+
 def _setup_logging(reporter, log_dir):
     """Sets up logging directories and files, registers with tensorboard.
-
     Args:
         reporter (Reporter): Reporter responsible for logging.
         log_dir (str): Log directory path on the file system.
-
     Returns:
         (tuple): Tuple containing:
             tb_logdir (str): Path of the tensorboard directory.
@@ -189,10 +184,10 @@ def _setup_logging(reporter, log_dir):
     trial_log_file = tb_logdir + "/output.log"
     reporter.set_trial_id(0)
     # If trial is repeated, delete trial directory, except log file
-    if hopshdfs.exists(tb_logdir):
-        util._clean_dir(tb_logdir, [trial_log_file])
+    if EnvSing.get_instance().exists(tb_logdir):
+        util.clean_dir(tb_logdir, [trial_log_file])
     else:
-        hopshdfs.mkdir(tb_logdir)
+        EnvSing.get_instance().mkdir(tb_logdir)
     reporter.init_logger(trial_log_file)
     tensorboard._register(tb_logdir)
     return tb_logdir, trial_log_file
@@ -200,7 +195,6 @@ def _setup_logging(reporter, log_dir):
 
 def _setup_torch_env(torch_config):
     """Registers the Torch config as environment variables on the worker.
-
     Args:
         torch_config (dict): Dictionary containing the values of the variables.
     """

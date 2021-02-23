@@ -14,7 +14,7 @@
 #   limitations under the License.
 #
 
-from maggy.core import rpc
+from maggy.core.rpc import DistributedServer
 from maggy.core.experiment_driver.Driver import Driver
 
 
@@ -23,7 +23,7 @@ class DistributedDriver(Driver):
 
     def __init__(self, config, num_executors, log_dir):
         super().__init__(config, num_executors, log_dir)
-        self.server = rpc.DistributedServer(num_executors)
+        self.server = DistributedServer(num_executors)
         self.results = []
 
     def _register_callbacks(self):

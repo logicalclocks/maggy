@@ -1,5 +1,5 @@
 #
-#   Copyright 2020 Logical Clocks AB
+#   Copyright 2021 Logical Clocks AB
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -24,9 +24,8 @@ import secrets
 from abc import ABC, abstractmethod
 from datetime import datetime
 
-from hops import hdfs as hopshdfs
-
-from maggy.core import rpc
+from maggy.core.rpc import Server
+from maggy.core.environment.singleton import EnvSing
 
 
 DRIVER_SECRET = None
@@ -42,7 +41,7 @@ class Driver(ABC):
         self.description = config.description
         self.num_executors = num_executors
         self.hb_interval = config.hb_interval
-        self.server = rpc.Server(self.num_executors)
+        self.server = Server(self.num_executors)
         self.server_addr = None
         self.job_start = None
 
@@ -62,9 +61,9 @@ class Driver(ABC):
         log_file = log_dir + "/maggy.log"
         self.log_dir = log_dir
         # Open File desc for HDFS to log
-        if not hopshdfs.exists(log_file):
-            hopshdfs.dump("", log_file)
-        self.log_file_handle = hopshdfs.open_file(log_file, flags="w")
+        if not EnvSing.get_instance().exists(log_file):
+            EnvSing.get_instance().dump("", log_file)
+        self.log_file_handle = EnvSing.get_instance().open_file(log_file, flags="w")
         self.exception = None
         self.result = None
 
@@ -120,9 +119,9 @@ class Driver(ABC):
     def stop(self):
         """Stop the Driver's worker thread and server."""
         self.worker_done = True
+        self.server.stop()
         self.log_file_handle.flush()
         self.log_file_handle.close()
-        self.server.stop()
 
     def log(self, log_msg):
         """Logs a string to the maggy driver log file.

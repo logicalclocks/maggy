@@ -1,5 +1,5 @@
 #
-#   Copyright 2020 Logical Clocks AB
+#   Copyright 2021 Logical Clocks AB
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -14,25 +14,22 @@
 #   limitations under the License.
 #
 
-import threading
-import struct
-from pyspark import cloudpickle
-import time
+import secrets
+
 import select
 import socket
-import secrets
-import json
+import struct
+import threading
+import time
+from pyspark import cloudpickle
 
+from maggy.core.environment.singleton import EnvSing
 from maggy.trial import Trial
-
-from hops import constants as hopsconstants
-from hops import util as hopsutil
-from hops.experiment_impl.util import experiment_utils
 
 MAX_RETRIES = 3
 BUFSIZE = 1024 * 2
 
-server_host_port = None
+SERVER_HOST_PORT = None
 
 
 class Reservations(object):
@@ -242,56 +239,13 @@ class Server(MessageSocket):
         Returns:
             address of the Server as a tuple of (host, port)
         """
-        global server_host_port
+        global SERVER_HOST_PORT
 
         server_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        if not server_host_port:
-            server_sock.bind(("", 0))
-            # hostname may not be resolvable but IP address probably will be
-            host = experiment_utils._get_ip_address()
-            port = server_sock.getsockname()[1]
-            server_host_port = (host, port)
-
-            # register this driver with Hopsworks
-            sc = hopsutil._find_spark().sparkContext
-            app_id = str(sc.applicationId)
-
-            method = hopsconstants.HTTP_CONFIG.HTTP_POST
-            resource_url = (
-                hopsconstants.DELIMITERS.SLASH_DELIMITER
-                + hopsconstants.REST_CONFIG.HOPSWORKS_REST_RESOURCE
-                + hopsconstants.DELIMITERS.SLASH_DELIMITER
-                + "maggy"
-                + hopsconstants.DELIMITERS.SLASH_DELIMITER
-                + "drivers"
-            )
-            json_contents = {
-                "hostIp": host,
-                "port": port,
-                "appId": app_id,
-                "secret": exp_driver._secret,
-            }
-            json_embeddable = json.dumps(json_contents)
-            headers = {
-                hopsconstants.HTTP_CONFIG.HTTP_CONTENT_TYPE: hopsconstants.HTTP_CONFIG.HTTP_APPLICATION_JSON
-            }
-
-            try:
-                response = hopsutil.send_request(
-                    method, resource_url, data=json_embeddable, headers=headers
-                )
-
-                if (response.status_code // 100) != 2:
-                    print("No connection to Hopsworks for logging.")
-                    exp_driver.log("No connection to Hopsworks for logging.")
-            except Exception as e:
-                print("Connection failed to Hopsworks. No logging.")
-                exp_driver.log(e)
-                exp_driver.log("Connection failed to Hopsworks. No logging.")
-        else:
-            server_sock.bind(server_host_port)
-        server_sock.listen(10)
+        server_sock, SERVER_HOST_PORT = EnvSing.get_instance().connect_host(
+            server_sock, SERVER_HOST_PORT, exp_driver
+        )
 
         def _listen(self, sock, driver):
             CONNECTIONS = []
@@ -330,7 +284,7 @@ class Server(MessageSocket):
         threading.Thread(
             target=_listen, args=(self, server_sock, exp_driver), daemon=True
         ).start()
-        return server_host_port
+        return SERVER_HOST_PORT
 
     def stop(self):
         """
@@ -501,7 +455,7 @@ class Client(MessageSocket):
         self.server_addr = server_addr
         self.done = False
         self.client_addr = (
-            experiment_utils._get_ip_address(),
+            EnvSing.get_instance().get_ip_address(),
             self.sock.getsockname()[1],
         )
         self.partition_id = partition_id
@@ -566,11 +520,10 @@ class Client(MessageSocket):
         return done
 
     def start_heartbeat(self, reporter):
-        def _heartbeat(self, reporter):
-
+        def _heartbeat(self, report):
             while not self.done:
-                with reporter.lock:
-                    metric, step, logs = reporter.get_data()
+                with report.lock:
+                    metric, step, logs = report.get_data()
                     data = {"value": metric, "step": step}
 
                     resp = self._request(

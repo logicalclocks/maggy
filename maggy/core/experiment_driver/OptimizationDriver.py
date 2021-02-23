@@ -1,5 +1,5 @@
 #
-#   Copyright 2020 Logical Clocks AB
+#   Copyright 2021 Logical Clocks AB
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -18,20 +18,16 @@ import os
 import time
 import json
 
-from hops import hdfs as hopshdfs
-from hops import constants as hopsconstants
-from hops import util as hopsutil
-from hops.experiment_impl.util import experiment_utils
-
 from maggy import util
 from maggy.searchspace import Searchspace
 from maggy.optimizer import AbstractOptimizer, RandomSearch, Asha, SingleRun
 from maggy.earlystop import AbstractEarlyStop, MedianStoppingRule, NoStoppingRule
 from maggy.optimizer import bayes
 from maggy.trial import Trial
-from maggy.core import rpc
 from maggy.core.experiment_driver.Driver import Driver
-from maggy.core.lagom.config import AblationConfig
+from maggy.core.rpc import OptimizationServer
+from maggy.experiment_config import AblationConfig
+from maggy.core.environment.singleton import EnvSing
 
 
 class OptimizationDriver(Driver):
@@ -46,7 +42,7 @@ class OptimizationDriver(Driver):
 
     def __init__(self, config, num_executors, log_dir):
         super().__init__(config, num_executors, log_dir)
-        self.server = rpc.OptimizationServer(num_executors)
+        self.server = OptimizationServer(num_executors)
         # CONTEXT-SPECIFIC EXPERIMENT SETUP
         self._final_store = []
         self._trial_store = {}
@@ -109,27 +105,21 @@ class OptimizationDriver(Driver):
 
     def finalize(self, job_end):
         self.job_end = job_end
-
         self.duration = util.seconds_to_milliseconds(self.job_end - self.job_start)
-
-        self.duration_str = experiment_utils._time_diff(self.job_start, self.job_end)
-
+        self.duration_str = util.time_diff(self.job_start, self.job_end)
         results = self.prep_results()
-
         print(results)
         self.log(results)
-
-        hopshdfs.dump(
+        EnvSing.get_instance().dump(
             json.dumps(self.result, default=util.json_default_numpy),
             self.log_dir + "/result.json",
         )
-        sc = hopsutil._find_spark().sparkContext
-        hopshdfs.dump(self.json(sc), self.log_dir + "/maggy.json")
-
+        sc = util.find_spark().sparkContext
+        EnvSing.get_instance().dump(self.json(sc), self.log_dir + "/maggy.json")
         return self.result
 
     def prep_results(self):
-        _ = self.controller._finalize_experiment(self._final_store)
+        self.controller._finalize_experiment(self._final_store)
         results = (
             "\n------ "
             + self.controller.name()
@@ -159,11 +149,15 @@ class OptimizationDriver(Driver):
         """Get all relevant experiment information in JSON format.
         """
         user = None
-        if hopsconstants.ENV_VARIABLES.HOPSWORKS_USER_ENV_VAR in os.environ:
-            user = os.environ[hopsconstants.ENV_VARIABLES.HOPSWORKS_USER_ENV_VAR]
+        constants = EnvSing.get_instance().get_constants()
+        try:
+            if constants.ENV_VARIABLES.HOPSWORKS_USER_ENV_VAR in os.environ:
+                user = os.environ[constants.ENV_VARIABLES.HOPSWORKS_USER_ENV_VAR]
+        except AttributeError:
+            pass
 
         experiment_json = {
-            "project": hopshdfs.project_name(),
+            "project": EnvSing.get_instance().project_name(),
             "user": user,
             "name": self.name,
             "module": "maggy",
@@ -271,7 +265,7 @@ class OptimizationDriver(Driver):
             + " ("
             + str(self.result["early_stopped"])
             + ") "
-            + util._progress_bar(self.result["num_trials"], self.num_trials)
+            + util.progress_bar(self.result["num_trials"], self.num_trials)
             + " - BEST "
             + json.dumps(self.result["best_config"])
             + " - metric "
@@ -328,9 +322,7 @@ class OptimizationDriver(Driver):
         with trial.lock:
             trial.status = Trial.FINALIZED
             trial.final_metric = msg["data"]
-            trial.duration = experiment_utils._seconds_to_milliseconds(
-                time.time() - trial.start
-            )
+            trial.duration = util.seconds_to_milliseconds(time.time() - trial.start)
 
         # move trial to the finalized ones
         self._final_store.append(trial)
@@ -342,7 +334,7 @@ class OptimizationDriver(Driver):
         self.maggy_log = self._update_maggy_log()
         self.log(self.maggy_log)
 
-        hopshdfs.dump(
+        EnvSing.get_instance().dump(
             trial.to_json(), self.log_dir + "/" + trial.trial_id + "/trial.json",
         )
 

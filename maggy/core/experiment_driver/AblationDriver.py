@@ -1,5 +1,5 @@
 #
-#   Copyright 2020 Logical Clocks AB
+#   Copyright 2021 Logical Clocks AB
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -60,6 +60,7 @@ class AblationDriver(OptimizationDriver):
         self.result = {"best_val": "n.a.", "num_trials": 0, "early_stopped": "n.a"}
 
         # Init controller and set references to data in ablator
+        self.direction = config.direction
         self.controller.ablation_study = self.ablation_study
         self.controller.final_store = self._final_store
         self.controller.initialize()
@@ -101,7 +102,7 @@ class AblationDriver(OptimizationDriver):
             + str(self.result["num_trials"])
             + "/"
             + str(self.num_trials)
-            + util._progress_bar(self.result["num_trials"], self.num_trials)
+            + util.progress_bar(self.result["num_trials"], self.num_trials)
             + " - BEST Excludes"
             + json.dumps(self.result["best_config"])
             + " - metric "

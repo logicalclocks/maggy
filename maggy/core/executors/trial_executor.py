@@ -1,5 +1,5 @@
 #
-#   Copyright 2020 Logical Clocks AB
+#   Copyright 2021 Logical Clocks AB
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -23,12 +23,10 @@ import inspect
 import json
 import traceback
 
-from hops import hdfs as hopshdfs
-from hops.experiment_impl.util import experiment_utils
-
 from maggy import util, tensorboard
 from maggy.core import rpc, exceptions
 from maggy.core.reporter import Reporter
+from maggy.core.environment.singleton import EnvSing
 
 
 def prepare_function(
@@ -46,12 +44,13 @@ def prepare_function(
         """
         Wraps the user supplied training function in order to be passed to the
         Spark Executors.
-
         Args:
             _ (object): Necessary sink for the iterator given by Spark to the function upon foreach
                 calls. Can safely be disregarded.
         """
-        experiment_utils._set_ml_id(app_id, run_id)
+        env = EnvSing.get_instance()
+
+        env.set_ml_id(app_id, run_id)
 
         # get task context information to determine executor identifier
         partition_id, task_attempt = util.get_partition_attempt_id()
@@ -114,21 +113,21 @@ def prepare_function(
                 reporter.set_trial_id(trial_id)
 
                 # If trial is repeated, delete trial directory, except log file
-                if hopshdfs.exists(tb_logdir):
-                    util._clean_dir(tb_logdir, [trial_log_file])
+                if env.exists(tb_logdir):
+                    util.clean_dir(tb_logdir, [trial_log_file])
                 else:
-                    hopshdfs.mkdir(tb_logdir)
+                    env.mkdir(tb_logdir)
 
                 reporter.init_logger(trial_log_file)
                 tensorboard._register(tb_logdir)
                 if experiment_type == "ablation":
-                    hopshdfs.dump(
+                    env.dump(
                         json.dumps(ablation_params, default=util.json_default_numpy),
                         tb_logdir + "/.hparams.json",
                     )
 
                 else:
-                    hopshdfs.dump(
+                    env.dump(
                         json.dumps(parameters, default=util.json_default_numpy),
                         tb_logdir + "/.hparams.json",
                     )
@@ -146,9 +145,7 @@ def prepare_function(
                     else:
                         retval = train_fn(**parameters)
 
-                    retval = util._handle_return_val(
-                        retval, tb_logdir, optimization_key, trial_log_file
-                    )
+                    retval = util.handle_return_val(retval, tb_logdir, optimization_key, trial_log_file)
 
                 except exceptions.EarlyStopException as e:
                     retval = e.metric
