@@ -179,10 +179,10 @@ class Driver(ABC):
                                                 self.direction,
                                             )
                                         except Exception as e:
-                                            self.log(e)
+                                            self._log(e)
                                             to_stop = None
                                         if to_stop is not None:
-                                            self.log(
+                                            self._log(
                                                 "Trials to stop: {}".format(to_stop)
                                             )
                                             self.get_trial(to_stop).set_early_stop()
@@ -223,7 +223,7 @@ class Driver(ABC):
                         self._update_result(trial)
                         # keep for later in case tqdm doesn't work
                         self.maggy_log = self._update_maggy_log()
-                        self.log(self.maggy_log)
+                        self._log(self.maggy_log)
 
                         EnvSing.get_instance().dump(
                             trial.to_json(),
@@ -305,7 +305,7 @@ class Driver(ABC):
             except Exception as exc:
                 # Exception can't be propagated to parent thread
                 # therefore log the exception and fail experiment
-                self.log(exc)
+                self._log(exc)
                 self.exception = exc
                 self.server.stop()
 

@@ -1,13 +1,24 @@
-
-
+#
+#   Copyright 2021 Logical Clocks AB
+#
+#   Licensed under the Apache License, Version 2.0 (the "License");
+#   you may not use this file except in compliance with the License.
+#   You may obtain a copy of the License at
+#
+#       http://www.apache.org/licenses/LICENSE-2.0
+#
+#   Unless required by applicable law or agreed to in writing, software
+#   distributed under the License is distributed on an "AS IS" BASIS,
+#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#   See the License for the specific language governing permissions and
+#   limitations under the License.
+#
 
 from maggy.core.environment.abstractenvironment import AbstractEnv
 import os
-import socket
 import maggy.util as util
-import pyspark
-import uuid
-import tensorflow as tf
+import shutil
+
 
 class DatabricksEnv(AbstractEnv):
     """
@@ -25,12 +36,28 @@ class DatabricksEnv(AbstractEnv):
         os.environ['ML_ID'] = str(app_id) + '_' + str(run_id)
 
     def create_experiment_dir(self, app_id, run_id):
-        pass
+        if not os.path.exists(os.path.join(self.log_dir, app_id)):
+            os.mkdir(os.path.join(self.log_dir, app_id))
+
+        experiment_path = self.get_logdir(app_id, run_id)
+        if os.path.exists(experiment_path):
+            shutil.rmtree(experiment_path)
+
+        os.mkdir(experiment_path)
 
     def get_logdir(self, app_id, run_id):
-        return self.log_dir
+        return os.path.join(self.log_dir, str(app_id), str(run_id))
 
-    def populate_experiment(self, model_name, function, type, hp, description, app_id, direction, optimization_key):
+    def populate_experiment(self,
+                            model_name,
+                            function,
+                            type,
+                            hp,
+                            description,
+                            app_id,
+                            direction,
+                            optimization_key
+                            ):
         pass
 
     def attach_experiment_xattr(self, exp_ml_id, experiment_json, command):
@@ -41,22 +68,7 @@ class DatabricksEnv(AbstractEnv):
 
 
     def mkdir(self, hdfs_path, project=None):
-        pass
-
-    def isdir(self, dir_path, project=None):
-        return os.path.exists(dir_path)
-
-    def ls(self, dir_path, recursive=False, project=None):
-        _ , dirnames, filenames = next(os.walk(dir_path))
-
-        return dirnames + filenames
-
-    def delete(self, path, recursive=False):
-        if self.exists(path):
-            if os.path.isdir(path):
-                os.rmdir(path)
-            elif os.path.isfile(path):
-                os.remove(path)
+        return os.mkdir(hdfs_path)
 
     def dump(self, data, hdfs_path):
         head_tail = os.path.split(hdfs_path)
@@ -72,7 +84,7 @@ class DatabricksEnv(AbstractEnv):
     def get_constants(self):
         pass
 
-    def open_file(self, hdfs_path, project=None, flags='rw', buff_size=0):
+    def open_file(self, hdfs_path, project=None, flags='r', buff_size=0):
         return open(hdfs_path, mode=flags)
 
     def get_training_dataset_path(self, training_dataset, featurestore=None, training_dataset_version=1):
@@ -104,18 +116,29 @@ class DatabricksEnv(AbstractEnv):
 
         return server_sock, server_host_port
 
-    def _upload_file_output(self, retval, hdfs_exec_logdir):
+    def isdir(self, dir_path, project=None):
+        return os.path.exists(dir_path)
+
+    def ls(self, dir_path, recursive=False, project=None):
+        return os.listdir(dir_path)
+
+    def delete(self, path, recursive=False):
+        if self.exists(path):
+            if os.path.isdir(path):
+                os.rmdir(path)
+            elif os.path.isfile(path):
+                os.remove(path)
+
+    def upload_file_output(self, retval, hdfs_exec_logdir):
         pass
 
     def project_path(self, project=None, exclude_nn_addr=False):
         return "/dbfs/"
 
     def get_user(self):
-        # TODO retrieve user info from databricks
         return ""
 
     def project_name(self):
-        # TODO retrieve project_name from databricks
         return ""
 
     def finalize_experiment(self,
@@ -147,45 +170,11 @@ class DatabricksEnv(AbstractEnv):
                 "Failed to find some of the spark.databricks properties."
             )
 
-    def _build_summary_json(self, logdir):
-        pass
-
-    def _convert_return_file_to_arr(self, return_file):
-        pass
-
-    def connect_hsfs(self, engine="training"):
-        pass
-
-    def create_tf_dataset(self, num_epochs, batch_size,
-                          training_dataset_version, training_dataset_name,
-                          ablated_feature, label_name, training_dataset_path):
-
-
-        spark_df = pyspark.read.csv(training_dataset_path, header="true", inferSchema="true")
-
-
-        feature_names = spark_df.schema.names
-
-        if ablated_feature is not None:
-            feature_names.remove(ablated_feature)
-
-        name_uuid = str(uuid.uuid4())
-        path = '/ml/'+ training_dataset_name + '/df-{}.tfrecord'.format(name_uuid)
-        spark_df.write.format("tfrecords").mode("overwrite").save(path)
-
-        return self.load_tf_dataset(path)
-
-    def load_tf_dataset(self,path):
-        filenames = [("/dbfs" + path + "/" + name) for name in os.listdir("/dbfs" + path) if name.startswith("part")]
-        dataset = tf.data.TFRecordDataset(filenames)
-        return dataset
-
-
     def build_summary_json(self, logdir):
         pass
 
     def convert_return_file_to_arr(self, return_file):
         pass
 
-    def upload_file_output(self, retval, hdfs_exec_logdir):
+    def connect_hsfs(self, engine="training"):
         pass
