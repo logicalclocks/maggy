@@ -29,9 +29,9 @@ from functools import singledispatch
 
 from maggy import util
 from maggy.core.environment.singleton import EnvSing
-from maggy.core.lagom.lagom_optimization import lagom_optimization
-from maggy.core.lagom.lagom_ablation import lagom_ablation
-from maggy.core.lagom.lagom_distributed import lagom_distributed
+from maggy.core.experiment_driver.ablation_driver import AblationDriver
+from maggy.core.experiment_driver.optimization_driver import OptimizationDriver
+from maggy.core.experiment_driver.distributed_driver import DistributedDriver
 from maggy.experiment_config import (
     OptimizationConfig,
     AblationConfig,
@@ -70,8 +70,9 @@ def lagom(train_fn, config):
         RUNNING = True
         spark_context = util.find_spark().sparkContext
         APP_ID = str(spark_context.applicationId)
-        result = lagom_wrapper(config, train_fn)  # Singledispatch uses first arg.
-        return result
+        APP_ID, RUN_ID = util.register_environment(APP_ID, RUN_ID)
+        driver = lagom_driver(config, APP_ID, RUN_ID)
+        return driver.run_experiment(train_fn)
     except:  # noqa: E722
         _exception_handler(util.seconds_to_milliseconds(time.time() - job_start))
         raise
@@ -83,8 +84,8 @@ def lagom(train_fn, config):
 
 
 @singledispatch
-def lagom_wrapper(config, train_fn):
-    raise ValueError(
+def lagom_driver(config, app_id, run_id):
+    raise TypeError(
         "Invalid config type! Config is expected to be of type {}, {} or {}, \
                      but is of type {}".format(
             OptimizationConfig, AblationConfig, DistributedConfig, type(config)
@@ -92,19 +93,19 @@ def lagom_wrapper(config, train_fn):
     )
 
 
-@lagom_wrapper.register(OptimizationConfig)
-def _(config, train_fn):
-    return lagom_optimization(train_fn, config, APP_ID, RUN_ID)
+@lagom_driver.register(OptimizationConfig)
+def _(config, app_id, run_id):
+    return OptimizationDriver(config, app_id, run_id)
 
 
-@lagom_wrapper.register(AblationConfig)
-def _(config, train_fn):
-    return lagom_ablation(train_fn, config, APP_ID, RUN_ID)
+@lagom_driver.register(AblationConfig)
+def _(config, app_id, run_id):
+    return AblationDriver(config, app_id, run_id)
 
 
-@lagom_wrapper.register(DistributedConfig)
-def _(config, train_fn):
-    return lagom_distributed(train_fn, config, APP_ID, RUN_ID)
+@lagom_driver.register(DistributedConfig)
+def _(config, app_id, run_id):
+    return DistributedDriver(config, app_id, run_id)
 
 
 def _exception_handler(duration):

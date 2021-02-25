@@ -30,33 +30,28 @@ import numpy as np
 from maggy import util, tensorboard
 from maggy.core.rpc import Client
 from maggy.core.reporter import Reporter
-from maggy.core.patching import MaggyDataLoader
+from maggy.core.patching import MaggyDataLoader, MaggyTrainer
 from maggy.core.environment.singleton import EnvSing
 
-torch.utils.data.DataLoader = (
-    MaggyDataLoader  # Patch data loader to always be distributed.
-)
+import pytorch_lightning
+
+# Patch DataLoader to always be distributed.
+torch.utils.data.DataLoader = MaggyDataLoader
+
+# Patch pytorch_lightning.Trainer to run with distributed config.
+pytorch_lightning.Trainer = MaggyTrainer
 
 
-def prepare_function(
-    app_id,
-    run_id,
-    train_fn,
-    model,
-    train_set,
-    test_set,
-    server_addr,
-    hb_interval,
-    secret,
-    log_dir,
+def dist_executor_fct(
+    train_fn, config, app_id, run_id, server_addr, hb_interval, secret, log_dir,
 ):
     """
     Wraps the user supplied training function in order to be passed to the Spark Executors.
     Args:
+        train_fn (Callable): Original training function.
+        config (DistributedConfig): Experiment config.
         app_id (int): Maggy application ID.
         run_id (int): Maggy run ID.
-        _ (object): Argument sink for experiment type to be compatible with other signatures.
-        train_fn (Callable): Original training function.
         server_addr (str): IP of the Maggy worker registration RPC server.
         hb_interval (Union[float, int]): Worker heartbeat interval.
         secret (str): Secret string to authenticate messages.
@@ -90,17 +85,17 @@ def prepare_function(
             reporter.log("Awaiting worker reservations.", True)
             client.await_reservations()
             reporter.log("Reservations complete, configuring PyTorch.", True)
-            config = client.get_torch_config()
-            if not config:
+            master_config = client.get_torch_config()
+            if not master_config:
                 reporter.log(
                     "PyTorch registration failed, exiting from all tasks.", True
                 )
                 return
-            addr, port = config["host_port"].split(":")
+            addr, port = master_config["host_port"].split(":")
             torch_config = {
                 "MASTER_ADDR": addr,
                 "MASTER_PORT": port,
-                "WORLD_SIZE": str(config["num_executors"]),
+                "WORLD_SIZE": str(master_config["num_executors"]),
                 "RANK": str(partition_id),
                 "NCCL_BLOCKING_WAIT": "1",
                 "NCCL_DEBUG_INFO": "INFO",
@@ -109,20 +104,22 @@ def prepare_function(
 
             _setup_torch_env(torch_config)
             _init_cluster(timeout=60, random_seed=0)
-            ddp_model = torch.nn.parallel.DistributedDataParallel(model.cuda())
+            ddp_model = torch.nn.parallel.DistributedDataParallel(config.model.cuda())
 
             reporter.log("Starting distributed training.", True)
             sig = inspect.signature(train_fn)
             if sig.parameters.get("reporter", None):
                 retval = train_fn(
                     model=ddp_model,
-                    train_set=train_set,
-                    test_set=test_set,
+                    train_set=config.train_set,
+                    test_set=config.test_set,
                     reporter=reporter,
                 )
             else:
                 retval = train_fn(
-                    model=ddp_model, train_set=train_set, test_set=test_set,
+                    model=ddp_model,
+                    train_set=config.train_set,
+                    test_set=config.test_set,
                 )
 
             retval = util.handle_return_val(retval, tb_logdir, "Metric", trial_log_file)
