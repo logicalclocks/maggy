@@ -167,7 +167,8 @@ class MaggyTrainer(Trainer):
     ):
         gpus = 1  # Each Spark worker has only 1 GPU assigned.
         num_nodes = int(os.environ["WORLD_SIZE"])
-        distributed_backend = "ddp"
+        distributed_backend = "ddp" if plugins != "deepspeed" else None
+        replace_sampler_ddp = False
         super().__init__(
             logger,
             checkpoint_callback,

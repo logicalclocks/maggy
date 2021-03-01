@@ -30,16 +30,16 @@ import numpy as np
 from maggy import util, tensorboard
 from maggy.core.rpc import Client
 from maggy.core.reporter import Reporter
-from maggy.core.patching import MaggyDataLoader, MaggyTrainer
+from maggy.core.patching import MaggyDataLoader  # , MaggyTrainer
 from maggy.core.environment.singleton import EnvSing
 
-import pytorch_lightning
+# import pytorch_lightning
 
 # Patch DataLoader to always be distributed.
 torch.utils.data.DataLoader = MaggyDataLoader
 
 # Patch pytorch_lightning.Trainer to run with distributed config.
-pytorch_lightning.Trainer = MaggyTrainer
+# pytorch_lightning.Trainer = MaggyTrainer
 
 
 def dist_executor_fct(
