@@ -19,7 +19,7 @@ import time
 
 from maggy import util, tensorboard
 from maggy.core.environment.singleton import EnvSing
-from maggy.core.experiment_driver.OptimizationDriver import OptimizationDriver
+from maggy.core.experiment_driver.optimization_driver import OptimizationDriver
 from maggy.core.executors.trial_executor import prepare_function
 
 

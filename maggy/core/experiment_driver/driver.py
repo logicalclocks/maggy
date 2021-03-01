@@ -44,9 +44,10 @@ class Driver(ABC):
         self.server = Server(self.num_executors)
         self.server_addr = None
         self.job_start = None
-        self._secret = (
+        DRIVER_SECRET = (
             DRIVER_SECRET if DRIVER_SECRET else self._generate_secret(self.SECRET_BYTES)
         )
+        self._secret = DRIVER_SECRET
         # Logging related initialization
         self._message_q = queue.Queue()
         self.message_callbacks = {}

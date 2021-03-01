@@ -19,7 +19,7 @@ import time
 
 from maggy import util
 from maggy.core.environment.singleton import EnvSing
-from maggy.core.experiment_driver.AblationDriver import AblationDriver
+from maggy.core.experiment_driver.ablation_driver import AblationDriver
 from maggy.core.executors.trial_executor import prepare_function
 
 

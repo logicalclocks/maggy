@@ -19,7 +19,7 @@ import time
 
 from maggy import util
 from maggy.core.environment.singleton import EnvSing
-from maggy.core.experiment_driver.DistributedDriver import DistributedDriver
+from maggy.core.experiment_driver.distributed_driver import DistributedDriver
 from maggy.core.executors.dist_executor import prepare_function
 
 
@@ -74,5 +74,8 @@ def lagom_distributed(train_fn, config, APP_ID, RUN_ID):
             "Total training time: {:.0f} h, {:.0f} min, {:.0f} s".format(hour, mon, sec)
         )
     finally:
+        # grace period to send last logs to sparkmagic
+        # sparkmagic hb poll intervall is 5 seconds, therefore wait 6 seconds
+        time.sleep(6)
         if exp_driver:
             exp_driver.stop()

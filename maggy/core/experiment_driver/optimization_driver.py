@@ -20,11 +20,11 @@ import json
 
 from maggy import util
 from maggy.searchspace import Searchspace
-from maggy.optimizer import AbstractOptimizer, RandomSearch, Asha, SingleRun
+from maggy.optimizer import AbstractOptimizer, RandomSearch, Asha, SingleRun, GridSearch
 from maggy.earlystop import AbstractEarlyStop, MedianStoppingRule, NoStoppingRule
 from maggy.optimizer import bayes
 from maggy.trial import Trial
-from maggy.core.experiment_driver.Driver import Driver
+from maggy.core.experiment_driver.driver import Driver
 from maggy.experiment_config import AblationConfig
 from maggy.core.environment.singleton import EnvSing
 
@@ -37,6 +37,7 @@ class OptimizationDriver(Driver):
         "gp": bayes.GP,
         "none": SingleRun,
         "faulty_none": None,
+        "gridsearch": GridSearch,
     }
 
     def __init__(self, config, num_executors, log_dir):
@@ -56,6 +57,11 @@ class OptimizationDriver(Driver):
         # if optimizer has pruner, num trials is determined by pruner
         if self.controller.pruner:
             self.num_trials = self.controller.pruner.num_trials()
+
+        if isinstance(self.controller, GridSearch):
+            # number of trials need to be determined depending on searchspace of user.
+            self.num_trials = self.controller.get_num_trials(config.searchspace)
+
         self.earlystop_check = self._init_earlystop_check(config.es_policy)
         self.es_interval = config.es_interval
         self.es_min = config.es_min

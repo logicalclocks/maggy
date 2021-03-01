@@ -14,7 +14,7 @@
 #   limitations under the License.
 #
 
-from maggy.core.experiment_driver.Driver import Driver
+from maggy.core.experiment_driver.driver import Driver
 
 
 class DistributedDriver(Driver):
