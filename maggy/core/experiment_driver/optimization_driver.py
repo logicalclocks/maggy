@@ -44,7 +44,6 @@ class OptimizationDriver(Driver):
     def __init__(self, config, num_executors, log_dir):
         super().__init__(config, num_executors, log_dir)
         self.server = OptimizationServer(num_executors)
-        # CONTEXT-SPECIFIC EXPERIMENT SETUP
         self._final_store = []
         self._trial_store = {}
         self.experiment_done = False

@@ -275,8 +275,7 @@ class Server(MessageSocket):
                                 raise Exception
 
                             self._handle_message(sock, msg, driver)
-                        except Exception as e:
-                            _ = e
+                        except Exception:
                             sock.close()
                             CONNECTIONS.remove(sock)
             server_sock.close()
@@ -463,7 +462,7 @@ class Client(MessageSocket):
         self.hb_interval = hb_interval
         self._secret = secret
 
-    def _request(self, req_sock, msg_type, msg_data="", trial_id=None, logs=None):
+    def _request(self, req_sock, msg_type, msg_data=None, trial_id=None, logs=None):
         """Helper function to wrap msg w/ msg_type."""
         msg = {}
         msg["partition_id"] = self.partition_id
@@ -520,10 +519,10 @@ class Client(MessageSocket):
         return done
 
     def start_heartbeat(self, reporter):
-        def _heartbeat(self, report):
+        def _heartbeat(self, reporter):
             while not self.done:
-                with report.lock:
-                    metric, step, logs = report.get_data()
+                with reporter.lock:
+                    metric, step, logs = reporter.get_data()
                     data = {"value": metric, "step": step}
 
                     resp = self._request(
@@ -579,8 +578,6 @@ class Client(MessageSocket):
         elif msg_type == "TRIAL":
             return msg["trial_id"], msg["data"]
         elif msg_type == "ERR":
-            string = msg["data"]
-            reporter.log(f"received message with content {string}", False)
             reporter.log("Stopping experiment", False)
             self.done = True
 
