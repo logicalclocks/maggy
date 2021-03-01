@@ -24,7 +24,7 @@ from maggy.optimizer import AbstractOptimizer, RandomSearch, Asha, SingleRun
 from maggy.earlystop import AbstractEarlyStop, MedianStoppingRule, NoStoppingRule
 from maggy.optimizer import bayes
 from maggy.trial import Trial
-from maggy.core.experiment_driver.Driver import Driver
+from maggy.core.experiment_driver.driver import Driver
 from maggy.core.rpc import OptimizationServer
 from maggy.experiment_config import AblationConfig
 from maggy.core.environment.singleton import EnvSing

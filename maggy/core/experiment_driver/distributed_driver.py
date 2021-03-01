@@ -15,7 +15,7 @@
 #
 
 from maggy.core.rpc import DistributedServer
-from maggy.core.experiment_driver.Driver import Driver
+from maggy.core.experiment_driver.driver import Driver
 
 
 class DistributedDriver(Driver):
