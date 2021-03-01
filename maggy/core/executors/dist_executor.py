@@ -204,11 +204,9 @@ def _setup_torch_env(torch_config):
 
 def _init_cluster(timeout=60, random_seed=0):
     """Checks if config is set, initializes the Torch distributed cluster and sets random seeds.
-
     Args:
         timeout (:obj:'int', optional): Time until initialization times out. Defaults to 60.
         random_seed (:obj:'int', optional): Random seed for Torch, numpy, random. Defaults to 0.
-
     Raises:
         AssertionError: Checks on environment variables or Torch distributed backend failed.
     """

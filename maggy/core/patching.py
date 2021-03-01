@@ -17,24 +17,17 @@
 import os
 
 import torch
+from torch.utils.data import DataLoader, Dataset
 from petastorm.reader import make_reader, make_batch_reader
 from petastorm.pytorch import DataLoader as PetastormDataLoader
 
 from maggy.core.environment.singleton import EnvSing
 
 
-def MaggyDataLoader(dataset, *args, **kwargs):
-    """Factory function for Maggy data loaders.
+class MaggyDataLoader(DataLoader, PetastormDataLoader):
 
-    Breach of naming convention intentional to emphasize the fact that the factory returns a
-    DataLoader object.
-    """
-    if isinstance(dataset, torch.utils.data.Dataset) or dataset is None:
-        return MaggyTorchDataLoader(dataset, *args, **kwargs)
-    return MaggyPetaDataLoader(dataset, *args, **kwargs)
+    loaders = {"pytorch": DataLoader, "petastorm": PetastormDataLoader}
 
-
-class MaggyTorchDataLoader(torch.utils.data.DataLoader):
     def __init__(
         self,
         dataset,
@@ -52,71 +45,61 @@ class MaggyTorchDataLoader(torch.utils.data.DataLoader):
         generator=None,
         **_,
     ):
-        num_workers = int(os.environ["WORLD_SIZE"])  # Is set at lagom startup.
-        sampler = torch.utils.data.distributed.DistributedSampler(dataset=dataset)
-        super().__init__(
-            dataset,
-            batch_size,
-            shuffle,
-            sampler,
-            batch_sampler,
-            num_workers,
-            collate_fn,
-            pin_memory,
-            drop_last,
-            timeout,
-            worker_init_fn,
-            multiprocessing_context,
-            generator,
-        )
+        # Distinguish between Torch dataloader and Petastorm dataloader
+        # Super init avoided to make sure MaggyDataLoader inherits correctly based on dataset type.
+        if isinstance(dataset, Dataset):
+            sampler = torch.utils.data.distributed.DistributedSampler(dataset=dataset)
+            DataLoader.__init__(
+                self,
+                dataset,
+                batch_size,
+                shuffle,
+                sampler,
+                batch_sampler,
+                num_workers,
+                collate_fn,
+                pin_memory,
+                drop_last,
+                timeout,
+                worker_init_fn,
+                multiprocessing_context,
+                generator,
+            )
+            self.mode = "pytorch"
+        else:
+            num_workers = int(os.environ["WORLD_SIZE"])  # Is set at lagom startup.
+            rank = int(os.environ["RANK"])
+            is_peta_ds = EnvSing.get_instance().exists(
+                dataset.rstrip("/") + "/_common_metadata"
+            )
+            # Make reader only compatible with petastorm dataset.
+            ds_type = "Petastorm" if is_peta_ds else "Parquet"
+            print(f"{ds_type} dataset detected in folder {dataset}")
+            reader_factory = make_reader if is_peta_ds else make_batch_reader
+            reader = reader_factory(dataset, cur_shard=rank, shard_count=num_workers)
+            PetastormDataLoader.__init__(self, reader, batch_size=batch_size)
+            self.mode = "petastorm"
         self.iterator = None
 
     def __iter__(self):
-        self.iterator = (
-            super().__iter__()
-        )  # Reload the dataset when new iterator requested.
+        # Reload the dataset when new iterator requested.
+        self.iterator = self.loaders[self.mode].__iter__(self)
         return self
 
     def __next__(self):
         data = self.iterator.__next__()
-        return to_cuda(data)
+        return _to_cuda(data)
 
 
-class MaggyPetaDataLoader(PetastormDataLoader):
-    def __init__(self, dataset, batch_size=1, **_):
-        num_workers = int(os.environ["WORLD_SIZE"])  # Is set at lagom startup.
-        rank = int(os.environ["RANK"])
-        is_peta_ds = EnvSing.get_instance().exists(
-            dataset.rstrip("/") + "/_common_metadata"
-        )
-        # Make reader only compatible with petastorm dataset.
-        ds_type = "Petastorm" if is_peta_ds else "Parquet"
-        print(f"{ds_type} dataset detected in folder {dataset}")
-        reader_factory = make_reader if is_peta_ds else make_batch_reader
-        reader = reader_factory(dataset, cur_shard=rank, shard_count=num_workers)
-        super().__init__(reader, batch_size=batch_size)
-        self.iterator = None
-
-    def __iter__(self):
-        self.iterator = (
-            super().__iter__()
-        )  # Reload the dataset when new iterator requested.
-        return self
-
-    def __next__(self):
-        data = self.iterator.__next__()
-        return to_cuda(data)
-
-
-def to_cuda(data):
+def _to_cuda(data):
     """Recurses into data, transfers tensors to GPU."""
     if isinstance(data, dict):
         for key in data.keys():
-            data[key] = to_cuda(data[key])
+            data[key] = _to_cuda(data[key])
         return data
     if isinstance(data, list):
         for idx, _ in enumerate(data):
-            temp = to_cuda(data[idx])
+            temp = _to_cuda(data[idx])
             data[idx] = temp
         return data
     if isinstance(data, torch.Tensor):
