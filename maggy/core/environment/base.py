@@ -1,32 +1,12 @@
-#
-#   Copyright 2021 Logical Clocks AB
-#
-#   Licensed under the Apache License, Version 2.0 (the "License");
-#   you may not use this file except in compliance with the License.
-#   You may obtain a copy of the License at
-#
-#       http://www.apache.org/licenses/LICENSE-2.0
-#
-#   Unless required by applicable law or agreed to in writing, software
-#   distributed under the License is distributed on an "AS IS" BASIS,
-#   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-#   See the License for the specific language governing permissions and
-#   limitations under the License.
-#
-
-from maggy.core.environment.base import BaseEnv
 import os
-import maggy.util as util
 import shutil
 
+import maggy.util as util
 
-class DatabricksEnv(BaseEnv):
-    """
-    Environment implemented for maggy usage on Databricks.
-    """
+class BaseEnv:
 
     def __init__(self):
-        self.log_dir = "/dbfs/maggy_log/"
+        self.log_dir = os.path.join(os.getcwd(),'experiment_log')
         if not os.path.exists(self.log_dir):
             os.mkdir(self.log_dir)
         self.constants = []
@@ -48,16 +28,7 @@ class DatabricksEnv(BaseEnv):
     def get_logdir(self, app_id, run_id):
         return os.path.join(self.log_dir, str(app_id), str(run_id))
 
-    def populate_experiment(self,
-                            model_name,
-                            function,
-                            type,
-                            hp,
-                            description,
-                            app_id,
-                            direction,
-                            optimization_key
-                            ):
+    def populate_experiment(self, model_name, function, type, hp, description, app_id, direction, optimization_key):
         pass
 
     def attach_experiment_xattr(self, exp_ml_id, experiment_json, command):
@@ -68,13 +39,26 @@ class DatabricksEnv(BaseEnv):
 
 
     def mkdir(self, hdfs_path, project=None):
-        return os.mkdir(hdfs_path)
+        pass
+
+    def isdir(self, dir_path, project=None):
+        return os.path.exists(dir_path)
+
+    def ls(self, dir_path, recursive=False, project=None):
+        return os.listdir(dir_path)
+
+    def delete(self, path, recursive=False):
+        if self.exists(path):
+            if os.path.isdir(path):
+                os.rmdir(path)
+            elif os.path.isfile(path):
+                os.remove(path)
 
     def dump(self, data, hdfs_path):
         head_tail = os.path.split(hdfs_path)
         if not os.path.exists(head_tail[0]):
             os.mkdir(head_tail[0])
-        file = self.open_file(hdfs_path, flags='w')
+        file = self.open_file(hdfs_path, flags='w+')
         file.write(data)
 
     def get_ip_address(self):
@@ -84,7 +68,7 @@ class DatabricksEnv(BaseEnv):
     def get_constants(self):
         pass
 
-    def open_file(self, hdfs_path, project=None, flags='r', buff_size=0):
+    def open_file(self, hdfs_path, project=None, flags='rw', buff_size=0):
         return open(hdfs_path, mode=flags)
 
     def get_training_dataset_path(self, training_dataset, featurestore=None, training_dataset_version=1):
@@ -116,24 +100,11 @@ class DatabricksEnv(BaseEnv):
 
         return server_sock, server_host_port
 
-    def isdir(self, dir_path, project=None):
-        return os.path.exists(dir_path)
-
-    def ls(self, dir_path, recursive=False, project=None):
-        return os.listdir(dir_path)
-
-    def delete(self, path, recursive=False):
-        if self.exists(path):
-            if os.path.isdir(path):
-                os.rmdir(path)
-            elif os.path.isfile(path):
-                os.remove(path)
-
-    def upload_file_output(self, retval, hdfs_exec_logdir):
+    def _upload_file_output(self, retval, hdfs_exec_logdir):
         pass
 
-    def project_path(self, project=None, exclude_nn_addr=False):
-        return "/dbfs/"
+    def project_path(self):
+        return os.getcwd()
 
     def get_user(self):
         return ""
@@ -159,10 +130,10 @@ class DatabricksEnv(BaseEnv):
 
     def get_executors(self, sc):
         try:
-            if sc._conf.get("spark.databricks.clusterUsageTags.clusterScalingType") == "autoscaling":
-                maxExecutors = int(sc._conf.get("spark.databricks.clusterUsageTags.clusterMaxWorkers"))
+            if sc._conf.get("spark.dynamicAllocation.enabled") == "true":
+                maxExecutors = int(sc._conf.get("spark.dynamicAllocation.maxExecutors"))
             else:
-                maxExecutors = int(sc._conf.get("spark.databricks.clusterUsageTags.clusterWorkers"))
+                maxExecutors = int(sc._conf.get("spark.executor.instances"))
 
             return maxExecutors
         except:  # noqa: E722
@@ -170,11 +141,14 @@ class DatabricksEnv(BaseEnv):
                 "Failed to find some of the spark.databricks properties."
             )
 
-    def build_summary_json(self, logdir):
+    def build_summary_json(self):
         pass
 
-    def convert_return_file_to_arr(self, return_file):
+    def connect_hsfs(self):
         pass
 
-    def connect_hsfs(self, engine="training"):
+    def convert_return_file_to_arr(self):
+        pass
+
+    def upload_file_output(self, retval, hdfs_exec_logdir):
         pass
