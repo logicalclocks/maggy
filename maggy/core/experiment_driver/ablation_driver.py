@@ -1,5 +1,5 @@
 #
-#   Copyright 2020 Logical Clocks AB
+#   Copyright 2021 Logical Clocks AB
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -21,67 +21,46 @@ from maggy.earlystop import NoStoppingRule
 from maggy.ablation.ablationstudy import AblationStudy
 from maggy.ablation.ablator.loco import LOCO
 from maggy.ablation.ablator import AbstractAblator
-from maggy.core.experiment_driver.Driver import Driver
+from maggy.core.experiment_driver.optimization_driver import OptimizationDriver
 
 
-class AblationDriver(Driver):
-    def __init__(
-        self,
-        ablator,
-        ablation_study,
-        name,
-        description,
-        direction,
-        num_executors,
-        hb_interval,
-        log_dir,
-    ):
-        super().__init__(
-            name, description, direction, num_executors, hb_interval, log_dir
-        )
-        self.exp_type = "ablation"
+class AblationDriver(OptimizationDriver):
+    def __init__(self, config, num_executors, log_dir):
+        super().__init__(config, num_executors, log_dir)
         # set up an ablation study experiment
         self.earlystop_check = NoStoppingRule.earlystop_check
 
-        if isinstance(ablation_study, AblationStudy):
-            self.ablation_study = ablation_study
+        if isinstance(config.ablation_study, AblationStudy):
+            self.ablation_study = config.ablation_study
         else:
             raise Exception(
                 "The experiment's ablation study configuration should be an instance of "
                 "maggy.ablation.AblationStudy, "
                 "but it is {0} (of type '{1}').".format(
-                    str(ablation_study), type(ablation_study).__name__
+                    str(config.ablation_study), type(config.ablation_study).__name__
                 )
             )
 
-        if isinstance(ablator, str):
-            if ablator.lower() == "loco":
-                self.controller = LOCO(ablation_study, self._final_store)
-                self.num_trials = self.controller.get_number_of_trials()
-                self.num_executors = min(self.num_executors, self.num_trials)
-            else:
-                raise Exception(
-                    "The experiment's ablation study policy should either be a string ('loco') "
-                    "or a custom policy that is an instance of maggy.ablation.ablation.AbstractAblator, "
-                    "but it is {0} (of type '{1}').".format(
-                        str(ablator), type(ablator).__name__
-                    )
-                )
-        elif isinstance(ablator, AbstractAblator):
-            self.controller = ablator
+        if isinstance(config.ablator, str) and config.ablator.lower() == "loco":
+            self.controller = LOCO(config.ablation_study, self._final_store)
+            self.num_trials = self.controller.get_number_of_trials()
+            self.num_executors = min(self.num_executors, self.num_trials)
+        elif isinstance(config.ablator, AbstractAblator):
+            self.controller = config.ablator
             print("Custom Ablator initialized. \n")
         else:
             raise Exception(
                 "The experiment's ablation study policy should either be a string ('loco') "
-                "or a custom policy that is an instance of maggy.ablation.ablation.AbstractAblator, "
-                "but it is {0} (of type '{1}').".format(
-                    str(ablator), type(ablator).__name__
+                "or a custom policy that is an instance of maggy.ablation.ablation.AbstractAblator,"
+                " but it is {0} (of type '{1}').".format(
+                    str(config.ablator), type(config.ablator).__name__
                 )
             )
 
         self.result = {"best_val": "n.a.", "num_trials": 0, "early_stopped": "n.a"}
 
         # Init controller and set references to data in ablator
+        self.direction = config.direction
         self.controller.ablation_study = self.ablation_study
         self.controller.final_store = self._final_store
         self.controller.initialize()
