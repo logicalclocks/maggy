@@ -1,5 +1,5 @@
 #
-#   Copyright 2020 Logical Clocks AB
+#   Copyright 2021 Logical Clocks AB
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -19,11 +19,12 @@
 import math
 import os
 import json
+
 import numpy as np
 from pyspark import TaskContext
 from pyspark.sql import SparkSession
 
-from maggy import constants
+from maggy import constants, tensorboard
 from maggy.core import exceptions
 from maggy.core.environment.singleton import EnvSing
 
@@ -131,7 +132,7 @@ def build_summary_json(logdir):
             return_file = trial + "/.outputs.json"
             hparams_file = trial + "/.hparams.json"
             if env.exists(return_file) and env.exists(hparams_file):
-                metric_arr = env._convert_return_file_to_arr(return_file)
+                metric_arr = env.convert_return_file_to_arr(return_file)
                 hparams_dict = _load_hparams(hparams_file)
                 combinations.append({"parameters": hparams_dict, "outputs": metric_arr})
 
@@ -230,8 +231,8 @@ def set_ml_id(app_id, run_id):
         app_id (int): Maggy App ID.
         run_id (int): Maggy experiment run ID.
     """
-    os.environ['HOME'] = os.getcwd()
-    os.environ['ML_ID'] = str(app_id) + '_' + str(run_id)
+    os.environ["HOME"] = os.getcwd()
+    os.environ["ML_ID"] = str(app_id) + "_" + str(run_id)
 
 
 def find_spark():
@@ -265,3 +266,53 @@ def time_diff(t0, t1):
     hours = (millis / (1000 * 60 * 60)) % 24
 
     return "%d hours, %d minutes, %d seconds" % (hours, minutes, seconds)
+
+
+def register_environment(app_id, run_id):
+    """Validates IDs, creates an experiment folder in the fs and registers with tensorboard.
+
+    Args:
+        :app_id: Application ID
+        :run_id: Current experiment run ID
+
+    Returns: (app_id, run_id) with the updated IDs.
+    """
+    app_id = str(find_spark().sparkContext.applicationId)
+    app_id, run_id = validate_ml_id(app_id, run_id)
+    set_ml_id(app_id, run_id)
+    # Create experiment directory.
+    EnvSing.get_instance().create_experiment_dir(app_id, run_id)
+    tensorboard._register(EnvSing.get_instance().get_logdir(app_id, run_id))
+    return app_id, run_id
+
+
+def populate_experiment(config, app_id, run_id, exp_function=None):
+    """Creates a dictionary with the experiment information.
+
+    Args:
+        :config: Experiment config object
+        :app_id: Application ID
+        :run_id: Current experiment run ID
+        :exp_function: Name of controller for hp tuning. Default None
+
+    Returns:
+        :experiment_json: Dictionary with config info on the experiment.
+    """
+    direction = config.direction if exp_function else "N/A"
+    opt_key = config.optimization_key if exp_function else "N/A"
+    exp_function = exp_function if exp_function else "N/A"
+    experiment_json = EnvSing.get_instance().populate_experiment(
+        config.name,
+        exp_function,
+        "MAGGY",
+        None,
+        config.description,
+        app_id,
+        direction,
+        opt_key,
+    )
+    exp_ml_id = app_id + "_" + str(run_id)
+    experiment_json = EnvSing.get_instance().attach_experiment_xattr(
+        exp_ml_id, experiment_json, "INIT"
+    )
+    return experiment_json

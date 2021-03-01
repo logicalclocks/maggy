@@ -1,5 +1,5 @@
 #
-#   Copyright 2020 Logical Clocks AB
+#   Copyright 2021 Logical Clocks AB
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 
 """
 Experiment module used for running asynchronous optimization tasks.
-
 The programming model is that you wrap the code containing the model
 training inside a wrapper function.
 Inside that wrapper function provide all imports and parts that make up your
@@ -24,270 +23,105 @@ experiment, see examples below. Whenever a function to run an experiment is
 invoked it is also registered in the Experiments service along with the
 provided information.
 """
-import os
 import atexit
 import time
+from functools import singledispatch
 
 from maggy import util
-from maggy.distributed.distributed_lagom import distributed_lagom
-from maggy.core.executors.Executor import Executor
-from maggy.core.experiment_driver.OptimizationDriver import OptimizationDriver
-from maggy.core.experiment_driver.AblationDriver import AblationDriver
 from maggy.core.environment.singleton import EnvSing
+from maggy.core.lagom.lagom_optimization import lagom_optimization
+from maggy.core.lagom.lagom_ablation import lagom_ablation
+from maggy.core.lagom.lagom_distributed import lagom_distributed
+from maggy.experiment_config import (
+    OptimizationConfig,
+    AblationConfig,
+    DistributedConfig,
+)
 
-app_id = None
-running = False
-run_id = 1
-experiment_json = None
+
+APP_ID = None
+RUNNING = False
+RUN_ID = 1
+EXPERIMENT_JSON = {}
 
 
-def lagom(
-    train_fn,
-    name="no-name",
-    experiment_type="optimization",
-    searchspace=None,
-    optimizer=None,
-    direction="max",
-    num_trials=1,
-    ablation_study=None,
-    ablator=None,
-    optimization_key="metric",
-    hb_interval=1,
-    es_policy="median",
-    es_interval=1,
-    es_min=10,
-    description="",
-    **kwargs,
-):
-    """Launches a maggy experiment, which depending on `experiment_type` can
-    either be a hyperparameter optimization or an ablation study experiment.
-    Given a search space, objective and a model training procedure `train_fn`
+def lagom(train_fn, config):
+    """Launches a maggy experiment, which depending on 'config' can either
+    be a hyperparameter optimization, an ablation study experiment or distributed
+    training. Given a search space, objective and a model training procedure `train_fn`
     (black-box function), an experiment is the whole process of finding the
     best hyperparameter combination in the search space, optimizing the
     black-box function. Currently maggy supports random search and a median
     stopping rule.
-
     **lagom** is a Swedish word meaning "just the right amount".
 
     :param train_fn: User defined experiment containing the model training.
-    :type train_fn: function
-    :param name: A user defined experiment identifier.
-    :type name: str
-    :param experiment_type: Type of Maggy experiment, either 'optimization'
-        (default) or 'ablation'.
-    :type experiment_type: str
-    :param searchspace: A maggy Searchspace object from which samples are
-        drawn.
-    :type searchspace: Searchspace
-    :param optimizer: The optimizer is the part generating new trials.
-    :type optimizer: str, AbstractOptimizer
-    :param direction: If set to ‘max’ the highest value returned will
-        correspond to the best solution, if set to ‘min’ the opposite is true.
-    :type direction: str
-    :param num_trials: the number of trials to evaluate given the search space,
-        each containing a different hyperparameter combination
-    :type num_trials: int
-    :param ablation_study: Ablation study object. Can be None for optimization
-        experiment type.
-    :type ablation_study: AblationStudy
-    :param ablator: Ablator to use for experiment type 'ablation'.
-    :type ablator: str, AbstractAblator
-    :param optimization_key: Name of the metric to be optimized
-    :type optimization_key: str, optional
-    :param hb_interval: The heartbeat interval in seconds from trial executor
-        to experiment driver, defaults to 1
-    :type hb_interval: int, optional
-    :param es_policy: The earlystopping policy, defaults to 'median'
-    :type es_policy: str, optional
-    :param es_interval: Frequency interval in number of steps to check currently
-        running trials for early stopping, defaults to 1.
-    :type es_interval: int, optional
-    :param es_min: Minimum number of trials finalized before checking for
-        early stopping, defaults to 10
-    :type es_min: int, optional
-    :param description: A longer description of the experiment.
-    :type description: str, optional
-    :raises RuntimeError: An experiment is currently running.
-    :return: A dictionary indicating the best trial and best hyperparameter
-        combination with it's performance metric
-    :rtype: dict
+    :type train_fn: callable
+    :param config: An experiment configuration. For more information, see experiment_config.
+    :type config: OptimizationConfig | AblationConfig | DistributedConfig
     """
-    global running
-    if running:
-        raise RuntimeError("An experiment is currently running.")
-    if experiment_type == "distributed_training":
-        for kwarg in ("model", "train_set", "test_set"):
-            assert (
-                kwarg in kwargs.keys()
-            ), f"Distributed training requires {kwarg} as argument!"
-        result = distributed_lagom(
-            train_fn,
-            name=name,
-            hb_interval=hb_interval,
-            description=description,
-            **kwargs,
-        )
-        return result
+    global APP_ID
+    global RUNNING
+    global RUN_ID
     job_start = time.time()
-    sc = util.find_spark().sparkContext
-    exp_driver = None
-
-    env = EnvSing.get_instance()
-
     try:
-        global app_id
-        global experiment_json
-        global run_id
-        app_id = str(sc.applicationId)
-
-        app_id, run_id = util.validate_ml_id(app_id, run_id)
-
-        # start run
-        running = True
-        env.set_ml_id(app_id, run_id)
-
-        # create experiment dir
-        env.create_experiment_dir(app_id, run_id)
-
-        env.init_ml_tracking(app_id, run_id)
-
-        num_executors = util.num_executors(sc)
-
-        # start experiment driver
-        if experiment_type == "optimization":
-
-            assert num_trials > 0, "number of trials should be greater than zero"
-            env.log_searchspace(app_id, run_id, searchspace)
-
-            if num_executors > num_trials:
-                num_executors = num_trials
-            exp_driver = OptimizationDriver(
-                searchspace=searchspace,
-                optimizer=optimizer,
-                direction=direction,
-                num_trials=num_trials,
-                name=name,
-                num_executors=num_executors,
-                hb_interval=hb_interval,
-                es_policy=es_policy,
-                es_interval=es_interval,
-                es_min=es_min,
-                description=description,
-                log_dir=env.get_logdir(app_id, run_id),
-            )
-        elif experiment_type == "ablation":
-            exp_driver = AblationDriver(
-                ablation_study=ablation_study,
-                ablator=ablator,
-                name=name,
-                num_executors=num_executors,
-                hb_interval=hb_interval,
-                description=description,
-                direction="max",
-                log_dir=env.get_logdir(app_id, run_id),
-            )
-            # using exp_driver.num_executor since
-            # it has been set using ablator.get_number_of_trials()
-            # in experiment.py
-            num_executors = min(num_executors, exp_driver.num_executors)
-
-        else:
-            running = False
-            raise RuntimeError(
-                "Unknown experiment_type:"
-                "should be either 'optimization' or 'ablation', "
-                "But it is '{0}'".format(str(experiment_type))
-            )
-
-        exp_function = exp_driver.controller.name()
-
-        nodeRDD = sc.parallelize(range(num_executors), num_executors)
-
-        # Do provenance after initializing exp_driver, because exp_driver does
-        # the type checks for optimizer and searchspace
-        sc.setJobGroup(os.environ["ML_ID"], "{0} | {1}".format(name, exp_function))
-
-        experiment_json = env.populate_experiment(
-            name,
-            exp_function,
-            "MAGGY",
-            None,
-            description,
-            app_id,
-            direction,
-            optimization_key,
-        )
-
-        exp_ml_id = app_id + "_" + str(run_id)
-        experiment_json = env.attach_experiment_xattr(
-            exp_ml_id, experiment_json, "INIT"
-        )
-
-        util.log("Started Maggy Experiment: {0}, {1}, run {2}".format(name, app_id, run_id))
-
-        exp_driver.init(job_start)
-
-        server_addr = exp_driver.server_addr
-        # Force execution on executor, since GPU is located on executor
-        exp_executor = Executor(exp_driver)
-        worker_fct = exp_executor.prepare_function(
-            app_id, run_id, train_fn, server_addr, hb_interval, optimization_key
-        )
-
-        nodeRDD.foreachPartition(worker_fct)
-        job_end = time.time()
-
-        result = exp_driver.finalize(job_end)
-        best_logdir = env.get_logdir(app_id, run_id) + "/" + result["best_id"]
-
-        util.finalize_experiment(experiment_json, float(result["best_val"]), app_id, run_id, "FINISHED",
-                                 exp_driver.duration, env.get_logdir(app_id, run_id), best_logdir, optimization_key)
-
-        util.log("Finished Experiment")
-
+        if RUNNING:
+            raise RuntimeError("An experiment is currently running.")
+        RUNNING = True
+        spark_context = util.find_spark().sparkContext
+        APP_ID = str(spark_context.applicationId)
+        result = lagom_wrapper(config, train_fn)  # Singledispatch uses first arg.
         return result
-
     except:  # noqa: E722
         _exception_handler(util.seconds_to_milliseconds(time.time() - job_start))
-        if exp_driver:
-            if experiment_type == "optimization":
-                # close logfiles of optimizer
-                exp_driver.controller._close_log()
-                if exp_driver.controller.pruner:
-                    exp_driver.controller.pruner._close_log()
-
-            if exp_driver.exception:
-                raise exp_driver.exception
         raise
     finally:
-        # grace period to send last logs to sparkmagic
-        # sparkmagic hb poll intervall is 5 seconds, therefore wait 6 seconds
-        time.sleep(6)
-        # cleanup spark jobs
-        if running and exp_driver is not None:
-            exp_driver.stop()
-        run_id += 1
-        running = False
-        sc.setJobGroup("", "")
+        # Clean up spark jobs
+        RUN_ID += 1
+        RUNNING = False
+        util.find_spark().sparkContext.setJobGroup("", "")
+
+
+@singledispatch
+def lagom_wrapper(config, train_fn):
+    raise ValueError(
+        "Invalid config type! Config is expected to be of type {}, {} or {}, \
+                     but is of type {}".format(
+            OptimizationConfig, AblationConfig, DistributedConfig, type(config)
+        )
+    )
+
+
+@lagom_wrapper.register(OptimizationConfig)
+def _(config, train_fn):
+    return lagom_optimization(train_fn, config, APP_ID, RUN_ID)
+
+
+@lagom_wrapper.register(AblationConfig)
+def _(config, train_fn):
+    return lagom_ablation(train_fn, config, APP_ID, RUN_ID)
+
+
+@lagom_wrapper.register(DistributedConfig)
+def _(config, train_fn):
+    return lagom_distributed(train_fn, config, APP_ID, RUN_ID)
 
 
 def _exception_handler(duration):
     """
     Handles exceptions during execution of an experiment
-
     :param duration: duration of the experiment until exception in milliseconds
     :type duration: int
     """
     try:
-
-        global running
-        global experiment_json
-        if running and experiment_json is not None:
-            experiment_json["state"] = "FAILED"
-            experiment_json["duration"] = duration
-            exp_ml_id = app_id + "_" + str(run_id)
+        global RUNNING
+        global EXPERIMENT_JSON
+        if RUNNING:
+            EXPERIMENT_JSON["state"] = "FAILED"
+            EXPERIMENT_JSON["duration"] = duration
+            exp_ml_id = APP_ID + "_" + str(RUN_ID)
             EnvSing.get_instance().attach_experiment_xattr(
-                exp_ml_id, experiment_json, "FULL_UPDATE"
+                exp_ml_id, EXPERIMENT_JSON, "FULL_UPDATE"
             )
     except Exception as err:
         util.log(err)
@@ -298,13 +132,13 @@ def _exit_handler():
     Handles jobs killed by the user.
     """
     try:
-        global running
-        global experiment_json
-        if running and experiment_json is not None:
-            experiment_json["status"] = "KILLED"
-            exp_ml_id = app_id + "_" + str(run_id)
+        global RUNNING
+        global EXPERIMENT_JSON
+        if RUNNING:
+            EXPERIMENT_JSON["status"] = "KILLED"
+            exp_ml_id = APP_ID + "_" + str(RUN_ID)
             EnvSing.get_instance().attach_experiment_xattr(
-                exp_ml_id, experiment_json, "FULL_UPDATE"
+                exp_ml_id, EXPERIMENT_JSON, "FULL_UPDATE"
             )
     except Exception as err:
         util.log(err)
