@@ -30,41 +30,9 @@ class DatabricksEnv(BaseEnv):
         self.log_dir = "/dbfs/maggy_log/"
         if not os.path.exists(self.log_dir):
             os.mkdir(self.log_dir)
-        self.constants = []
-
-    def set_ml_id(self, app_id = 0, run_id = 0):
-        os.environ['ML_ID'] = str(app_id) + '_' + str(run_id)
-
-    def create_experiment_dir(self, app_id, run_id):
-        if not os.path.exists(os.path.join(self.log_dir, app_id)):
-            os.mkdir(os.path.join(self.log_dir, app_id))
-
-        experiment_path = self.get_logdir(app_id, run_id)
-        if os.path.exists(experiment_path):
-            shutil.rmtree(experiment_path)
-
-        os.mkdir(experiment_path)
 
     def mkdir(self, hdfs_path):
         return os.mkdir(hdfs_path)
-
-    def dump(self, data, hdfs_path):
-        head_tail = os.path.split(hdfs_path)
-        if not os.path.exists(head_tail[0]):
-            os.mkdir(head_tail[0])
-        file = self.open_file(hdfs_path, flags='w')
-        file.write(data)
-
-    def get_ip_address(self):
-        sc = util.find_spark().sparkContext
-        return sc._conf.get("spark.driver.host")
-
-    def delete(self, path, recursive=False):
-        if self.exists(path):
-            if os.path.isdir(path):
-                os.rmdir(path)
-            elif os.path.isfile(path):
-                os.remove(path)
 
     def project_path(self, project=None, exclude_nn_addr=False):
         return "/dbfs/"

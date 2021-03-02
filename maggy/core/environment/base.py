@@ -25,8 +25,6 @@ class BaseEnv:
         self.log_dir = os.path.join(os.getcwd(),'experiment_log')
         if not os.path.exists(self.log_dir):
             os.mkdir(self.log_dir)
-        self.constants = []
-        pass
 
     def set_ml_id(self, app_id = 0, run_id = 0):
         os.environ['ML_ID'] = str(app_id) + '_' + str(run_id)
