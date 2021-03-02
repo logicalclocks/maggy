@@ -81,3 +81,4 @@ class DatabricksEnv(BaseEnv):
             raise RuntimeError(
                 "Failed to find some of the spark.databricks properties."
             )
+            
