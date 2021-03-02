@@ -29,8 +29,7 @@ from maggy.experiment_config.lagom import LagomConfig
 from maggy.core.rpc import Server
 from maggy.core.environment.singleton import EnvSing
 
-
-DRIVER_SECRET = None
+driver_secret = None
 
 
 class Driver(ABC):
