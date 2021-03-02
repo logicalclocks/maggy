@@ -1,7 +1,7 @@
 import os
 import shutil
 
-import maggy.util as util
+from maggy import util
 
 class BaseEnv:
 
@@ -34,20 +34,21 @@ class BaseEnv:
     def attach_experiment_xattr(self, exp_ml_id, experiment_json, command):
         pass
 
-    def exists(self, hdfs_path, project=None):
+    def exists(self, hdfs_path):
         return os.path.exists(hdfs_path)
 
 
-    def mkdir(self, hdfs_path, project=None):
+    def mkdir(self, hdfs_path):
         pass
 
     def isdir(self, dir_path, project=None):
         return os.path.exists(dir_path)
 
-    def ls(self, dir_path, recursive=False, project=None):
+    def ls(self, dir_path):
         return os.listdir(dir_path)
 
-    def delete(self, path, recursive=False):
+    def delete(self, path):
+
         if self.exists(path):
             if os.path.isdir(path):
                 os.rmdir(path)
@@ -58,7 +59,7 @@ class BaseEnv:
         head_tail = os.path.split(hdfs_path)
         if not os.path.exists(head_tail[0]):
             os.mkdir(head_tail[0])
-        file = self.open_file(hdfs_path, flags='w+')
+        file = self.open_file(hdfs_path, flags='w')
         file.write(data)
 
     def get_ip_address(self):
@@ -68,8 +69,8 @@ class BaseEnv:
     def get_constants(self):
         pass
 
-    def open_file(self, hdfs_path, project=None, flags='rw', buff_size=0):
-        return open(hdfs_path, mode=flags)
+    def open_file(self, hdfs_path, flags='r', buff_size=-1):
+        return open(hdfs_path, mode=flags, buffering=buff_size)
 
     def get_training_dataset_path(self, training_dataset, featurestore=None, training_dataset_version=1):
         pass
