@@ -17,7 +17,7 @@
 from maggy import util
 from maggy.core.rpc import DistributedServer
 from maggy.core.experiment_driver.driver import Driver
-from maggy.core.executors.dist_executor import dist_executor_fct
+from maggy.core.executors.dist_executor import dist_executor_fn
 
 
 class DistributedDriver(Driver):
@@ -44,7 +44,7 @@ class DistributedDriver(Driver):
         raise exc
 
     def _patching_fct(self, train_fn):
-        return dist_executor_fct(
+        return dist_executor_fn(
             train_fn,
             self.config,
             self.APP_ID,

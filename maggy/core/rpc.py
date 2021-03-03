@@ -275,8 +275,7 @@ class Server(MessageSocket):
                                 raise Exception
 
                             self._handle_message(sock, msg, driver)
-                        except Exception as e:
-                            _ = e
+                        except Exception:
                             sock.close()
                             CONNECTIONS.remove(sock)
             server_sock.close()
@@ -520,10 +519,10 @@ class Client(MessageSocket):
         return done
 
     def start_heartbeat(self, reporter):
-        def _heartbeat(self, report):
+        def _heartbeat(self, reporter):
             while not self.done:
-                with report.lock:
-                    metric, step, logs = report.get_data()
+                with reporter.lock:
+                    metric, step, logs = reporter.get_data()
                     data = {"value": metric, "step": step}
 
                     resp = self._request(

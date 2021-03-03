@@ -256,7 +256,7 @@ def time_diff(t0, t1):
         :t1: end time in seconds
     Returns: string with time difference (i.e. t1-t0)
     """
-    minutes, seconds = divmod(t1 - t0, 60)  # Mon since min is keyword.
+    minutes, seconds = divmod(t1 - t0, 60)
     hours, minutes = divmod(minutes, 60)
     return "%d hours, %d minutes, %d seconds" % (hours, minutes, seconds)
 

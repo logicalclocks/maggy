@@ -29,7 +29,7 @@ from maggy.core.reporter import Reporter
 from maggy.core.environment.singleton import EnvSing
 
 
-def trial_executor_fct(
+def trial_executor_fn(
     train_fn,
     experiment_type,
     app_id,
