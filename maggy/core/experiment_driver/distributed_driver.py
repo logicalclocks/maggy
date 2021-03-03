@@ -43,7 +43,7 @@ class DistributedDriver(Driver):
     def _exp_exception_callback(self, exc):
         raise exc
 
-    def _patching_fct(self, train_fn):
+    def _patching_fn(self, train_fn):
         return dist_executor_fn(
             train_fn,
             self.config,

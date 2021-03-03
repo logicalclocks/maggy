@@ -23,7 +23,7 @@ from maggy.ablation.ablator.loco import LOCO
 from maggy.ablation.ablator import AbstractAblator
 from maggy.core.rpc import OptimizationServer
 from maggy.core.experiment_driver.optimization_driver import OptimizationDriver
-from maggy.core.executors.trial_executor import trial_executor_fct
+from maggy.core.executors.trial_executor import trial_executor_fn
 
 
 class AblationDriver(OptimizationDriver):
@@ -92,8 +92,8 @@ class AblationDriver(OptimizationDriver):
             raise self.exception  # pylint: disable=raising-bad-type
         raise exc
 
-    def _patching_fct(self, train_fn):
-        return trial_executor_fct(
+    def _patching_fn(self, train_fn):
+        return trial_executor_fn(
             train_fn,
             "ablation",
             self.APP_ID,

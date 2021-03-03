@@ -123,7 +123,7 @@ class OptimizationDriver(Driver):
             raise self.exception  # pylint: disable=raising-bad-type
         raise exc
 
-    def _patching_fct(self, train_fn):
+    def _patching_fn(self, train_fn):
         return trial_executor_fn(
             train_fn,
             "optimization",

@@ -100,7 +100,7 @@ class Driver(ABC):
                 os.environ["ML_ID"],
                 "{} | {}".format(self.name, str(self.__class__.__name__)),
             )
-            executor_fct = self._patching_fct(train_fn)
+            executor_fct = self._patching_fn(train_fn)
             node_rdd.foreachPartition(
                 executor_fct
             )  # Triggers execution on Spark nodes.
@@ -129,7 +129,7 @@ class Driver(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def _patching_fct(self, train_fn):
+    def _patching_fn(self, train_fn):
         raise NotImplementedError
 
     def init(self, job_start):
