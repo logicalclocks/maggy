@@ -462,7 +462,7 @@ class Client(MessageSocket):
         self.hb_interval = hb_interval
         self._secret = secret
 
-    def _request(self, req_sock, msg_type, msg_data="", trial_id=None, logs=None):
+    def _request(self, req_sock, msg_type, msg_data=None, trial_id=None, logs=None):
         """Helper function to wrap msg w/ msg_type."""
         msg = {}
         msg["partition_id"] = self.partition_id
@@ -578,8 +578,6 @@ class Client(MessageSocket):
         elif msg_type == "TRIAL":
             return msg["trial_id"], msg["data"]
         elif msg_type == "ERR":
-            string = msg["data"]
-            reporter.log(f"received message with content {string}", False)
             reporter.log("Stopping experiment", False)
             self.done = True
 
