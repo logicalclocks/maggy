@@ -30,7 +30,7 @@ from maggy.core.environment.base import BaseEnv
 
 class HopsworksEnv(BaseEnv):
     """
-    This class implements AbstractEnvironment.
+    This class extends BaseEnv.
     The methods implemented mainly recall the libraries developed on maggy.
     """
 

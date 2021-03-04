@@ -16,11 +16,14 @@
 
 import os
 import shutil
+import warnings
 
 from maggy import util
 
 class BaseEnv:
-
+    """
+    Support maggy on a local pyspark installation.
+    """
     def __init__(self):
         self.log_dir = os.path.join(os.getcwd(),'experiment_log')
         if not os.path.exists(self.log_dir):
@@ -61,20 +64,30 @@ class BaseEnv:
     def ls(self, dir_path):
         return os.listdir(dir_path)
 
-    def delete(self, path):
+    def delete(self, path, recursive=False):
 
         if self.exists(path):
             if os.path.isdir(path):
-                os.rmdir(path)
+                if recursive:
+                    #remove the directory recursively
+                    shutil.rmtree(path)
+                elif not os.listdir(path):
+                    os.rmdir(path)
+                else:
+                    warnings.warn("Could not delete the dir {}, not empty.\n"
+                                  "Use recursive=True when calling this function".format(path))
             elif os.path.isfile(path):
                 os.remove(path)
+        else:
+            warnings.warn("Could not delete the file in {}.\n"
+                          "File does not exists.".format(path))
 
     def dump(self, data, hdfs_path):
         head_tail = os.path.split(hdfs_path)
         if not os.path.exists(head_tail[0]):
             os.mkdir(head_tail[0])
-        file = self.open_file(hdfs_path, flags='w')
-        file.write(data)
+        with self.open_file(hdfs_path, flags='w') as file:
+            file.write(data)
 
     def get_ip_address(self):
         sc = util.find_spark().sparkContext
@@ -144,17 +157,20 @@ class BaseEnv:
         return str
 
     def get_executors(self, sc):
-        try:
-            if sc._conf.get("spark.dynamicAllocation.enabled") == "true":
-                maxExecutors = int(sc._conf.get("spark.dynamicAllocation.maxExecutors"))
-            else:
-                maxExecutors = int(sc._conf.get("spark.executor.instances"))
 
-            return maxExecutors
-        except:  # noqa: E722
-            raise RuntimeError(
-                "Failed to find some of the spark.databricks properties."
-            )
+        if sc._conf.get("spark.dynamicAllocation.enabled") == "true":
+            maxExecutors = int(sc._conf.get("spark.dynamicAllocation.maxExecutors", defaultValue='-1'))
+            if maxExecutors == -1:
+                raise KeyError("Failed to find \"spark.dynamicAllocation.maxExecutors\" property, "
+                               "but dynamicAllocation is enabled. "
+                               "Define the number of min and max executors when building the spark session.")
+        else:
+            maxExecutors = int(sc._conf.get("spark.executor.instances", defaultValue='-1'))
+            if maxExecutors == -1:
+                raise KeyError("Failed to find \"spark.executor.instances\" property, "
+                               "Define the number of executors using \"spark.executor.instances\" "
+                               "when building the spark session.")
+        return maxExecutors
 
     def build_summary_json(self):
         pass

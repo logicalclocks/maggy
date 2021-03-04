@@ -15,14 +15,13 @@
 #
 
 import os
-import shutil
 
-from maggy import util
 from maggy.core.environment.base import BaseEnv
 
 
 class DatabricksEnv(BaseEnv):
     """
+    This class extends BaseEnv.
     Environment implemented for maggy usage on Databricks.
     """
 
@@ -38,15 +37,17 @@ class DatabricksEnv(BaseEnv):
         return "/dbfs/"
 
     def get_executors(self, sc):
-        try:
-            if sc._conf.get("spark.databricks.clusterUsageTags.clusterScalingType") == "autoscaling":
-                maxExecutors = int(sc._conf.get("spark.databricks.clusterUsageTags.clusterMaxWorkers"))
-            else:
-                maxExecutors = int(sc._conf.get("spark.databricks.clusterUsageTags.clusterWorkers"))
+        conf = sc._conf
 
-            return maxExecutors
-        except:  # noqa: E722
-            raise RuntimeError(
-                "Failed to find some of the spark.databricks properties."
-            )
+        if sc._conf.get("spark.databricks.clusterUsageTags.clusterScalingType") == "autoscaling":
+            maxExecutors = int(sc._conf.get("spark.databricks.clusterUsageTags.clusterMaxWorkers",
+                                             defaultValue='-1'))
+            if maxExecutors == -1:
+                raise KeyError("Failed to find \"spark.databricks.clusterUsageTags.clusterMaxWorkers\" property, "
+                               "but clusterScalingType is set to autoscaling.")
+        else:
+            maxExecutors = int(sc._conf.get("spark.databricks.clusterUsageTags.clusterWorkers", defaultValue='-1'))
+            if maxExecutors == -1:
+                raise KeyError("Failed to find \"spark.databricks.clusterUsageTags.clusterWorkers\" property.")
+        return maxExecutors
             
