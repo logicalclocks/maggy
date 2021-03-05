@@ -37,17 +37,30 @@ class DatabricksEnv(BaseEnv):
         return "/dbfs/"
 
     def get_executors(self, sc):
-        conf = sc._conf
-
-        if sc._conf.get("spark.databricks.clusterUsageTags.clusterScalingType") == "autoscaling":
-            maxExecutors = int(sc._conf.get("spark.databricks.clusterUsageTags.clusterMaxWorkers",
-                                             defaultValue='-1'))
+        if (
+            sc._conf.get("spark.databricks.clusterUsageTags.clusterScalingType")
+            == "autoscaling"
+        ):
+            maxExecutors = int(
+                sc._conf.get(
+                    "spark.databricks.clusterUsageTags.clusterMaxWorkers",
+                    defaultValue="-1",
+                )
+            )
             if maxExecutors == -1:
-                raise KeyError("Failed to find \"spark.databricks.clusterUsageTags.clusterMaxWorkers\" property, "
-                               "but clusterScalingType is set to autoscaling.")
+                raise KeyError(
+                    'Failed to find "spark.databricks.clusterUsageTags.clusterMaxWorkers" property, '
+                    "but clusterScalingType is set to autoscaling."
+                )
         else:
-            maxExecutors = int(sc._conf.get("spark.databricks.clusterUsageTags.clusterWorkers", defaultValue='-1'))
+            maxExecutors = int(
+                sc._conf.get(
+                    "spark.databricks.clusterUsageTags.clusterWorkers",
+                    defaultValue="-1",
+                )
+            )
             if maxExecutors == -1:
-                raise KeyError("Failed to find \"spark.databricks.clusterUsageTags.clusterWorkers\" property.")
+                raise KeyError(
+                    'Failed to find "spark.databricks.clusterUsageTags.clusterWorkers" property.'
+                )
         return maxExecutors
-            

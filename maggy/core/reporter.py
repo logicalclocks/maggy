@@ -129,7 +129,9 @@ class Reporter(object):
             # Throws AttributeError when calling file ops on NoneType object
             except (IOError, ValueError, AttributeError) as e:
                 self.fd.write(
-                  env.str_or_byte("An error occurred while writing logs: {}".format(e))
+                    env.str_or_byte(
+                        "An error occurred while writing logs: {}".format(e)
+                    )
                 )
 
     def get_data(self):
