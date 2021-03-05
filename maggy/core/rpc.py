@@ -63,7 +63,7 @@ class Reservations(object):
                 "host_port": meta["host_port"],
                 "task_attempt": meta["task_attempt"],
                 "trial_id": meta["trial_id"],
-                "num_executors": self.required
+                "num_executors": self.required,
             }
 
             if self.remaining() == 0:
@@ -242,7 +242,9 @@ class Server(MessageSocket):
             send["type"] = "OK"
         elif msg_type == "TORCH_CONFIG":
             try:
-                send["data"] = self.reservations.get()[0]  # Config of worker with partition 1.
+                send["data"] = self.reservations.get()[
+                    0
+                ]  # Config of worker with partition 1.
             except KeyError:
                 send["data"] = None
             send["type"] = "OK"
@@ -363,8 +365,12 @@ class Server(MessageSocket):
                             if not secrets.compare_digest(
                                 msg["secret"], exp_driver._secret
                             ):
-                                exp_driver.log("SERVER secret: {}".format(exp_driver._secret))
-                                exp_driver.log("ERROR: wrong secret {}".format(msg["secret"]))
+                                exp_driver.log(
+                                    "SERVER secret: {}".format(exp_driver._secret)
+                                )
+                                exp_driver.log(
+                                    "ERROR: wrong secret {}".format(msg["secret"])
+                                )
                                 raise Exception
 
                             self._handle_message(sock, msg, driver)

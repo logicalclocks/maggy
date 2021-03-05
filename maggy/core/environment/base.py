@@ -20,17 +20,19 @@ import warnings
 
 from maggy import util
 
+
 class BaseEnv:
     """
     Support maggy on a local pyspark installation.
     """
+
     def __init__(self):
-        self.log_dir = os.path.join(os.getcwd(),'experiment_log')
+        self.log_dir = os.path.join(os.getcwd(), "experiment_log")
         if not os.path.exists(self.log_dir):
             os.mkdir(self.log_dir)
 
-    def set_ml_id(self, app_id = 0, run_id = 0):
-        os.environ['ML_ID'] = str(app_id) + '_' + str(run_id)
+    def set_ml_id(self, app_id=0, run_id=0):
+        os.environ["ML_ID"] = str(app_id) + "_" + str(run_id)
 
     def create_experiment_dir(self, app_id, run_id):
         if not os.path.exists(os.path.join(self.log_dir, app_id)):
@@ -45,7 +47,17 @@ class BaseEnv:
     def get_logdir(self, app_id, run_id):
         return os.path.join(self.log_dir, str(app_id), str(run_id))
 
-    def populate_experiment(self, model_name, function, type, hp, description, app_id, direction, optimization_key):
+    def populate_experiment(
+        self,
+        model_name,
+        function,
+        type,
+        hp,
+        description,
+        app_id,
+        direction,
+        optimization_key,
+    ):
         pass
 
     def attach_experiment_xattr(self, exp_ml_id, experiment_json, command):
@@ -53,7 +65,6 @@ class BaseEnv:
 
     def exists(self, hdfs_path):
         return os.path.exists(hdfs_path)
-
 
     def mkdir(self, hdfs_path):
         pass
@@ -69,24 +80,28 @@ class BaseEnv:
         if self.exists(path):
             if os.path.isdir(path):
                 if recursive:
-                    #remove the directory recursively
+                    # remove the directory recursively
                     shutil.rmtree(path)
                 elif not os.listdir(path):
                     os.rmdir(path)
                 else:
-                    warnings.warn("Could not delete the dir {}, not empty.\n"
-                                  "Use recursive=True when calling this function".format(path))
+                    warnings.warn(
+                        "Could not delete the dir {}, not empty.\n"
+                        "Use recursive=True when calling this function".format(path)
+                    )
             elif os.path.isfile(path):
                 os.remove(path)
         else:
-            warnings.warn("Could not delete the file in {}.\n"
-                          "File does not exists.".format(path))
+            warnings.warn(
+                "Could not delete the file in {}.\n"
+                "File does not exists.".format(path)
+            )
 
     def dump(self, data, hdfs_path):
         head_tail = os.path.split(hdfs_path)
         if not os.path.exists(head_tail[0]):
             os.mkdir(head_tail[0])
-        with self.open_file(hdfs_path, flags='w') as file:
+        with self.open_file(hdfs_path, flags="w") as file:
             file.write(data)
 
     def get_ip_address(self):
@@ -96,13 +111,17 @@ class BaseEnv:
     def get_constants(self):
         pass
 
-    def open_file(self, hdfs_path, flags='r', buff_size=-1):
+    def open_file(self, hdfs_path, flags="r", buff_size=-1):
         return open(hdfs_path, mode=flags, buffering=buff_size)
 
-    def get_training_dataset_path(self, training_dataset, featurestore=None, training_dataset_version=1):
+    def get_training_dataset_path(
+        self, training_dataset, featurestore=None, training_dataset_version=1
+    ):
         pass
 
-    def get_training_dataset_tf_record_schema(self, training_dataset, training_dataset_version=1, featurestore=None):
+    def get_training_dataset_tf_record_schema(
+        self, training_dataset, training_dataset_version=1, featurestore=None
+    ):
         pass
 
     def get_featurestore_metadata(self, featurestore=None, update_cache=False):
@@ -114,7 +133,7 @@ class BaseEnv:
     def log_searchspace(self, app_id, run_id, searchspace):
         pass
 
-    def connect_host(self,server_sock, server_host_port, exp_driver):
+    def connect_host(self, server_sock, server_host_port, exp_driver):
         if not server_host_port:
             server_sock.bind(("", 0))
             host = self.get_ip_address()
@@ -140,17 +159,18 @@ class BaseEnv:
     def project_name(self):
         return ""
 
-    def finalize_experiment(self,
-            experiment_json,
-            metric,
-            app_id,
-            run_id,
-            state,
-            duration,
-            logdir,
-            best_logdir,
-            optimization_key
-                            ):
+    def finalize_experiment(
+        self,
+        experiment_json,
+        metric,
+        app_id,
+        run_id,
+        state,
+        duration,
+        logdir,
+        best_logdir,
+        optimization_key,
+    ):
         pass
 
     def str_or_byte(self, str):
@@ -159,17 +179,25 @@ class BaseEnv:
     def get_executors(self, sc):
 
         if sc._conf.get("spark.dynamicAllocation.enabled") == "true":
-            maxExecutors = int(sc._conf.get("spark.dynamicAllocation.maxExecutors", defaultValue='-1'))
+            maxExecutors = int(
+                sc._conf.get("spark.dynamicAllocation.maxExecutors", defaultValue="-1")
+            )
             if maxExecutors == -1:
-                raise KeyError("Failed to find \"spark.dynamicAllocation.maxExecutors\" property, "
-                               "but dynamicAllocation is enabled. "
-                               "Define the number of min and max executors when building the spark session.")
+                raise KeyError(
+                    'Failed to find "spark.dynamicAllocation.maxExecutors" property, '
+                    "but dynamicAllocation is enabled. "
+                    "Define the number of min and max executors when building the spark session."
+                )
         else:
-            maxExecutors = int(sc._conf.get("spark.executor.instances", defaultValue='-1'))
+            maxExecutors = int(
+                sc._conf.get("spark.executor.instances", defaultValue="-1")
+            )
             if maxExecutors == -1:
-                raise KeyError("Failed to find \"spark.executor.instances\" property, "
-                               "Define the number of executors using \"spark.executor.instances\" "
-                               "when building the spark session.")
+                raise KeyError(
+                    'Failed to find "spark.executor.instances" property, '
+                    'Define the number of executors using "spark.executor.instances" '
+                    "when building the spark session."
+                )
         return maxExecutors
 
     def build_summary_json(self):
@@ -183,4 +211,3 @@ class BaseEnv:
 
     def upload_file_output(self, retval, hdfs_exec_logdir):
         pass
-    
