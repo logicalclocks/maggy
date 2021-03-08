@@ -21,12 +21,14 @@ from maggy.earlystop import NoStoppingRule
 from maggy.ablation.ablationstudy import AblationStudy
 from maggy.ablation.ablator.loco import LOCO
 from maggy.ablation.ablator import AbstractAblator
+from maggy.core.rpc import OptimizationServer
 from maggy.core.experiment_driver.optimization_driver import OptimizationDriver
+from maggy.core.executors.trial_executor import trial_executor_fn
 
 
 class AblationDriver(OptimizationDriver):
-    def __init__(self, config, num_executors, log_dir):
-        super().__init__(config, num_executors, log_dir)
+    def __init__(self, config, app_id, run_id):
+        super().__init__(config, app_id, run_id)
         # set up an ablation study experiment
         self.earlystop_check = NoStoppingRule.earlystop_check
 
@@ -56,7 +58,7 @@ class AblationDriver(OptimizationDriver):
                     str(config.ablator), type(config.ablator).__name__
                 )
             )
-
+        self.server = OptimizationServer(self.num_executors)
         self.result = {"best_val": "n.a.", "num_trials": 0, "early_stopped": "n.a"}
 
         # Init controller and set references to data in ablator
@@ -65,11 +67,49 @@ class AblationDriver(OptimizationDriver):
         self.controller.final_store = self._final_store
         self.controller.initialize()
 
+    def _exp_startup_callback(self):
+        pass
+
+    def _exp_final_callback(self, job_end, exp_json):
+        result = self.finalize(job_end)
+        best_logdir = self.log_dir + "/" + result["best_id"]
+        util.finalize_experiment(
+            exp_json,
+            float(result["best_val"]),
+            self.APP_ID,
+            self.RUN_ID,
+            "FINISHED",
+            self.duration,
+            self.log_dir,
+            best_logdir,
+            "N/A",
+        )
+        print("Finished experiment.")
+        return result
+
+    def _exp_exception_callback(self, exc):
+        if self.exception:
+            raise self.exception  # pylint: disable=raising-bad-type
+        raise exc
+
+    def _patching_fn(self, train_fn):
+        return trial_executor_fn(
+            train_fn,
+            "ablation",
+            self.APP_ID,
+            self.RUN_ID,
+            self.server_addr,
+            self.hb_interval,
+            self._secret,
+            "N/A",
+            self.log_dir,
+        )
+
     def controller_get_next(self, trial=None):
         return self.controller.get_trial(trial)
 
-    def prep_results(self):
-        _ = self.controller.finalize_experiment(self._final_store)
+    def prep_results(self, duration_str):
+        self.controller.finalize_experiment(self._final_store)
         results = (
             "\n------ "
             + self.controller.name()
@@ -88,7 +128,7 @@ class AblationDriver(OptimizationDriver):
             + str(self.result["avg"])
             + "\n"
             + "Total Job Time "
-            + self.duration_str
+            + duration_str
             + "\n"
         )
         return results

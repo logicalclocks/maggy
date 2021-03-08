@@ -256,15 +256,8 @@ def time_diff(t0, t1):
         :t1: end time in seconds
     Returns: string with time difference (i.e. t1-t0)
     """
-
-    millis = seconds_to_milliseconds(t1) - seconds_to_milliseconds(t0)
-    millis = int(millis)
-    seconds = (millis / 1000) % 60
-    seconds = int(seconds)
-    minutes = (millis / (1000 * 60)) % 60
-    minutes = int(minutes)
-    hours = (millis / (1000 * 60 * 60)) % 24
-
+    minutes, seconds = divmod(t1 - t0, 60)
+    hours, minutes = divmod(minutes, 60)
     return "%d hours, %d minutes, %d seconds" % (hours, minutes, seconds)
 
 
@@ -286,21 +279,26 @@ def register_environment(app_id, run_id):
     return app_id, run_id
 
 
-def populate_experiment(config, app_id, run_id, exp_function=None):
+def populate_experiment(config, app_id, run_id, exp_function):
     """Creates a dictionary with the experiment information.
 
     Args:
         :config: Experiment config object
         :app_id: Application ID
         :run_id: Current experiment run ID
-        :exp_function: Name of controller for hp tuning. Default None
+        :exp_function: Name of experiment driver.
 
     Returns:
         :experiment_json: Dictionary with config info on the experiment.
     """
-    direction = config.direction if exp_function else "N/A"
-    opt_key = config.optimization_key if exp_function else "N/A"
-    exp_function = exp_function if exp_function else "N/A"
+    try:
+        direction = config.direction
+    except AttributeError:
+        direction = "N/A"
+    try:
+        opt_key = config.optimization_key
+    except AttributeError:
+        opt_key = "N/A"
     experiment_json = EnvSing.get_instance().populate_experiment(
         config.name,
         exp_function,

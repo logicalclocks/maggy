@@ -29,11 +29,11 @@ from maggy.core.reporter import Reporter
 from maggy.core.environment.singleton import EnvSing
 
 
-def prepare_function(
+def trial_executor_fn(
+    train_fn,
+    experiment_type,
     app_id,
     run_id,
-    experiment_type,
-    train_fn,
     server_addr,
     hb_interval,
     secret,
@@ -145,7 +145,9 @@ def prepare_function(
                     else:
                         retval = train_fn(**parameters)
 
-                    retval = util.handle_return_val(retval, tb_logdir, optimization_key, trial_log_file)
+                    retval = util.handle_return_val(
+                        retval, tb_logdir, optimization_key, trial_log_file
+                    )
 
                 except exceptions.EarlyStopException as e:
                     retval = e.metric

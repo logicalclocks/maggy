@@ -18,7 +18,7 @@ import os
 import time
 import json
 
-from maggy import util
+from maggy import util, tensorboard
 from maggy.searchspace import Searchspace
 from maggy.optimizer import AbstractOptimizer, RandomSearch, Asha, SingleRun, GridSearch
 from maggy.earlystop import AbstractEarlyStop, MedianStoppingRule, NoStoppingRule
@@ -26,8 +26,9 @@ from maggy.optimizer import bayes
 from maggy.trial import Trial
 from maggy.core.experiment_driver.driver import Driver
 from maggy.core.rpc import OptimizationServer
-from maggy.experiment_config import AblationConfig
 from maggy.core.environment.singleton import EnvSing
+from maggy.core.executors.trial_executor import trial_executor_fn
+from maggy.experiment_config import AblationConfig
 
 
 class OptimizationDriver(Driver):
@@ -41,19 +42,22 @@ class OptimizationDriver(Driver):
         "gridsearch": GridSearch,
     }
 
-    def __init__(self, config, num_executors, log_dir):
-        super().__init__(config, num_executors, log_dir)
-        self.server = OptimizationServer(num_executors)
+    def __init__(self, config, app_id, run_id):
+        super().__init__(config, app_id, run_id)
         self._final_store = []
         self._trial_store = {}
         self.experiment_done = False
         self.maggy_log = ""
-
-        if isinstance(
-            config, AblationConfig
-        ):  # Interrupt init, dirty fix for deviating config.
+        self.job_end = None
+        self.duration = None
+        # Interrupt init for AblationDriver.
+        if isinstance(config, AblationConfig):
             return
         self.num_trials = config.num_trials
+        self.num_executors = min(
+            util.num_executors(self.spark_context), self.num_trials
+        )
+        self.server = OptimizationServer(self.num_executors)
         self.searchspace = self._init_searchspace(config.searchspace)
         self.controller = self._init_controller(config.optimizer, self.searchspace)
         # if optimizer has pruner, num trials is determined by pruner
@@ -80,7 +84,6 @@ class OptimizationDriver(Driver):
                 )
             )
         self.result = {"best_val": "n.a.", "num_trials": 0, "early_stopped": 0}
-
         # Init controller and set references to data
         self.controller.num_trials = self.num_trials
         self.controller.searchspace = self.searchspace
@@ -89,13 +92,57 @@ class OptimizationDriver(Driver):
         self.controller.direction = self.direction
         self.controller._initialize(exp_dir=self.log_dir)
 
-    def _register_callbacks(self):
+    def _exp_startup_callback(self):
+        tensorboard._write_hparams_config(
+            EnvSing.get_instance().get_logdir(self.APP_ID, self.RUN_ID),
+            self.config.searchspace,
+        )
+
+    def _exp_final_callback(self, job_end, exp_json):
+        result = self.finalize(job_end)
+        best_logdir = self.log_dir + "/" + result["best_id"]
+        util.finalize_experiment(
+            exp_json,
+            float(result["best_val"]),
+            self.APP_ID,
+            self.RUN_ID,
+            "FINISHED",
+            self.duration,
+            self.log_dir,
+            best_logdir,
+            self.config.optimization_key,
+        )
+        print("Finished experiment.")
+        return result
+
+    def _exp_exception_callback(self, exc):
+        self.controller._close_log()
+        if self.controller.pruner:
+            self.controller.pruner._close_log()
+        if self.exception:
+            raise self.exception  # pylint: disable=raising-bad-type
+        raise exc
+
+    def _patching_fn(self, train_fn):
+        return trial_executor_fn(
+            train_fn,
+            "optimization",
+            self.APP_ID,
+            self.RUN_ID,
+            self.server_addr,
+            self.hb_interval,
+            self._secret,
+            self.config.optimization_key,
+            self.log_dir,
+        )
+
+    def _register_msg_callbacks(self):
         for key, call in (
-            ("METRIC", self._metric_callback),
-            ("BLACK", self._blacklist_callback),
-            ("FINAL", self._final_callback),
-            ("IDLE", self._idle_callback),
-            ("REG", self._register_callback),
+            ("METRIC", self._metric_msg_callback),
+            ("BLACK", self._blacklist_msg_callback),
+            ("FINAL", self._final_msg_callback),
+            ("IDLE", self._idle_msg_callback),
+            ("REG", self._register_msg_callback),
         ):
             self.message_callbacks[key] = call
 
@@ -111,19 +158,18 @@ class OptimizationDriver(Driver):
     def finalize(self, job_end):
         self.job_end = job_end
         self.duration = util.seconds_to_milliseconds(self.job_end - self.job_start)
-        self.duration_str = util.time_diff(self.job_start, self.job_end)
-        results = self.prep_results()
+        duration_str = util.time_diff(self.job_start, self.job_end)
+        results = self.prep_results(duration_str)
         print(results)
         self.log(results)
         EnvSing.get_instance().dump(
             json.dumps(self.result, default=util.json_default_numpy),
             self.log_dir + "/result.json",
         )
-        sc = util.find_spark().sparkContext
-        EnvSing.get_instance().dump(self.json(sc), self.log_dir + "/maggy.json")
+        EnvSing.get_instance().dump(self.json(), self.log_dir + "/maggy.json")
         return self.result
 
-    def prep_results(self):
+    def prep_results(self, duration_str):
         self.controller._finalize_experiment(self._final_store)
         results = (
             "\n------ "
@@ -143,14 +189,14 @@ class OptimizationDriver(Driver):
             + "\n"
             "AVERAGE metric -- " + str(self.result["avg"]) + "\n"
             "EARLY STOPPED Trials -- " + str(self.result["early_stopped"]) + "\n"
-            "Total job time " + self.duration_str + "\n"
+            "Total job time " + duration_str + "\n"
         )
         return results
 
     def config_to_dict(self):
         return self.searchspace.to_dict()
 
-    def json(self, sc):
+    def json(self):
         """Get all relevant experiment information in JSON format.
         """
         user = None
@@ -166,10 +212,14 @@ class OptimizationDriver(Driver):
             "user": user,
             "name": self.name,
             "module": "maggy",
-            "app_id": str(sc.applicationId),
+            "app_id": str(self.APP_ID),
             "start": time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(self.job_start)),
-            "memory_per_executor": str(sc._conf.get("spark.executor.memory")),
-            "gpus_per_executor": str(sc._conf.get("spark.executor.gpus")),
+            "memory_per_executor": str(
+                self.spark_context._conf.get("spark.executor.memory")
+            ),
+            "gpus_per_executor": str(
+                self.spark_context._conf.get("spark.executor.gpus")
+            ),
             "executors": self.num_executors,
             "logdir": self.log_dir,
             # 'versioned_resources': versioned_resources,
@@ -278,7 +328,7 @@ class OptimizationDriver(Driver):
         )
         return log
 
-    def _metric_callback(self, msg):
+    def _metric_msg_callback(self, msg):
         logs = msg.get("logs", None)
         if logs is not None:
             with self.log_lock:
@@ -310,13 +360,13 @@ class OptimizationDriver(Driver):
                             self.log("Trials to stop: {}".format(to_stop))
                             self.get_trial(to_stop).set_early_stop()
 
-    def _blacklist_callback(self, msg):
+    def _blacklist_msg_callback(self, msg):
         trial = self.get_trial(msg["trial_id"])
         with trial.lock:
             trial.status = Trial.SCHEDULED
             self.server.reservations.assign_trial(msg["partition_id"], msg["trial_id"])
 
-    def _final_callback(self, msg):
+    def _final_msg_callback(self, msg):
         trial = self.get_trial(msg["trial_id"])
         logs = msg.get("logs", None)
         if logs is not None:
@@ -366,7 +416,7 @@ class OptimizationDriver(Driver):
                 )
                 self.add_trial(trial)
 
-    def _idle_callback(self, msg):
+    def _idle_msg_callback(self, msg):
         # execute only every 0.1 seconds but do not block thread
         if time.time() - msg["idle_start"] > 0.1:
             trial = self.controller_get_next()
@@ -388,7 +438,7 @@ class OptimizationDriver(Driver):
         else:
             self.add_message(msg)
 
-    def _register_callback(self, msg):
+    def _register_msg_callback(self, msg):
         trial = self.controller_get_next()
         if trial is None:
             self.server.reservations.assign_trial(msg["partition_id"], None)
