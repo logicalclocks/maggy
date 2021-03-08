@@ -28,7 +28,7 @@ import torch.distributed as dist
 import numpy as np
 
 from maggy import util, tensorboard
-from maggy.core import rpc
+from maggy.core.rpc import Client
 from maggy.core.reporter import Reporter
 from maggy.core.patching import MaggyDataLoader
 from maggy.core.environment.singleton import EnvSing
@@ -72,7 +72,7 @@ def prepare_function(
         """
         EnvSing.get_instance().set_ml_id(app_id, run_id)
         partition_id, _ = util.get_partition_attempt_id()
-        client = rpc.Client(server_addr, partition_id, 0, hb_interval, secret)
+        client = Client(server_addr, partition_id, 0, hb_interval, secret)
         log_file = log_dir + "/executor_" + str(partition_id) + ".log"
 
         reporter = Reporter(log_file, partition_id, 0, __builtin__.print)
@@ -220,6 +220,7 @@ def _init_cluster(timeout=60, random_seed=0):
         assert (
             env_variable in os.environ
         ), f"Environment variable {env_variable} not registered."
+    assert torch.cuda.is_available(), "Torch distributed needs a GPU cluster."
     assert dist.is_available(), "Torch distributed backend not accessible."
     assert dist.is_nccl_available(), "NCCL link not available on worker."
     dist.init_process_group(backend="nccl", timeout=datetime.timedelta(seconds=timeout))

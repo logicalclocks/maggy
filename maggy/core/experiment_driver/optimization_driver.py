@@ -25,6 +25,7 @@ from maggy.earlystop import AbstractEarlyStop, MedianStoppingRule, NoStoppingRul
 from maggy.optimizer import bayes
 from maggy.trial import Trial
 from maggy.core.experiment_driver.driver import Driver
+from maggy.core.rpc import OptimizationServer
 from maggy.experiment_config import AblationConfig
 from maggy.core.environment.singleton import EnvSing
 
@@ -42,6 +43,7 @@ class OptimizationDriver(Driver):
 
     def __init__(self, config, num_executors, log_dir):
         super().__init__(config, num_executors, log_dir)
+        self.server = OptimizationServer(num_executors)
         self._final_store = []
         self._trial_store = {}
         self.experiment_done = False
@@ -108,23 +110,17 @@ class OptimizationDriver(Driver):
 
     def finalize(self, job_end):
         self.job_end = job_end
-
         self.duration = util.seconds_to_milliseconds(self.job_end - self.job_start)
-
         self.duration_str = util.time_diff(self.job_start, self.job_end)
-
         results = self.prep_results()
-
         print(results)
         self.log(results)
-
         EnvSing.get_instance().dump(
             json.dumps(self.result, default=util.json_default_numpy),
             self.log_dir + "/result.json",
         )
         sc = util.find_spark().sparkContext
         EnvSing.get_instance().dump(self.json(sc), self.log_dir + "/maggy.json")
-
         return self.result
 
     def prep_results(self):

@@ -89,7 +89,7 @@ class Driver(ABC):
                             msg
                         )  # Execute registered callbacks.
             except Exception as exc:  # pylint: disable=broad-except
-                self._log(exc)
+                self.log(exc)
                 self.exception = exc
                 self.server.stop()
                 raise
@@ -103,7 +103,7 @@ class Driver(ABC):
     def add_message(self, msg):
         self._message_q.put(msg)
 
-    def _get_logs(self):
+    def get_logs(self):
         """Return current experiment status and executor logs to send them to
         spark magic.
         """

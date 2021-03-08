@@ -14,6 +14,7 @@
 #   limitations under the License.
 #
 
+from maggy.core.rpc import DistributedServer
 from maggy.core.experiment_driver.driver import Driver
 
 
@@ -22,11 +23,8 @@ class DistributedDriver(Driver):
 
     def __init__(self, config, num_executors, log_dir):
         super().__init__(config, num_executors, log_dir)
+        self.server = DistributedServer(num_executors)
         self.results = []
-        # Legacy: Define result and num_trials to make heartbeat work.
-        # Is going to get removed in the future.
-        self.result = {"best_val": "n.a.", "num_trials": 1, "early_stopped": 0}
-        self.num_trials = 1
 
     def _register_callbacks(self):
         self.message_callbacks["METRIC"] = self.log_callback
