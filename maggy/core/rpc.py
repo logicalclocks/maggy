@@ -216,7 +216,7 @@ class Server(MessageSocket):
         Returns:
 
         """
-        msg_type = msg["type"]        
+        msg_type = msg["type"]
         resp = {}
         try:
             self.message_callbacks[msg_type](
@@ -231,8 +231,6 @@ class Server(MessageSocket):
         for key, call in self.callback_list:
             message_callbacks[key] = call
         return message_callbacks
-
-
 
     def start(self, exp_driver):
         """
