@@ -69,7 +69,6 @@ class BaseEnv:
     def mkdir(self, hdfs_path):
         return os.mkdir(hdfs_path)
 
-
     def isdir(self, dir_path, project=None):
         return os.path.isdir(dir_path)
 
