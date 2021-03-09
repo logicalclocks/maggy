@@ -216,120 +216,22 @@ class Server(MessageSocket):
         Returns:
 
         """
-        msg_type = msg["type"]
+        msg_type = msg["type"]        
+        resp = {}
+        try:
+            self.message_callbacks[msg_type](
+                resp, msg, exp_driver
+            )  # Prepare response in callback.
+        except KeyError:
+            resp["type"] = "ERR"
+        MessageSocket.send(self, sock, resp)
 
-        # Prepare message
-        send = {}
+    def _register_callbacks(self):
+        message_callbacks = {}
+        for key, call in self.callback_list:
+            message_callbacks[key] = call
+        return message_callbacks
 
-        if msg_type == "REG":
-            # check if executor was registered before and retrieve lost trial
-            lost_trial = self.reservations.get_assigned_trial(msg["partition_id"])
-            if lost_trial is not None:
-                # the trial or executor must have failed
-                exp_driver.get_trial(lost_trial).status = Trial.ERROR
-                # add a blacklist message to the worker queue
-                fail_msg = {
-                    "partition_id": msg["partition_id"],
-                    "type": "BLACK",
-                    "trial_id": lost_trial,
-                }
-                self.reservations.add(msg["data"])
-                exp_driver.add_message(fail_msg)
-            else:
-                # else add regular registration msg to queue
-                self.reservations.add(msg["data"])
-                exp_driver.add_message(msg)
-
-            send["type"] = "OK"
-        elif msg_type == "TORCH_CONFIG":
-            try:
-                send["data"] = self.reservations.get()[
-                    0
-                ]  # Config of worker with partition 1.
-            except KeyError:
-                send["data"] = None
-            send["type"] = "OK"
-        elif msg_type == "QUERY":
-            send["type"] = "QUERY"
-            send["data"] = self.reservations.done()
-        elif msg_type == "METRIC":
-            # add metric msg to the exp driver queue
-            exp_driver.add_message(msg)
-
-            if msg["trial_id"] is None:
-                send["type"] = "OK"
-                MessageSocket.send(self, sock, send)
-                return
-            elif msg["trial_id"] is not None:
-                if msg.get("data", None) is None:
-                    send["type"] = "OK"
-                    MessageSocket.send(self, sock, send)
-                    return
-
-            # lookup executor reservation to find assigned trial
-            trialId = msg["trial_id"]
-            # get early stopping flag, should be False for ablation
-            flag = exp_driver.get_trial(trialId).get_early_stop()
-
-            if flag:
-                send["type"] = "STOP"
-            else:
-                send["type"] = "OK"
-        elif msg_type == "FINAL":
-            # reset the reservation to avoid sending the same trial again
-            self.reservations.assign_trial(msg["partition_id"], None)
-
-            send["type"] = "OK"
-
-            # add metric msg to the exp driver queue
-            exp_driver.add_message(msg)
-        elif msg_type == "GET":
-            # lookup reservation to find assigned trial
-            trial_id = self.reservations.get_assigned_trial(msg["partition_id"])
-
-            # trial_id needs to be none because experiment_done can be true but
-            # the assigned trial might not be finalized yet
-            if exp_driver.experiment_done and trial_id is None:
-                send["type"] = "GSTOP"
-            else:
-                send["type"] = "TRIAL"
-
-            send["trial_id"] = trial_id
-
-            # retrieve trial information
-            if trial_id is not None:
-                send["data"] = exp_driver.get_trial(trial_id).params
-                exp_driver.get_trial(trial_id).status = Trial.RUNNING
-            else:
-                send["data"] = None
-        elif msg_type == "LOG":
-            # get data from experiment driver
-            result, log = exp_driver._get_logs()
-
-            send["type"] = "OK"
-            if log:
-                send["ex_logs"] = log
-            else:
-                send["ex_logs"] = None
-            send["num_trials"] = exp_driver.num_trials
-            send["to_date"] = result["num_trials"]
-            send["stopped"] = result["early_stopped"]
-            send["metric"] = result["best_val"]
-        else:
-            send["type"] = "ERR"
-
-        MessageSocket.send(self, sock, send)
-
-    def get_assigned_trial_id(self, partition_id):
-        """Returns the id of the assigned trial, given a ``partition_id``.
-
-        Arguments:
-            partition_id {[type]} -- [description]
-
-        Returns:
-            trial_id
-        """
-        return self.reservations.get_assigned_trial(partition_id)
 
 
     def start(self, exp_driver):
