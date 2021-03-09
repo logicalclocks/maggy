@@ -67,10 +67,11 @@ class BaseEnv:
         return os.path.exists(hdfs_path)
 
     def mkdir(self, hdfs_path):
-        pass
+        return os.mkdir(hdfs_path)
+
 
     def isdir(self, dir_path, project=None):
-        return os.path.exists(dir_path)
+        return os.path.isdir(dir_path)
 
     def ls(self, dir_path):
         return os.listdir(dir_path)
