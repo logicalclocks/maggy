@@ -25,12 +25,12 @@ from hops.experiment_impl.util import experiment_utils
 
 from maggy import tensorboard
 from maggy import util
-from maggy.core.environment.abstractenvironment import AbstractEnv
+from maggy.core.environment.base import BaseEnv
 
 
-class HopsworksEnv(AbstractEnv):
+class HopsworksEnv(BaseEnv):
     """
-    This class implements AbstractEnvironment.
+    This class extends BaseEnv.
     The methods implemented mainly recall the libraries developed on maggy.
     """
 

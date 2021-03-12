@@ -185,4 +185,4 @@ class Driver(ABC):
         """Logs a string to the maggy driver log file.
         """
         msg = datetime.now().isoformat() + ": " + str(log_msg)
-        self.log_file_handle.write((msg + "\n").encode())
+        self.log_file_handle.write(EnvSing.get_instance().str_or_byte((msg + "\n")))
