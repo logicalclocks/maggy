@@ -24,7 +24,7 @@ import numpy as np
 from pyspark import TaskContext
 from pyspark.sql import SparkSession
 
-from maggy import constants, tensorboard
+from maggy import constants
 from maggy.core import exceptions
 from maggy.core.environment.singleton import EnvSing
 
@@ -262,7 +262,7 @@ def time_diff(t0, t1):
 
 
 def register_environment(app_id, run_id):
-    """Validates IDs, creates an experiment folder in the fs and registers with tensorboard.
+    """Validates IDs and creates an experiment folder in the fs.
 
     Args:
         :app_id: Application ID
@@ -275,7 +275,6 @@ def register_environment(app_id, run_id):
     set_ml_id(app_id, run_id)
     # Create experiment directory.
     EnvSing.get_instance().create_experiment_dir(app_id, run_id)
-    tensorboard._register(EnvSing.get_instance().get_logdir(app_id, run_id))
     return app_id, run_id
 
 

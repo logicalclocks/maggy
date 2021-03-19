@@ -14,10 +14,6 @@
 #   limitations under the License.
 #
 
-"""
-The experiment driver implements the functionality for scheduling trials on
-maggy.
-"""
 import time
 import os
 import queue
@@ -25,8 +21,11 @@ import threading
 import secrets
 from abc import ABC, abstractmethod
 from datetime import datetime
+from typing import Callable, Tuple
+
 
 from maggy import util
+from maggy.experiment_config import LagomConfig
 from maggy.core.rpc import Server
 from maggy.core.environment.singleton import EnvSing
 
@@ -35,14 +34,29 @@ DRIVER_SECRET = None
 
 
 class Driver(ABC):
+    """Abstract base driver class for the experiment drivers.
+
+    The driver sets up a digestion thread for messages queued by the server and
+    starts the experiment. Messages from the queue are used for communication
+    between the Spark workers and the driver. Each derived experiment driver
+    can register its own callbacks for custom message types. It should also
+    implement the callbacks to customize the generic experiment setup to their
+    needs.
+    """
 
     SECRET_BYTES = 8
 
-    def __init__(self, config, APP_ID, RUN_ID):
+    def __init__(self, config: LagomConfig, app_id: int, run_id: int):
+        """Sets up the RPC server, message queue and logs.
+
+        :param config: Experiment config.
+        :param app_id: Maggy application ID.
+        :param run_id: Maggy run ID.
+        """
         global DRIVER_SECRET
         self.config = config
-        self.APP_ID = APP_ID
-        self.RUN_ID = RUN_ID
+        self.app_id = app_id
+        self.run_id = run_id
         self.name = config.name
         self.description = config.description
         self.spark_context = util.find_spark().sparkContext
@@ -62,7 +76,7 @@ class Driver(ABC):
         self.worker_done = False
         self.executor_logs = ""
         self.log_lock = threading.RLock()
-        self.log_dir = EnvSing.get_instance().get_logdir(APP_ID, RUN_ID)
+        self.log_dir = EnvSing.get_instance().get_logdir(app_id, run_id)
         log_file = self.log_dir + "/maggy.log"
         # Open File desc for HDFS to log
         if not EnvSing.get_instance().exists(log_file):
@@ -72,22 +86,33 @@ class Driver(ABC):
         self.result = None
 
     @staticmethod
-    def _generate_secret(nbytes):
+    def _generate_secret(nbytes: int) -> str:
         """Generates a secret to be used by all clients during the experiment
         to authenticate their messages with the experiment driver.
+
+        :param nbytes: Desired secret size.
+
+        :returns: Secret string.
         """
         return secrets.token_hex(nbytes=nbytes)
 
-    def run_experiment(self, train_fn):
+    def run_experiment(self, train_fn: Callable) -> dict:
+        """Runs the generic experiment setup with callbacks for customization.
+
+        :param train_fn: User provided training function that should be
+            parallelized.
+
+        :returns: A dictionary of the experiment's results.
+        """
         job_start = time.time()
         try:
             self._exp_startup_callback()
             exp_json = util.populate_experiment(
-                self.config, self.APP_ID, self.RUN_ID, str(self.__class__.__name__)
+                self.config, self.app_id, self.run_id, str(self.__class__.__name__)
             )
             self.log(
                 "Started Maggy Experiment: {}, {}, run {}".format(
-                    self.name, self.APP_ID, self.RUN_ID
+                    self.name, self.app_id, self.run_id
                 )
             )
             self.init(job_start)
@@ -100,10 +125,9 @@ class Driver(ABC):
                 os.environ["ML_ID"],
                 "{} | {}".format(self.name, str(self.__class__.__name__)),
             )
-            executor_fct = self._patching_fn(train_fn)
-            node_rdd.foreachPartition(
-                executor_fct
-            )  # Triggers execution on Spark nodes.
+            executor_fn = self._patching_fn(train_fn)
+            # Trigger execution on Spark nodes.
+            node_rdd.foreachPartition(executor_fn)
 
             job_end = time.time()
             result = self._exp_final_callback(job_end, exp_json)
@@ -117,27 +141,54 @@ class Driver(ABC):
             self.stop()
 
     @abstractmethod
-    def _exp_startup_callback(self):
-        raise NotImplementedError
+    def _exp_startup_callback(self) -> None:
+        """Callback for experiment drivers to implement their own experiment
+        startup logic.
+        """
 
     @abstractmethod
-    def _exp_final_callback(self, job_end, exp_json):
-        raise NotImplementedError
+    def _exp_final_callback(self, job_end: float, exp_json: dict) -> dict:
+        """Callback for experiment drivers to implement their own experiment
+        experiment finalization logic.
+
+        :param job_end: Time of the job end.
+        :param exp_json: Dictionary of experiment metadata.
+        """
 
     @abstractmethod
-    def _exp_exception_callback(self, exc):
-        raise NotImplementedError
+    def _exp_exception_callback(self, exc: Exception):
+        """Callback for experiment drivers to implement their own experiment
+        error handling logic.
+
+        :param exc: The caught exception.
+        """
 
     @abstractmethod
-    def _patching_fn(self, train_fn):
-        raise NotImplementedError
+    def _patching_fn(self, train_fn: Callable) -> Callable:
+        """Patching function for the user provided training function.
 
-    def init(self, job_start):
+        :param train_fn: User provided training function.
+
+        :returns: The patched training function.
+        """
+
+    def init(self, job_start: float) -> None:
+        """Starts the RPC server and message digestion worker.
+
+        :param job_start: Time of the job start.
+        """
         self.server_addr = self.server.start(self)
         self.job_start = job_start
         self._start_worker()
 
-    def _start_worker(self):
+    def _start_worker(self) -> None:
+        """Starts the message digestion worker thread.
+
+        The worker tries to pop messages from the queue and matches their type
+        keyword with any registered callbacks from the message_callback
+        dictionary. The callback then gets called with the popped message.
+        """
+
         def _digest_queue(self):
             try:
                 while not self.worker_done:
@@ -158,15 +209,26 @@ class Driver(ABC):
         threading.Thread(target=_digest_queue, args=(self,), daemon=True).start()
 
     @abstractmethod
-    def _register_msg_callbacks(self):
-        pass
+    def _register_msg_callbacks(self) -> None:
+        """Registers the callbacks for the message digestion thread.
 
-    def add_message(self, msg):
+        Since each driver can define its own message types and choose which
+        ones to include, it has to be defined in the subclasses.
+        """
+
+    def add_message(self, msg: dict) -> None:
+        """Adds a message to the message queue.
+
+        :param msg: Message to put into the queue.
+        """
         self._message_q.put(msg)
 
-    def get_logs(self):
-        """Return current experiment status and executor logs to send them to
-        spark magic.
+    def get_logs(self) -> Tuple[dict, str]:
+        """Returns the current experiment status and executor logs to send them
+        to spark magic.
+
+        :returns: A tuple with the current experiment result and the aggregated
+        executor log strings.
         """
         with self.log_lock:
             temp = self.executor_logs
@@ -174,15 +236,17 @@ class Driver(ABC):
             self.executor_logs = ""
             return self.result, temp
 
-    def stop(self):
+    def stop(self) -> None:
         """Stop the Driver's worker thread and server."""
         self.worker_done = True
         self.server.stop()
         self.log_file_handle.flush()
         self.log_file_handle.close()
 
-    def log(self, log_msg):
+    def log(self, log_msg: str) -> None:
         """Logs a string to the maggy driver log file.
+
+        :param log_msg: The log message.
         """
         msg = datetime.now().isoformat() + ": " + str(log_msg)
         self.log_file_handle.write(EnvSing.get_instance().str_or_byte((msg + "\n")))
