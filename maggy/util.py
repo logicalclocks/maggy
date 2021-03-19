@@ -134,6 +134,7 @@ def build_summary_json(logdir):
             if env.exists(return_file) and env.exists(hparams_file):
                 metric_arr = env.convert_return_file_to_arr(return_file)
                 hparams_dict = _load_hparams(hparams_file)
+                hparams_dict["early_stopped"] = trial.get_early_stop()
                 combinations.append({"parameters": hparams_dict, "outputs": metric_arr})
 
     return json.dumps({"combinations": combinations}, default=json_default_numpy)
