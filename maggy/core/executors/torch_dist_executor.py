@@ -110,10 +110,8 @@ def torch_dist_executor_fn(
             reporter.log("Reservations complete, configuring PyTorch.", True)
             master_config = client.get_exec_config()[0]
             if not master_config:
-                reporter.log(
-                    "PyTorch registration failed, exiting from all tasks.", True
-                )
-                return
+                reporter.log("RuntimeError: PyTorch registration failed.", True)
+                raise RuntimeError("PyTorch registration failed.")
             addr, port = master_config["host_port"].split(":")
             torch_config = {
                 "MASTER_ADDR": addr,
