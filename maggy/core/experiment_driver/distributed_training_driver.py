@@ -62,8 +62,8 @@ class DistributedTrainingDriver(Driver):
         return result
 
     def _exp_exception_callback(self, exc: Type[Exception]) -> None:
-        """Catches pickling errors in case either the model or the dataset are
-        too large to be pickled, or not compatible.
+        """Catches pickling errors in case the input arguments (most likely
+        the dataset) are too large to be pickled, or not compatible.
 
         :param exc: The exception to handle.
 
@@ -72,11 +72,12 @@ class DistributedTrainingDriver(Driver):
         """
         if isinstance(exc, PicklingError):
             raise RuntimeError(
-                """Pickling has failed. This is most likely caused by one of the
-                 following reasons: Model too large, model can't be pickled, dataset too large.
-                 Consider passing a custom dataloader that reads from files in case of large
-                 datasets or the model class instead of an instance. It will be initialized
-                 automatically on the workers for you."""
+                """Pickling has failed. This is most likely caused by one of
+                the following reasons: Your module class can't be pickled, or your
+                dataset is too large.
+                Consider passing a custom dataloader that reads from files in
+                case of large datasets, and verify that your module is
+                pickleable!"""
             )
         raise exc
 

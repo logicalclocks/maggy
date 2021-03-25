@@ -21,7 +21,7 @@ import os
 import datetime
 import random
 import socket
-from typing import Callable, Union, Any, Tuple, Type
+from typing import Callable, Union, Any, Tuple, Type, List
 
 import torch
 import torch.distributed as dist
@@ -128,7 +128,7 @@ def torch_dist_executor_fn(
             _setup_torch_env(torch_config)
             _sanitize_config(config)
             _init_cluster(timeout=60, random_seed=0)
-            module = _wrap_module(config)
+            module = _wrap_module_dispatcher(config)
             _monkey_patch_pytorch(config.zero_lvl)
 
             reporter.log("Starting distributed training.", True)
@@ -270,8 +270,53 @@ def _init_cluster(
     random.seed(random_seed)
 
 
-def _wrap_module(
+def _wrap_module_dispatcher(
     config: TorchDistributedConfig,
+) -> Union[
+    List[Type[MaggyDDPModuleWrapper]],
+    List[Type[MaggyFairScaleModuleWrapper]],
+    List[Type[MaggyDeepSpeedModuleWrapper]],
+    Type[MaggyDDPModuleWrapper],
+    Type[MaggyFairScaleModuleWrapper],
+    Type[MaggyDeepSpeedModuleWrapper],
+]:
+    """Dispatcher for module wrapping.
+
+    In case the user has passed a list of modules, converts each of the modules to be distributed.
+
+    :param config: Experiment config.
+
+    :returns: Either a list of wrapped modules or a single module.
+    """
+    if isinstance(config.module, list):
+        wrapped_module = []
+        for module in config.module:
+            wrapped_module.append(
+                _wrap_module(
+                    module,
+                    config.backend,
+                    config.zero_lvl,
+                    config.ddp3_mp,
+                    config.ds_config,
+                )
+            )
+    else:
+        wrapped_module = _wrap_module(
+            config.module,
+            config.backend,
+            config.zero_lvl,
+            config.ddp3_mp,
+            config.ds_config,
+        )
+    return wrapped_module
+
+
+def _wrap_module(
+    module: Type[torch.nn.Module],
+    backend: str,
+    zero_lvl: int,
+    ddp3_mp: bool,
+    ds_config: dict,
 ) -> Union[
     Type[MaggyDDPModuleWrapper],
     Type[MaggyFairScaleModuleWrapper],
@@ -279,25 +324,37 @@ def _wrap_module(
 ]:
     """Wraps the module according to `backend`.
 
-    :param config: Experiment config.
+    :param module: Experiment config.
+    :param backend: The backend engine used for training.
+    :param zero_lvl: Sets the ZeRO optimization stages for `ddp`.
+    :param ddp3_mp: Used to control the use of mixed precision training in `zero_lvl` 3.
+    :param ds_config: DeepSpeed configuration dictionary if ds is enabled.
 
     :returns: Depending on the backend, returns a module that is a Maggy wrapper of either a PyTorch
         distributed module, a fairscale fully sharded module or a deepspeed engine.
     """
-    if config.backend == "ddp" and config.zero_lvl in [0, 1, 2]:
-        module = MaggyDDPModuleWrapper.config(config.module)
-    elif config.backend == "ddp":
-        module = MaggyFairScaleModuleWrapper.config(config.module, config.ddp3_mp)
-    elif config.backend == "deepspeed":
-        module = MaggyDeepSpeedModuleWrapper.config(config.module, config.ds_config)
+    if backend == "ddp" and zero_lvl in [0, 1, 2]:
+        module = MaggyDDPModuleWrapper.config(module)
+    elif backend == "ddp":
+        module = MaggyFairScaleModuleWrapper.config(module, ddp3_mp)
+    elif backend == "deepspeed":
+        module = MaggyDeepSpeedModuleWrapper.config(module, ds_config)
     return module
 
 
 def _sanitize_config(config: TorchDistributedConfig) -> None:
-    assert isinstance(config.module, type) or callable(
-        config.module
-    ), """Passed module should be a
-        class, not an instance."""
+    if isinstance(config.module, list):
+        for module in config.module:
+            if not (isinstance(module, type) or callable(module)):
+                raise TypeError(
+                    """Passed module should be a class or a factory
+                                callable."""
+                )
+    elif not (isinstance(config.module, type) or callable(config.module)):
+        raise TypeError(
+            """Passed module should be a class or a factory
+                        callable."""
+        )
     if config.backend == "ddp":
         if config.ds_config:
             print(

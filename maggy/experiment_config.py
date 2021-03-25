@@ -17,7 +17,7 @@
 from __future__ import annotations
 
 import typing
-from typing import Union, Type, Optional
+from typing import Union, Type, Optional, List
 from abc import ABC
 
 from maggy import Searchspace
@@ -127,7 +127,7 @@ class TorchDistributedConfig(LagomConfig):
 
     def __init__(
         self,
-        module: Type[torch.nn.Module],
+        module: Union[Type[torch.nn.Module], List[Type[torch.nn.Module]]],
         train_set: Optional[Union[str, torch.util.data.Dataset]] = None,
         test_set: Optional[Union[str, torch.util.data.Dataset]] = None,
         hparams: dict = None,
@@ -141,8 +141,8 @@ class TorchDistributedConfig(LagomConfig):
     ):
         """Initializes PyTorch distributed training parameters.
 
-        :param module: A PyTorch module class. Note that this has to be the class itself, not
-            an instance.
+        :param module: A PyTorch module class or list of PyTorch module classes.
+            Note that this has to be the class itself, not an instance.
         :param train_set: The training set for the training function. If you want to load the set
             inside the training function, this can be disregarded.
         :param test_set: The test set for the training function. If you want to load the set
