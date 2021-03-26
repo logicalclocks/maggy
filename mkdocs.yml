@@ -1,5 +1,5 @@
-site_name: "Maggy"
-site_description: "Official website and documentation for Maggy - Distribution transparent Machine Learning experiments on Apache Spark."
+site_name: "MAGGY"
+site_description: "Official website and documentation for MAGGY - Distribution transparent Machine Learning experiments on Apache Spark."
 site_author: "Logical Clocks"
 site_url: "https://maggy.ai"
 
@@ -17,6 +17,9 @@ nav:
     - Contributing: CONTRIBUTING.md
     - Issues: https://github.com/logicalclocks/maggy/issues
     - Hopsworks.ai: https://hopsworks.ai/
+  - Getting Started:
+    - Installation: start/install.md
+    - Quickstart: start/quickstart.md
   - Hyperparameter Optimization:
     - Introduction: hpo/intro.md
   - Ablation Studies:
@@ -51,30 +54,35 @@ extra:
       link: https://www.linkedin.com/company/logicalclocks/
 
 extra_css:
-    - assets/css/custom.css
+  - assets/css/custom.css
+  - assets/css/version-select.css
+
+extra_javascript:
+  - assets/javascript/version-select.js
 
 plugins:
-    - search
+  - search
 
 markdown_extensions:
-    - admonition
-    - codehilite
-    - footnotes
-    - pymdownx.tabbed
-    - pymdownx.arithmatex
-    - pymdownx.superfences
-    - pymdownx.details
-    - pymdownx.caret
-    - pymdownx.mark
-    - pymdownx.tilde
-    - pymdownx.critic
-    - toc:
-        permalink: "#"
-    - pymdownx.tasklist:
-        custom_checkbox: true
-    - markdown_include.include:
-        base_path: docs
+  - admonition
+  - codehilite
+  - footnotes
+  - pymdownx.tabbed
+  - pymdownx.arithmatex
+  - pymdownx.superfences
+  - pymdownx.details
+  - pymdownx.caret
+  - pymdownx.mark
+  - pymdownx.tilde
+  - pymdownx.critic
+  - toc:
+      permalink: "#"
+      toc_depth: 3
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - markdown_include.include:
+      base_path: docs
 
 google_analytics:
-    - G-3VNC1GQCRZ
-    - auto
+  - G-3VNC1GQCRZ
+  - auto

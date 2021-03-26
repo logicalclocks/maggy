@@ -1,118 +1,88 @@
 <p align="center">
   <a href="https://github.com/logicalclocks/maggy">
-    <img src="https://raw.githubusercontent.com/moritzmeister/maggy/mkdocs/docs/assets/images/maggy.png" width="420" alt="Maggy">
+    <img src="https://raw.githubusercontent.com/moritzmeister/maggy/mkdocs/docs/assets/images/maggy.png" width="320" alt="Maggy">
   </a>
 </p>
 
+<p align="center">
+  <a href="https://community.hopsworks.ai"><img
+    src="https://img.shields.io/discourse/users?label=Hopsworks%20Community&server=https%3A%2F%2Fcommunity.hopsworks.ai"
+    alt="Hopsworks Community"
+  /></a>
+    <a href="https://.ai"><img
+    src="https://img.shields.io/badge/docs-MAGGY-orange"
+    alt="Maggy Documentation"
+  /></a>
+  <a href="https://pypi.org/project/maggy/"><img
+    src="https://img.shields.io/pypi/v/maggy?color=blue"
+    alt="PyPiStatus"
+  /></a>
+  <a href="https://pepy.tech/project/maggy/month"><img
+    src="https://pepy.tech/badge/maggy/month"
+    alt="Downloads"
+  /></a>
+  <a href="https://github.com/psf/black"><img
+    src="https://img.shields.io/badge/code%20style-black-000000.svg"
+    alt="CodeStyle"
+  /></a>
+  <a><img
+    src="https://img.shields.io/pypi/l/maggy?color=green"
+    alt="License"
+  /></a>
+</p>
 
-Maggy
-=====
+Maggy is a framework for **distribution transparent** machine learning experiments on [Apache Spark](https://spark.apache.org/).
+In this post, we introduce a new unified framework for writing core ML training logic as **oblivious training functions**.
+Maggy enables you to reuse the same training code whether training small models on your laptop or reusing the same code to scale out hyperparameter tuning or distributed deep learning on a cluster.
+Maggy enables the replacement of the current waterfall development process for distributed ML applications, where code is rewritten at every stage to account for the different distribution context.
 
-|Downloads| |PypiStatus| |PythonVersions| |Docs| |CodeStyle|
 
-Maggy is a framework for efficient asynchronous optimization of expensive
-black-box functions on top of Apache Spark. Compared to existing frameworks,
-maggy is not bound to stage based optimization algorithms and therefore it is
-able to make extensive use of early stopping in order to achieve efficient
-resource utilization.
+## Quick Start
 
-For a video describing Maggy, see `this talk at the Spark/AI Summit <https://www.youtube.com/watch?v=0Hd1iYEL03w>`_.
+Maggy uses PySpark as an engine to distribute the training processes. To get started, install Maggy in the Python environment used by your Spark Cluster, or install Maggy in your local Python environment with the `'spark'` extra, to run on Spark in local mode:
 
-Right now, maggy supports asynchronous hyperparameter tuning of machine
-learning and deep learning models, and ablation studies on neural network
-layers as well as input features.
-
-Moreover, it provides a developer API that allows advanced usage by
-implementing custom optimization algorithms and early stopping criteria.
-
-To accomodate asynchronous algorithms, support for communication between the
-Driver and Executors via RPCs through Maggy was added. The Optimizer that guides
-hyperparameter search is located on the Driver and it assigns trials to
-Executors. Executors periodically send back to the Driver the current
-performance of their trial, and the Optimizer can decide to early-stop any
-ongoing trial and send the Executor a new trial instead.
-
-Quick Start
------------
-
-To Install:
-
->>> pip install maggy
+```python
+pip install maggy
+```
 
 The programming model consists of wrapping the code containing the model training
 inside a function. Inside that wrapper function provide all imports and
 parts that make up your experiment.
 
-There are three requirements for this wrapper function:
+Single run experiment:
 
-1. The function should take the hyperparameters as arguments, plus one
-   additional parameter reporter which is needed for reporting the current
-   metric to the experiment driver.
-2. The function should return the metric that you want to optimize for. This
-   should coincide with the metric being reported in the Keras callback (see
-   next point).
-3. In order to leverage on the early stopping capabilities of maggy, you need
-   to make use of the maggy reporter API. By including the reporter in your
-   training loop, you are telling maggy which metric to report back to the
-   experiment driver for optimization and to check for global stopping. It is
-   as easy as adding reporter.broadcast(metric=YOUR_METRIC) for example at the
-   end of your epoch or batch training step and adding a reporter argument to
-   your function signature. If you are not writing your own training loop you
-   can use the pre-written Keras callbacks in the `maggy.callbacks` module.
+```python
+def train_fn():
+    # This is your training iteration loop
+    for i in range(number_iterations):
+        ...
+        # add the maggy reporter to report the metric to be optimized
+        reporter.broadcast(metric=accuracy)
+         ...
+    # Return metric to be optimized or any metric to be logged
+    return accuracy
 
-Sample usage:
+from maggy import experiment
+result = experiment.lagom(train_fn=train_fn, name='MNIST')
+```
 
->>> # Define Searchspace
->>> from maggy import Searchspace
->>> # The searchspace can be instantiated with parameters
->>> sp = Searchspace(kernel=('INTEGER', [2, 8]), pool=('INTEGER', [2, 8]))
->>> # Or additional parameters can be added one by one
->>> sp.add('dropout', ('DOUBLE', [0.01, 0.99]))
-
->>> # Define training wrapper function:
->>> def mnist(kernel, pool, dropout, reporter):
->>>     # This is your training iteration loop
->>>     for i in range(number_iterations):
->>>         ...
->>>         # add the maggy reporter to report the metric to be optimized
->>>         reporter.broadcast(metric=accuracy)
->>>         ...
->>>     # Return the same final metric
->>>     return accuracy
-
->>> # Launch maggy experiment
->>> from maggy import experiment
->>> result = experiment.lagom(train_fn=mnist,
->>>                            searchspace=sp,
->>>                            optimizer='randomsearch',
->>>                            direction='max',
->>>                            num_trials=15,
->>>                            name='MNIST'
->>>                           )
-
-**lagom** is a Swedish word meaning "just the right amount". This is how maggy
+**lagom** is a Swedish word meaning "just the right amount". This is how MAggy
 uses your resources.
 
-MNIST Example
--------------
 
-For a full MNIST example with random search using Keras,
-see the Jupyter Notebook in the `examples` folder.
+## Documentation
 
-Documentation
--------------
+Full documentation is available at [maggy.ai](https://maggy.ai/)
 
-Read our `blog post <https://www.logicalclocks.com/blog/scaling-machine-learning-and-deep-learning-with-pyspark-on-hopsworks>`_ for more details.
+## Contributing
 
-API documentation is available `here <https://maggy.readthedocs.io/en/latest/>`_.
+There are various ways to contribute, and any contribution is welcome, please follow the
+CONTRIBUTING guide to get started.
 
-.. |Downloads| image:: https://pepy.tech/badge/maggy/month
-   :target: https://pepy.tech/project/maggy
-.. |PypiStatus| image:: https://img.shields.io/pypi/v/maggy?color=blue
-    :target: https://pypi.org/project/maggy
-.. |PythonVersions| image:: https://img.shields.io/pypi/pyversions/maggy.svg
-    :target: https://pypi.org/project/maggy
-.. |Docs| image:: https://img.shields.io/readthedocs/maggy
-    :target: https://maggy.readthedocs.io/en/latest/
-.. |CodeStyle| image:: https://img.shields.io/badge/code%20style-black-000000.svg
-    :target: https://github.com/psf/black
+## Issues
+
+Issues can be reported on the official [GitHub repo](https://github.com/logicalclocks/maggy/issues) of Maggy.
+
+## Citation
+
+Please see our publications on [maggy.ai](https://maggy.ai/publications) to find out how to cite our work.
