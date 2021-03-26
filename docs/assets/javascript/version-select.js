@@ -1,7 +1,7 @@
 window.addEventListener("DOMContentLoaded", function() {
     // This is a bit hacky. Figure out the base URL from a known CSS file the
     // template refers to...
-    var ex = new RegExp("/?css/version-select.css$");
+    var ex = new RegExp("/?assets/css/version-select.css$");
     var sheet = document.querySelector('link[href$="version-select.css"]');
 
     var ABS_BASE_URL = sheet.href.replace(ex, "");
