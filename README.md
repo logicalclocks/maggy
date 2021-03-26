@@ -1,10 +1,8 @@
 <p align="center">
   <a href="https://github.com/logicalclocks/maggy">
-    <img src="https://raw.githubusercontent.com/moritzmeister/maggy/mkdocs/.github/assets/logo.svg" width="420" alt="Maggy">
+    <img src="https://raw.githubusercontent.com/moritzmeister/maggy/mkdocs/docs/assets/images/maggy.png" width="420" alt="Maggy">
   </a>
 </p>
-
-
 
 
 Maggy
