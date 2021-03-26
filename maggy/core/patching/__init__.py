@@ -16,7 +16,7 @@
 
 import torch
 
-from .dataloader import MaggyDataLoader
+from .dataloader import MaggyDataLoader, MaggyPetastormDataLoader
 from .modules import (
     MaggyDDPModuleWrapper,
     MaggyFairScaleModuleWrapper,
@@ -27,6 +27,8 @@ __all__ = [
     "MaggyDDPModuleWrapper",
     "MaggyFairScaleModuleWrapper",
     "MaggyDeepSpeedModuleWrapper",
+    "MaggyDataLoader",
+    "MaggyPetastormDataLoader",
 ]
 
 # Check torch version, only import ZeroRedundancyOptimizer if >= 1.8
@@ -47,7 +49,6 @@ if int(_torch_version[0]) > 1 or int(_torch_version[1]) >= 8:
     )
 
     __all__ += [
-        "MaggyDataLoader",
         "MaggyZeroAdadelta",
         "MaggyZeroAdagrad",
         "MaggyZeroAdam",

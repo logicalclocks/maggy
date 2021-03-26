@@ -121,8 +121,8 @@ def torch_dist_executor_fn(
                 "LOCAL_RANK": str(0),  # DeepSpeed requires local rank.
                 "NCCL_BLOCKING_WAIT": "1",
                 "NCCL_DEBUG": "INFO",
-                "NCCL_IB_DISABLE": "1",
             }
+            # "NCCL_IB_DISABLE": "1"}
             reporter.log(f"Torch config is {torch_config}", True)
 
             _setup_torch_env(torch_config)
