@@ -1,5 +1,5 @@
 #
-#   Copyright 2020 Logical Clocks AB
+#   Copyright 2021 Logical Clocks AB
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -16,7 +16,12 @@
 
 import os
 from setuptools import setup, find_packages
-from maggy.version import __version__
+from importlib.machinery import SourceFileLoader
+
+
+version = (
+    SourceFileLoader("maggy.version", os.path.join("maggy", "version.py")).load_module().__version__
+)
 
 
 def read(fname):
@@ -25,9 +30,9 @@ def read(fname):
 
 setup(
     name='maggy',
-    version=__version__,
+    version=version,
     install_requires=[
-        'numpy', 'scikit-optimize==0.7.4', 'statsmodels==0.11.0', 'scipy==1.4.1'
+        'numpy==1.20.1', 'scikit-optimize==0.7.4', 'statsmodels==0.11.0', 'scipy==1.4.1'
     ],
     extras_require={
         'pydoop': ['pydoop'],
@@ -36,35 +41,34 @@ setup(
         'zero': ['deepspeed==0.3.13',
                  'fairscale==0.3.0'],
         'docs': [
-            'sphinx==1.8.5',
-            'sphinx-autobuild',
-            'recommonmark',
-            'sphinx_rtd_theme',
-            'jupyter_sphinx_theme'
-        ],
-        'test': [
-            'pylint',
-            'pytest',
+            'mkdocs==1.1.2',
+            'mike==0.5.5',
+            'mkdocs-material==7.0.6',
+            'markdown-include==0.6.0',
         ],
         'dev': [
-            'black',
-            'flake8',
+            'black==20.8b1',
+            'flake8==3.9.0',
+            'pre-commit==2.11.1',
         ],
         'spark': ['pyspark==2.4.3']
     },
     author='Moritz Meister',
-    author_email='meister.mo@gmail.com',
-    description='Efficient asynchronous optimization of expensive black-box functions on top of Apache Spark',
-    license='GNU Affero General Public License v3',
-    keywords='Hyperparameter, Optimization, Auto-ML, Hops, Hadoop, TensorFlow, Spark',
+    author_email='moritz@logicalclocks.com',
+    description='Distribution transparent Machine Learning experiments on Apache Spark ',
+    license='Apache License 2.0',
+    keywords='Hyperparameter, Optimization, Distributed, Training, Keras, PyTorch, TensorFlow, Spark',
     url='https://github.com/logicalclocks/maggy',
-    download_url='http://snurran.sics.se/hops/maggy/maggy-' + __version__ + '.tar.gz',
+    download_url='',
     packages=find_packages(),
-    long_description=read('README.rst'),
+    long_description=read('README.md'),
+    python_requires=">=3.7",
     classifiers=[
-        'Development Status :: 2 - Pre-Alpha',
+        'Development Status :: 5 - Production/Stable',
         'Topic :: Utilities',
         'License :: OSI Approved :: Apache Software License',
         'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.7',
+        'Intended Audience :: Developers',
     ]
 )
