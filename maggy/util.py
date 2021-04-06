@@ -24,7 +24,7 @@ import numpy as np
 from pyspark import TaskContext
 from pyspark.sql import SparkSession
 
-from maggy import constants
+from maggy import constants, tensorboard
 from maggy.core import exceptions
 from maggy.core.environment.singleton import EnvSing
 
@@ -275,6 +275,7 @@ def register_environment(app_id, run_id):
     set_ml_id(app_id, run_id)
     # Create experiment directory.
     EnvSing.get_instance().create_experiment_dir(app_id, run_id)
+    tensorboard._register(EnvSing.get_instance().get_logdir(app_id, run_id))
     return app_id, run_id
 
 

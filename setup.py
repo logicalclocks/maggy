@@ -32,7 +32,9 @@ setup(
     extras_require={
         'pydoop': ['pydoop'],
         'tf': ['tensorflow==2.4.1'],
-        'torch': ['torch==1.7.1'],
+        'torch': ['torch==1.7.1'],  # Should be 1.8.1 if we want to support PyTorch's ZeRO.
+        'zero': ['deepspeed==0.3.13',
+                 'fairscale==0.3.0'],
         'docs': [
             'sphinx==1.8.5',
             'sphinx-autobuild',

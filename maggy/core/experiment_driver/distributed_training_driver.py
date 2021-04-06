@@ -18,6 +18,7 @@ from pickle import PicklingError
 from typing import Callable, Type, Any
 
 from maggy import util
+from maggy.core.environment.singleton import EnvSing
 from maggy.experiment_config import TorchDistributedConfig
 from maggy.core.rpc import DistributedTrainingServer
 from maggy.core.experiment_driver.driver import Driver
@@ -54,6 +55,12 @@ class DistributedTrainingDriver(Driver):
         :returns: The result in a dictionary.
         """
         result = {"test result": self.average_metric()}
+        exp_ml_id = str(self.app_id) + "_" + str(self.run_id)
+        EnvSing.get_instance().attach_experiment_xattr(
+            exp_ml_id,
+            {"state": "FINISHED", "duration": int(job_end - self.job_start) * 1000},
+            "FULL_UPDATE",
+        )
         print("Final average test loss: {:.3f}".format(self.average_metric()))
         print(
             "Finished experiment. Total run time: "

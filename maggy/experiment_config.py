@@ -123,7 +123,7 @@ class AblationConfig(LagomConfig):
 class TorchDistributedConfig(LagomConfig):
     """Config class for running distributed PyTorch training."""
 
-    BACKENDS = ["ddp", "deepspeed"]
+    BACKENDS = ["torch", "deepspeed"]
 
     def __init__(
         self,
@@ -131,8 +131,8 @@ class TorchDistributedConfig(LagomConfig):
         train_set: Optional[Union[str, torch.util.data.Dataset]] = None,
         test_set: Optional[Union[str, torch.util.data.Dataset]] = None,
         hparams: dict = None,
-        backend: str = "ddp",
-        ddp3_mp: bool = False,
+        backend: str = "torch",
+        mixed_precision: bool = False,
         zero_lvl: int = 0,
         deepspeed_config: dict = None,
         name: str = "torchDist",
@@ -149,11 +149,11 @@ class TorchDistributedConfig(LagomConfig):
             inside the training function, this can be disregarded.
         :param hparams: Hyperparameters that should be used during model initialization. Primarily
             used to give an interface for hp optimization.
-        :param backend: The backend engine used for training. Note that `deepspeed` needs syntax
+        :param backend: The backend framework used for training. Note that `deepspeed` needs syntax
             changes to a normal PyTorch script!
-        :param ddp3_mp: Used to control the use of mixed precision training in `ddp` backend mode
-            with model sharding (`zero_lvl` 3).
-        :param zero_lvl: Sets the ZeRO optimization stages for `ddp`. Note: When using `deepspeed`
+        :param mixed_precision: Used to control the use of mixed precision training in `torch`
+            backend mode with model sharding (`zero_lvl` 3).
+        :param zero_lvl: Sets the ZeRO optimization stages for `torch`. Note: When using `deepspeed`
             backend, overwrites `deepspeed_config` zero level!
         :param deepspeed_config: A dictionary that represents a valid deepspeed ZeRO optimizer
             config. For information on the config, see https://www.deepspeed.ai/docs/config-json/.
@@ -173,7 +173,7 @@ class TorchDistributedConfig(LagomConfig):
                 )
             )
         self.backend = backend
-        self.ddp3_mp = ddp3_mp
+        self.mixed_precision = mixed_precision
         self.hparams = hparams if hparams else {}
         self.zero_lvl = zero_lvl
         self.ds_config = deepspeed_config

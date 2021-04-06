@@ -22,141 +22,118 @@ from typing import Type, Any
 from torch.nn import Module as TorchModule
 from torch.nn.parallel import DistributedDataParallel as TorchDistributedDataParallel
 
-from deepspeed.pipe import PipelineModule
-from deepspeed.runtime.engine import DeepSpeedEngine
-from fairscale.nn import FullyShardedDataParallel as FairscaleFullyShardedDataParallel
+try:
+    from deepspeed.pipe import PipelineModule
+    from deepspeed.runtime.engine import DeepSpeedEngine
+    from fairscale.nn import (
+        FullyShardedDataParallel as FairscaleFullyShardedDataParallel,
+    )
+except ImportError:
+    print(
+        """Warning: deepspeed and/or fairscale import failed. DeepSpeed backend and zero_lvl 3
+          won't be available"""
+    )
 
 
-class MaggyDDPModuleWrapper(TorchDistributedDataParallel):
-    """Wrapper around PyTorch's DDP Module.
+def get_maggy_ddp_wrapper(module: Type[TorchModule]):
+    """Factory function for MaggyDDPModuleWrapper.
 
-    The wrapper replaces the user's module. Since the module's signature needs to be preserved, we
-    cannot add the module as an additional parameter during initialization. Instead, the module is
-    configured before initialization of the class by a user. Its class property `__module` is set
-    by the executor function during patching. Note that this property has to be set appropriately
-    for the wrapper to function properly.
+    :param module: PyTorch module passed by the user.
     """
 
-    __module = None  # Avoid overwriting torch module
+    class MaggyDDPModuleWrapper(TorchDistributedDataParallel):
+        """Wrapper around PyTorch's DDP Module.
 
-    def __init__(self, *args: Any, **kwargs: Any):
-        """Initializes the previously set module, moves it to the GPU and initializes a DDP module
-        with it.
-
-        Note that the `__module` attribute has to be set BEFORE the constructor is called for the
-        first time!
-
-        :param args: Arguments passed by the user for module initialization.
-        :param kwargs: Keyword arguments passed by the user for module initialization.
+        The wrapper replaces the user's module. Since the module's signature needs to be preserved,
+        we cannot add the module as an additional parameter during initialization. Instead, it is
+        configured by its factory function.
         """
-        # Avoid self because bound method adds to args which makes the function call fail
-        model = MaggyDDPModuleWrapper.__module(*args, **kwargs).cuda()
-        super().__init__(model)
 
-    @classmethod
-    def config(cls, module: Type[TorchModule]) -> Type[MaggyDDPModuleWrapper]:
-        """Sets the wrapper module class property.
+        __module = module  # Avoid overwriting torch module
 
-        :param module: The PyTorch module that is to be wrapped.
+        def __init__(self, *args: Any, **kwargs: Any):
+            """Initializes the previously set module, moves it to the GPU and initializes a DDP
+            module with it.
 
-        :returns: A MaggyDDPModuleWrapper class type with the registered properties.
-        """
-        cls.__module = module
-        return cls
+            :param args: Arguments passed by the user for module initialization.
+            :param kwargs: Keyword arguments passed by the user for module initialization.
+            """
+            # Avoid self because bound method adds to args which makes the function call fail
+            model = MaggyDDPModuleWrapper.__module(*args, **kwargs).cuda()
+            super().__init__(model)
+
+    return MaggyDDPModuleWrapper
 
 
-class MaggyFairScaleModuleWrapper(FairscaleFullyShardedDataParallel):
-    """Wrapper around Fairscale's FullyShardedDataParallel Module.
+def get_maggy_fairscale_wrapper(module: TorchModule, mixed_precision: bool):
+    """Factory function for MaggyFairScaleModuleWrapper.
 
-    The wrapper replaces the user's module. Since the module's signature needs to be preserved, we
-    cannot add the module as an additional parameter during initialization. Instead, the module is
-    configured before initialization of the class by a user. Its class properties `__module` and
-    `mixed_precision` are set by the executor function during patching. Note that these properties
-    have to be set appropriately for the wrapper to function properly.
+    :param module: PyTorch module passed by the user.
+    :param mixed_precision: Switches on mixed precision for the FairscaleModule.
     """
 
-    __module = None
-    __mixed_precision = False
+    class MaggyFairScaleModuleWrapper(FairscaleFullyShardedDataParallel):
+        """Wrapper around Fairscale's FullyShardedDataParallel Module.
 
-    def __init__(self, *args: Any, **kwargs: Any):
-        """Initializes the previously set module, moves it to the GPU and initializes a Fairscale
-        FullyShardedDataParallel module with it.
-
-        Note that the `__module` attribute has to be set BEFORE the constructor is called for the
-        first time!
-
-        :param args: Arguments passed by the user for module initialization.
-        :param kwargs: Keyword arguments passed by the user for module initialization.
+        The wrapper replaces the user's module. Since the module's signature needs to be preserved,
+        we cannot add the module as an additional parameter during initialization. Instead, it is
+        configured by its factory function.
         """
-        # Avoid self because bound method adds to args which makes the function call fail
-        model = MaggyFairScaleModuleWrapper.__module(*args, **kwargs).cuda()
-        super().__init__(model, mixed_precision=self.__mixed_precision)
 
-    @classmethod
-    def config(
-        cls, module: Type[TorchModule], mixed_precision: bool
-    ) -> Type[MaggyFairScaleModuleWrapper]:
-        """Sets the wrapper module class and mixed_precision properties.
+        __module = module
+        __mixed_precision = mixed_precision
 
-        :param module: The PyTorch module that is to be wrapped.
-        :param mixed_precision: Determines if mixed precision is used for the model's parameters
-        during training for increased speed.
+        def __init__(self, *args: Any, **kwargs: Any):
+            """Initializes the previously set module, moves it to the GPU and initializes a
+            Fairscale FullyShardedDataParallel module with it.
 
-        :returns: A MaggyFairScaleModuleWrapper class type with the registered properties.
-        """
-        cls.__module = module
-        cls.__mixed_precision = mixed_precision
-        return cls
+            :param args: Arguments passed by the user for module initialization.
+            :param kwargs: Keyword arguments passed by the user for module initialization.
+            """
+            # Avoid self because bound method adds to args which makes the function call fail
+            model = MaggyFairScaleModuleWrapper.__module(*args, **kwargs).cuda()
+            super().__init__(model, mixed_precision=self.__mixed_precision)
+
+    return MaggyFairScaleModuleWrapper
 
 
-class MaggyDeepSpeedModuleWrapper(DeepSpeedEngine):
-    """Wrapper around DeepSpeed's DeepSpeedEngine.
+def get_maggy_deepspeed_wrapper(module: TorchModule, config_params: dict):
+    """Factory function for MaggyDeepSpeedModuleWrapper.
 
-    The wrapper replaces the user's module. Since the module's signature needs to be preserved, we
-    cannot add the module as an additional parameter during initialization. Instead, the module is
-    configured before initialization of the class by a user. Its class properties `__module` and
-    `config_params` are set by the executor function during patching. Note that these properties
-    have to be set appropriately for the wrapper to function properly.
+    :param module: PyTorch module passed by the user.
+    :param mixed_precision: DeepSpeed config dict passed by the user.
     """
-
-    __module = None
-    config_params = None
-
-    def __init__(self, *args, **kwargs):
-        """Initializes the previously set module and initializes a DeepSpeedEngine with it.
-
-        Note that the `__module` attribute has to be set BEFORE the constructor is called for the
-        first time!
-
-        :param args: Arguments passed by the user for module initialization.
-        :param kwargs: Keyword arguments passed by the user for module initialization.
-        """
-        # Avoid self because bound method adds to args which makes the function call fail.
-        # No .cuda() calls for DeepSpeed necessary.
-        model = MaggyDeepSpeedModuleWrapper.__module(*args, **kwargs)
-        ds_args = SimpleNamespace(local_rank=0)
-        super().__init__(
-            ds_args,
-            model,
-            model_parameters=model.parameters(),
-            config_params=self.config_params,
-        )
-
-    @classmethod
-    def config(
-        cls, module: Type[TorchModule], config_params: dict
-    ) -> Type[MaggyDeepSpeedModuleWrapper]:
-        """Sets the wrapper module class and config parameters properties.
-
-        :param module: The PyTorch module that is to be wrapped.
-        :param config_params: Configuration dictionary for the DeepSpeedEngine.
-
-        :returns: A MaggyDeepSpeedModuleWrapper class type with the registered properties.
-        """
-        assert (
-            module != PipelineModule
-        ), """Maggy currently doesn't support pipeline
+    assert (
+        module != PipelineModule
+    ), """Maggy currently doesn't support pipeline
              modules with DeepSpeed ZeRO."""
-        cls.__module = module
-        cls.config_params = config_params
-        return cls
+
+    class MaggyDeepSpeedModuleWrapper(DeepSpeedEngine):
+        """Wrapper around DeepSpeed's DeepSpeedEngine.
+
+        The wrapper replaces the user's module. Since the module's signature needs to be preserved,
+        we cannot add the module as an additional parameter during initialization. Instead, it is
+        configured by its factory function.
+        """
+
+        __module = module
+        __config_params = config_params
+
+        def __init__(self, *args, **kwargs):
+            """Initializes the previously set module and initializes a DeepSpeedEngine with it.
+
+            :param args: Arguments passed by the user for module initialization.
+            :param kwargs: Keyword arguments passed by the user for module initialization.
+            """
+            # Avoid self because bound method adds to args which makes the function call fail.
+            # No .cuda() calls for DeepSpeed necessary.
+            model = MaggyDeepSpeedModuleWrapper.__module(*args, **kwargs)
+            ds_args = SimpleNamespace(local_rank=0)
+            super().__init__(
+                ds_args,
+                model,
+                model_parameters=model.parameters(),
+                config_params=self.__config_params,
+            )
+
+    return MaggyDeepSpeedModuleWrapper

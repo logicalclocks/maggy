@@ -30,15 +30,17 @@ import numpy as np
 import deepspeed
 
 from maggy import util
+from maggy import tensorboard
 from maggy.experiment_config import TorchDistributedConfig
 from maggy.core.rpc import Client
 from maggy.core.reporter import Reporter
 from maggy.core.patching import MaggyDataLoader
 from maggy.core.patching import (
-    MaggyDDPModuleWrapper,
-    MaggyFairScaleModuleWrapper,
-    MaggyDeepSpeedModuleWrapper,
+    get_maggy_ddp_wrapper,
+    get_maggy_fairscale_wrapper,
+    get_maggy_deepspeed_wrapper,
 )
+
 from maggy.core.environment.singleton import EnvSing
 
 _torch_version = torch.__version__.split(".")  # Check compatibility with 1.8
@@ -122,6 +124,7 @@ def torch_dist_executor_fn(
                 "NCCL_BLOCKING_WAIT": "1",
                 "NCCL_DEBUG": "INFO",
             }
+            tensorboard._register(tb_logdir)
             reporter.log(f"Torch config is {torch_config}", True)
 
             _setup_torch_env(torch_config)
@@ -229,14 +232,14 @@ def _setup_torch_env(torch_config: dict) -> None:
 
 
 def _init_cluster(
-    timeout: int = 60, random_seed: int = 0, backend: str = "ddp"
+    timeout: int = 60, random_seed: int = 0, backend: str = "torch"
 ) -> None:
     """Checks if config is set, initializes the Torch distributed cluster and sets random seeds.
 
     :param timeout: Time until initialization times out (default: ``60``).
     :param random_seed: Random seed for Torch, numpy, random (default: ``0``).
-    :param backend: The backend that torch uses for distributed training. Either "ddp"
-        or "deepspeed" (default: ``ddp``).
+    :param backend: The backend that torch uses for distributed training. Either "torch"
+        or "deepspeed" (default: ``torch``).
 
     :raises KeyError: Checks on environment variables failed.
     :raises RuntimeError: Checks on PyTorch distributed backend failed.
@@ -272,12 +275,12 @@ def _init_cluster(
 def _wrap_module_dispatcher(
     config: TorchDistributedConfig,
 ) -> Union[
-    List[Type[MaggyDDPModuleWrapper]],
-    List[Type[MaggyFairScaleModuleWrapper]],
-    List[Type[MaggyDeepSpeedModuleWrapper]],
-    Type[MaggyDDPModuleWrapper],
-    Type[MaggyFairScaleModuleWrapper],
-    Type[MaggyDeepSpeedModuleWrapper],
+    List[Type["MaggyDDPModuleWrapper"]],
+    List[Type["MaggyFairScaleModuleWrapper"]],
+    List[Type["MaggyDeepSpeedModuleWrapper"]],
+    Type["MaggyDDPModuleWrapper"],
+    Type["MaggyFairScaleModuleWrapper"],
+    Type["MaggyDeepSpeedModuleWrapper"],
 ]:
     """Dispatcher for module wrapping.
 
@@ -295,7 +298,7 @@ def _wrap_module_dispatcher(
                     module,
                     config.backend,
                     config.zero_lvl,
-                    config.ddp3_mp,
+                    config.mixed_precision,
                     config.ds_config,
                 )
             )
@@ -304,7 +307,7 @@ def _wrap_module_dispatcher(
             config.module,
             config.backend,
             config.zero_lvl,
-            config.ddp3_mp,
+            config.mixed_precision,
             config.ds_config,
         )
     return wrapped_module
@@ -314,30 +317,30 @@ def _wrap_module(
     module: Type[torch.nn.Module],
     backend: str,
     zero_lvl: int,
-    ddp3_mp: bool,
+    mixed_precision: bool,
     ds_config: dict,
 ) -> Union[
-    Type[MaggyDDPModuleWrapper],
-    Type[MaggyFairScaleModuleWrapper],
-    Type[MaggyDeepSpeedModuleWrapper],
+    Type["MaggyDDPModuleWrapper"],
+    Type["MaggyFairScaleModuleWrapper"],
+    Type["MaggyDeepSpeedModuleWrapper"],
 ]:
     """Wraps the module according to `backend`.
 
     :param module: Experiment config.
     :param backend: The backend engine used for training.
-    :param zero_lvl: Sets the ZeRO optimization stages for `ddp`.
-    :param ddp3_mp: Used to control the use of mixed precision training in `zero_lvl` 3.
+    :param zero_lvl: Sets the ZeRO optimization stages for `torch`.
+    :param mixed_precision: Used to control the use of mixed precision training in `zero_lvl` 3.
     :param ds_config: DeepSpeed configuration dictionary if ds is enabled.
 
     :returns: Depending on the backend, returns a module that is a Maggy wrapper of either a PyTorch
         distributed module, a fairscale fully sharded module or a deepspeed engine.
     """
-    if backend == "ddp" and zero_lvl in [0, 1, 2]:
-        module = MaggyDDPModuleWrapper.config(module)
-    elif backend == "ddp":
-        module = MaggyFairScaleModuleWrapper.config(module, ddp3_mp)
+    if backend == "torch" and zero_lvl in [0, 1, 2]:
+        module = get_maggy_ddp_wrapper(module)
+    elif backend == "torch":
+        module = get_maggy_fairscale_wrapper(module, mixed_precision)
     elif backend == "deepspeed":
-        module = MaggyDeepSpeedModuleWrapper.config(module, ds_config)
+        module = get_maggy_deepspeed_wrapper(module, ds_config)
     return module
 
 
@@ -354,10 +357,10 @@ def _sanitize_config(config: TorchDistributedConfig) -> None:
             """Passed module should be a class or a factory
                         callable."""
         )
-    if config.backend == "ddp":
+    if config.backend == "torch":
         if config.ds_config:
             print(
-                "Warning: DeepSpeed config passed for DDP backend. Config will be discarded."
+                "Warning: DeepSpeed config passed for torch backend. Config will be discarded."
             )
         if config.zero_lvl not in [0, 1, 2, 3]:
             raise ValueError(

@@ -18,15 +18,15 @@ import torch
 
 from .dataloader import MaggyDataLoader, MaggyPetastormDataLoader
 from .modules import (
-    MaggyDDPModuleWrapper,
-    MaggyFairScaleModuleWrapper,
-    MaggyDeepSpeedModuleWrapper,
+    get_maggy_ddp_wrapper,
+    get_maggy_fairscale_wrapper,
+    get_maggy_deepspeed_wrapper,
 )
 
 __all__ = [
-    "MaggyDDPModuleWrapper",
-    "MaggyFairScaleModuleWrapper",
-    "MaggyDeepSpeedModuleWrapper",
+    "get_maggy_ddp_wrapper",
+    "get_maggy_fairscale_wrapper",
+    "get_maggy_deepspeed_wrapper",
     "MaggyDataLoader",
     "MaggyPetastormDataLoader",
 ]
