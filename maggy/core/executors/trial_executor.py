@@ -22,6 +22,7 @@ import builtins as __builtin__
 import inspect
 import json
 import traceback
+from typing import Callable, Any
 
 from maggy import util, tensorboard
 from maggy.core import rpc, exceptions
@@ -30,23 +31,37 @@ from maggy.core.environment.singleton import EnvSing
 
 
 def trial_executor_fn(
-    train_fn,
-    experiment_type,
-    app_id,
-    run_id,
-    server_addr,
-    hb_interval,
-    secret,
-    optimization_key,
-    log_dir,
-):
-    def _wrapper_fun(_):
-        """
-        Wraps the user supplied training function in order to be passed to the
-        Spark Executors.
-        Args:
-            _ (object): Necessary sink for the iterator given by Spark to the function upon foreach
-                calls. Can safely be disregarded.
+    train_fn: Callable,
+    experiment_type: str,
+    app_id: int,
+    run_id: int,
+    server_addr: str,
+    hb_interval: int,
+    secret: str,
+    optimization_key: str,
+    log_dir: str,
+) -> Callable:
+    """
+    Wraps the user supplied training function in order to be passed to the Spark Executors.
+
+    :param train_fn: Original training function.
+    :param config: Experiment config.
+    :param app_id: Maggy application ID.
+    :param run_id: Maggy run ID.
+    :param server_addr: IP of the Maggy worker registration RPC server.
+    :param hb_interval: Worker heartbeat interval.
+    :param secret: Secret string to authenticate messages.
+    :param optimization key: Key of the preformance metric that should be optimized.
+    :param log_dir: Location of the logger file directory on the file system.
+
+    :returns: Patched function to execute on the Spark executors.
+    """
+
+    def _wrapper_fun(_: Any) -> None:
+        """Patched function from trial_executor_fn factory.
+
+        :param _: Necessary catch for the iterator given by Spark to the
+        function upon foreach calls. Can safely be disregarded.
         """
         env = EnvSing.get_instance()
 

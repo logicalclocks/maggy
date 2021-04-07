@@ -17,6 +17,7 @@
 import os
 import time
 import json
+from typing import Callable, Optional, Union
 
 from maggy import util, tensorboard
 from maggy.searchspace import Searchspace
@@ -28,10 +29,17 @@ from maggy.core.experiment_driver.driver import Driver
 from maggy.core.rpc import OptimizationServer
 from maggy.core.environment.singleton import EnvSing
 from maggy.core.executors.trial_executor import trial_executor_fn
-from maggy.experiment_config import AblationConfig
+from maggy.experiment_config import AblationConfig, OptimizationConfig
 
 
 class OptimizationDriver(Driver):
+    """Driver class for hyperparameter optimization experiments.
+
+    Initializes a controller that returns a new hyperparameter configuration
+    from the searchspace on each poll and sets up the callbacks for the hp
+    optimization.
+    """
+
     controller_dict = {
         "randomsearch": RandomSearch,
         "asha": Asha,
@@ -42,7 +50,17 @@ class OptimizationDriver(Driver):
         "gridsearch": GridSearch,
     }
 
-    def __init__(self, config, app_id, run_id):
+    def __init__(self, config: OptimizationConfig, app_id: int, run_id: int):
+        """Performs argument checks and initializes the optimization
+        controller.
+
+        :param config: Experiment config.
+        :param app_id: Maggy application ID.
+        :param run_id: Maggy run ID.
+
+        :raises ValueError: In case an invalid optimization direction was
+            specified.
+        """
         super().__init__(config, app_id, run_id)
         self._final_store = []
         self._trial_store = {}
@@ -77,8 +95,8 @@ class OptimizationDriver(Driver):
         ]:
             self.direction = config.direction.lower()
         else:
-            raise Exception(
-                "The experiment's direction should be an string (either 'min' or 'max') "
+            raise ValueError(
+                "The experiment's direction should be a string (either 'min' or 'max') "
                 "but it is {0} (of type '{1}').".format(
                     str(config.direction), type(config.direction).__name__
                 )
@@ -92,20 +110,32 @@ class OptimizationDriver(Driver):
         self.controller.direction = self.direction
         self.controller._initialize(exp_dir=self.log_dir)
 
-    def _exp_startup_callback(self):
+    def _exp_startup_callback(self) -> None:
+        """Registers the hp config to tensorboard upon experiment startup.
+        """
+        tensorboard._register(
+            EnvSing.get_instance().get_logdir(self.app_id, self.run_id)
+        )
         tensorboard._write_hparams_config(
-            EnvSing.get_instance().get_logdir(self.APP_ID, self.RUN_ID),
+            EnvSing.get_instance().get_logdir(self.app_id, self.run_id),
             self.config.searchspace,
         )
 
-    def _exp_final_callback(self, job_end, exp_json):
+    def _exp_final_callback(self, job_end: float, exp_json: dict) -> dict:
+        """Writes the results from the hp optimization into a dict and logs it.
+
+        :param job_end: Time of the job end.
+        :param exp_json: Dictionary of experiment metadata.
+
+        :returns: A summary of the ablation study results.
+        """
         result = self.finalize(job_end)
         best_logdir = self.log_dir + "/" + result["best_id"]
         util.finalize_experiment(
             exp_json,
             float(result["best_val"]),
-            self.APP_ID,
-            self.RUN_ID,
+            self.app_id,
+            self.run_id,
             "FINISHED",
             self.duration,
             self.log_dir,
@@ -115,7 +145,12 @@ class OptimizationDriver(Driver):
         print("Finished experiment.")
         return result
 
-    def _exp_exception_callback(self, exc):
+    def _exp_exception_callback(self, exc: Exception) -> None:
+        """Closes logs, raises the driver exception if existent, else reraises
+        unhandled exception.
+
+        :param exc: The exception to handle.
+        """
         self.controller._close_log()
         if self.controller.pruner:
             self.controller.pruner._close_log()
@@ -123,12 +158,19 @@ class OptimizationDriver(Driver):
             raise self.exception  # pylint: disable=raising-bad-type
         raise exc
 
-    def _patching_fn(self, train_fn):
+    def _patching_fn(self, train_fn: Callable) -> Callable:
+        """Monkey patches the user training function with the trial executor
+        modifications for hyperparameter search.
+
+
+        :param train_fn: User provided training function.
+
+        :returns: The monkey patched training function."""
         return trial_executor_fn(
             train_fn,
             "optimization",
-            self.APP_ID,
-            self.RUN_ID,
+            self.app_id,
+            self.run_id,
             self.server_addr,
             self.hb_interval,
             self._secret,
@@ -136,7 +178,12 @@ class OptimizationDriver(Driver):
             self.log_dir,
         )
 
-    def _register_msg_callbacks(self):
+    def _register_msg_callbacks(self) -> None:
+        """Registers message callbacks for heartbeat responses to spark
+        magic, blacklist messages to exclude hp configurations, final callbacks
+        to process experiment results, idle callbacks for finished executors,
+        and registration callbacks for the clients to exchange connection info.
+        """
         for key, call in (
             ("METRIC", self._metric_msg_callback),
             ("BLACK", self._blacklist_msg_callback),
@@ -146,16 +193,40 @@ class OptimizationDriver(Driver):
         ):
             self.message_callbacks[key] = call
 
-    def controller_get_next(self, trial=None):
+    def controller_get_next(self, trial: Optional[Trial] = None) -> Union[Trial, None]:
+        """Gets a `Trial` to be assigned to an executor, or `None` if there are
+        no trials remaining in the experiment.
+
+        :param trial: Trial to fetch from the controller (default ``None``).
+            None autofetches the next available trial.
+
+        :returns: A new trial for hp optimization.
+        """
         return self.controller.get_suggestion(trial)
 
-    def get_trial(self, trial_id):
+    def get_trial(self, trial_id: int) -> Trial:
+        """Returns a trial by ID from the trial store.
+
+        :param trial_id: The target trial ID.
+
+        :returns: The trial configuration.
+        """
         return self._trial_store[trial_id]
 
-    def add_trial(self, trial):
+    def add_trial(self, trial: Trial) -> None:
+        """Adds a trial to the internal trial store.
+
+        :param trial: The trial to be added.
+        """
         self._trial_store[trial.trial_id] = trial
 
-    def finalize(self, job_end):
+    def finalize(self, job_end: float) -> dict:
+        """Saves a summary of the experiment to a dict and logs it in the DFS.
+
+        :param job_end: Time of the job end.
+
+        :returns: The experiment summary dict.
+        """
         self.job_end = job_end
         self.duration = util.seconds_to_milliseconds(self.job_end - self.job_start)
         duration_str = util.time_diff(self.job_start, self.job_end)
@@ -169,7 +240,14 @@ class OptimizationDriver(Driver):
         EnvSing.get_instance().dump(self.json(), self.log_dir + "/maggy.json")
         return self.result
 
-    def prep_results(self, duration_str):
+    def prep_results(self, duration_str: str) -> str:
+        """Writes and returns the results of the experiment into one string and
+        returns it.
+
+        :param duration_str: Experiment duration as a formatted string.
+
+        :returns: The formatted experiment results summary string.
+        """
         self.controller._finalize_experiment(self._final_store)
         results = (
             "\n------ "
@@ -193,11 +271,18 @@ class OptimizationDriver(Driver):
         )
         return results
 
-    def config_to_dict(self):
+    def config_to_dict(self) -> dict:
+        """Returns a summary of the scheduled hp optimization searchspace as a
+            dict.
+
+        :returns: The summary dict.
+        """
         return self.searchspace.to_dict()
 
-    def json(self):
-        """Get all relevant experiment information in JSON format.
+    def json(self) -> str:
+        """Exports the experiment's metadata in JSON format.
+
+        :returns: The metadata string.
         """
         user = None
         constants = EnvSing.get_instance().get_constants()
@@ -212,7 +297,7 @@ class OptimizationDriver(Driver):
             "user": user,
             "name": self.name,
             "module": "maggy",
-            "app_id": str(self.APP_ID),
+            "app_id": str(self.app_id),
             "start": time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(self.job_start)),
             "memory_per_executor": str(
                 self.spark_context._conf.get("spark.executor.memory")
@@ -244,11 +329,12 @@ class OptimizationDriver(Driver):
 
         return json.dumps(experiment_json, default=util.json_default_numpy)
 
-    def _update_result(self, trial):
-        """Given a finalized trial updates the current result's best and
-        worst trial.
-        """
+    def _update_result(self, trial: Trial) -> None:
+        """Updates the current result's best and worst trial given a finalized
+            trial.
 
+        :param trial: The finalized trial.
+        """
         metric = trial.final_metric
         param_string = trial.params
         trial_id = trial.trial_id
@@ -306,12 +392,16 @@ class OptimizationDriver(Driver):
         if trial.early_stop:
             self.result["early_stopped"] += 1
 
-    def _update_maggy_log(self):
+    def _update_maggy_log(self) -> None:
         """Creates the status of a maggy experiment with a progress bar.
         """
         return self.log_string()
 
-    def log_string(self):
+    def log_string(self) -> str:
+        """Creates a summary of the current experiment progress for jupyter.
+
+        :returns: The summary string.
+        """
         log = (
             "Maggy Optimization "
             + str(self.result["num_trials"])
@@ -328,7 +418,15 @@ class OptimizationDriver(Driver):
         )
         return log
 
-    def _metric_msg_callback(self, msg):
+    def _metric_msg_callback(self, msg: dict) -> None:
+        """Heartbeart message callback.
+
+        Checks if the experiment is underperforming and can trigger an early
+        stop abort. Also copies logs from the server to the driver logs for
+        later display in sparkmagic.
+
+        :param msg: The metric message from the message queue.
+        """
         logs = msg.get("logs", None)
         if logs is not None:
             with self.log_lock:
@@ -360,13 +458,25 @@ class OptimizationDriver(Driver):
                             self.log("Trials to stop: {}".format(to_stop))
                             self.get_trial(to_stop).set_early_stop()
 
-    def _blacklist_msg_callback(self, msg):
+    def _blacklist_msg_callback(self, msg: dict) -> None:
+        """Blacklist message callback.
+
+        Registers a trial in the server reservations.
+
+        :param msg: The blacklist message from the message queue.
+        """
         trial = self.get_trial(msg["trial_id"])
         with trial.lock:
             trial.status = Trial.SCHEDULED
             self.server.reservations.assign_trial(msg["partition_id"], msg["trial_id"])
 
-    def _final_msg_callback(self, msg):
+    def _final_msg_callback(self, msg: dict) -> None:
+        """Final message callback.
+
+        Logs trial results and registers executor as idle.
+
+        :param msg: The final executor message from the message queue.
+        """
         trial = self.get_trial(msg["trial_id"])
         logs = msg.get("logs", None)
         if logs is not None:
@@ -416,7 +526,13 @@ class OptimizationDriver(Driver):
                 )
                 self.add_trial(trial)
 
-    def _idle_msg_callback(self, msg):
+    def _idle_msg_callback(self, msg: dict) -> None:
+        """Idle message callback.
+
+        Tries to trigger another trial for the idle executor.
+
+        :param msg: The idle message from the message queue.
+        """
         # execute only every 0.1 seconds but do not block thread
         if time.time() - msg["idle_start"] > 0.1:
             trial = self.controller_get_next()
@@ -438,7 +554,13 @@ class OptimizationDriver(Driver):
         else:
             self.add_message(msg)
 
-    def _register_msg_callback(self, msg):
+    def _register_msg_callback(self, msg: dict) -> None:
+        """Register message callback.
+
+        Assigns trials on worker registration if available.
+
+        :param msg: The blacklist message from the message queue.
+        """
         trial = self.controller_get_next()
         if trial is None:
             self.server.reservations.assign_trial(msg["partition_id"], None)
@@ -457,15 +579,39 @@ class OptimizationDriver(Driver):
                 self.add_trial(trial)
 
     @staticmethod
-    def _init_searchspace(searchspace):
-        assert isinstance(searchspace, Searchspace) or searchspace is None, (
-            "The experiment's search space should be an instance of maggy.Searchspace, but it is "
-            "{0} (of type '{1}').".format(str(searchspace), type(searchspace).__name__)
-        )
+    def _init_searchspace(searchspace: Searchspace) -> Searchspace:
+        """Checks for a valid searchspace config.
+
+        :param searchspace: The searchspace initialization argument.
+
+        :raises ValueError: If the searchspace is invalid.
+
+        :returns: The valid searchspace."""
+        if not isinstance(searchspace, Searchspace) or searchspace is None:
+            raise ValueError(
+                """The experiment's search space should be an instance of
+                 maggy.Searchspace, but it is {} (of type '{}').""".format(
+                    str(searchspace), type(searchspace).__name__
+                )
+            )
         return searchspace if isinstance(searchspace, Searchspace) else Searchspace()
 
     @staticmethod
-    def _init_controller(optimizer, searchspace):
+    def _init_controller(
+        optimizer: Union[str, AbstractOptimizer], searchspace: Searchspace
+    ) -> AbstractOptimizer:
+        """Checks for a valid optimizer config.
+
+        :param optimizer: The optimizer to be checked.
+        :param searchspace: The searchspace for hyperparameter optimization.
+
+        :raises KeyError: If the optimizer is given as a string, but is not in
+            the dict of supported optimizers.
+        :raises TypeError: If the searchspace and optimizer mismatch or the
+            optimizer is of wrong type.
+
+        :returns: The validated Optimizer
+        """
         optimizer = (
             "none" if optimizer is None else optimizer
         )  # Convert None key to usable string.
@@ -475,18 +621,18 @@ class OptimizationDriver(Driver):
             try:
                 return OptimizationDriver.controller_dict[optimizer.lower()]()
             except KeyError as exc:
-                raise Exception(
+                raise KeyError(
                     "Unknown Optimizer. Can't initialize experiment driver."
                 ) from exc
             except TypeError as exc:
-                raise Exception(
+                raise TypeError(
                     "Searchspace has to be empty or None to use without Optimizer."
                 ) from exc
         elif isinstance(optimizer, AbstractOptimizer):
             print("Custom Optimizer initialized.")
             return optimizer
         else:
-            raise Exception(
+            raise TypeError(
                 "The experiment's optimizer should either be an string indicating the name "
                 "of an implemented optimizer (such as 'randomsearch') or an instance of "
                 "maggy.optimizer.AbstractOptimizer, "
@@ -496,24 +642,34 @@ class OptimizationDriver(Driver):
             )
 
     @staticmethod
-    def _init_earlystop_check(es_policy):
-        assert isinstance(
-            es_policy, (str, AbstractEarlyStop)
-        ), "The experiment's early stopping policy should either be a string ('median' or 'none') \
-            or a custom policy that is an instance of maggy.earlystop.AbstractEarlyStop, but it is \
-            {0} (of type '{1}').".format(
-            str(es_policy), type(es_policy).__name__
-        )
-        if isinstance(es_policy, str):
-            assert es_policy.lower() in [
-                "median",
-                "none",
-            ], "The experiment's early stopping policy\
-                should either be a string ('median' or 'none') or a custom policy that is an \
-                instance of maggy.earlystop.AbstractEarlyStop, but it is {0} \
-                (of type '{1}').".format(
-                str(es_policy), type(es_policy).__name__
+    def _init_earlystop_check(es_policy: Union[str, AbstractEarlyStop]) -> Callable:
+        """Checks for a valid early stop policy.
+
+        :param es_policy: The early stop policy to be checked.
+
+        :raises TypeError: In case the policy is of wrong type or not in the
+            set of supported stopping policies.
+
+        :returns: The validated early stopping policy.
+        """
+        if not isinstance(es_policy, (str, AbstractEarlyStop)):
+            raise TypeError(
+                """The experiment's early stopping policy should either be a string
+                ('median' or 'none') or a custom policy that is an instance of
+                maggy.earlystop.AbstractEarlyStop, but it is {} (of type '{}').""".format(
+                    str(es_policy), type(es_policy).__name__
+                )
             )
+        if isinstance(es_policy, str):
+            if es_policy.lower() not in ["median", "none"]:
+                raise TypeError(
+                    """The experiment's early stopping policy should either be a
+                    string ('median' or 'none') or a custom policy that is an
+                    instance of maggy.earlystop.AbstractEarlyStop, but it is {}
+                    (of type '{}').""".format(
+                        str(es_policy), type(es_policy).__name__
+                    )
+                )
             rule = (
                 MedianStoppingRule if es_policy.lower() == "median" else NoStoppingRule
             )

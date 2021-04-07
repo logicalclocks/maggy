@@ -262,7 +262,7 @@ def time_diff(t0, t1):
 
 
 def register_environment(app_id, run_id):
-    """Validates IDs, creates an experiment folder in the fs and registers with tensorboard.
+    """Validates IDs and creates an experiment folder in the fs.
 
     Args:
         :app_id: Application ID
