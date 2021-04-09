@@ -1,0 +1,88 @@
+site_name: "MAGGY"
+site_description: "Official website and documentation for MAGGY - Distribution transparent Machine Learning experiments on Apache Spark."
+site_author: "Logical Clocks"
+site_url: "https://maggy.ai"
+
+# Repository
+repo_name: logicalclocks/maggy
+repo_url: https://github.com/logicalclocks/maggy
+edit_uri: ""
+
+nav:
+  - Home:
+    - Introduction: README.md
+    - Blogs: blogs.md
+    - Publications: publications.md
+    - Releases: releases.md
+    - Contributing: CONTRIBUTING.md
+    - Issues: https://github.com/logicalclocks/maggy/issues
+    - Hopsworks.ai: https://hopsworks.ai/
+  - Getting Started:
+    - Installation: start/install.md
+    - Quickstart: start/quickstart.md
+  - Hyperparameter Optimization:
+    - Introduction: hpo/intro.md
+  - Ablation Studies:
+    - Introduction: ablation/intro.md
+  - Distributed Training:
+    - Introduction: dist_training/intro.md
+
+theme:
+  name: material
+  favicon: assets/images/maggyfav.png
+  logo: assets/images/whitemaggy-eye.svg
+  icon:
+    repo: fontawesome/brands/github
+  font:
+    text: "Roboto"
+  palette:
+    accent: orange
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+
+extra:
+  generator: false
+  social:
+    - icon: fontawesome/brands/twitter
+      link: https://twitter.com/logicalclocks
+    - icon: fontawesome/brands/github
+      link: https://github.com/logicalclocks
+    - icon: fontawesome/brands/discourse
+      link: https://community.hopsworks.ai/
+    - icon: fontawesome/brands/linkedin
+      link: https://www.linkedin.com/company/logicalclocks/
+
+extra_css:
+  - assets/css/custom.css
+  - assets/css/version-select.css
+
+extra_javascript:
+  - assets/javascript/version-select.js
+
+plugins:
+  - search
+
+markdown_extensions:
+  - admonition
+  - codehilite
+  - footnotes
+  - pymdownx.tabbed
+  - pymdownx.arithmatex
+  - pymdownx.superfences
+  - pymdownx.details
+  - pymdownx.caret
+  - pymdownx.mark
+  - pymdownx.tilde
+  - pymdownx.critic
+  - toc:
+      permalink: "#"
+      toc_depth: 3
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - markdown_include.include:
+      base_path: docs
+
+google_analytics:
+  - G-J3F4GSLKE8
+  - auto

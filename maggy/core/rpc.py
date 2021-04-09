@@ -302,8 +302,7 @@ class Server(MessageSocket):
 
 
 class OptimizationServer(Server):
-    """Implements the server for hyperparameter optimization and ablation.
-    """
+    """Implements the server for hyperparameter optimization and ablation."""
 
     def __init__(self, num_executors: int):
         """Registers the callbacks for message handling.

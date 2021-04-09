@@ -21,8 +21,7 @@ import numpy as np
 
 
 class USER_FCT:
-    """User training function specifics.
-    """
+    """User training function specifics."""
 
     RETURN_TYPES = (float, int, np.number, dict)
     NUMERIC_TYPES = (float, int, np.number)

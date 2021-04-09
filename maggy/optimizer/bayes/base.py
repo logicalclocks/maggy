@@ -209,7 +209,8 @@ class BaseAsyncBO(AbstractOptimizer):
                 )
                 # report new trial id to pruner
                 self.pruner.report_trial(
-                    original_trial_id=parent_trial_id, new_trial_id=next_trial.trial_id,
+                    original_trial_id=parent_trial_id,
+                    new_trial_id=next_trial.trial_id,
                 )
                 self._log(
                     "use hparams from promoted trial {}. \n start trial {}: {} \n".format(
@@ -233,7 +234,9 @@ class BaseAsyncBO(AbstractOptimizer):
             self._log("take sample from warmup buffer")
             next_trial_params = self.warmup_configs.pop()
             next_trial = self.create_trial(
-                hparams=next_trial_params, sample_type="random", run_budget=run_budget,
+                hparams=next_trial_params,
+                sample_type="random",
+                run_budget=run_budget,
             )
 
         elif np.random.rand() < self.random_fraction:

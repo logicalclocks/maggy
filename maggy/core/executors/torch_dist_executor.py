@@ -275,12 +275,12 @@ def _init_cluster(
 def _wrap_module_dispatcher(
     config: TorchDistributedConfig,
 ) -> Union[
-    List[Type["MaggyDDPModuleWrapper"]],
-    List[Type["MaggyFairScaleModuleWrapper"]],
-    List[Type["MaggyDeepSpeedModuleWrapper"]],
-    Type["MaggyDDPModuleWrapper"],
-    Type["MaggyFairScaleModuleWrapper"],
-    Type["MaggyDeepSpeedModuleWrapper"],
+    List[Type["MaggyDDPModuleWrapper"]],  # noqa: F821
+    List[Type["MaggyFairScaleModuleWrapper"]],  # noqa: F821
+    List[Type["MaggyDeepSpeedModuleWrapper"]],  # noqa: F821
+    Type["MaggyDDPModuleWrapper"],  # noqa: F821
+    Type["MaggyFairScaleModuleWrapper"],  # noqa: F821
+    Type["MaggyDeepSpeedModuleWrapper"],  # noqa: F821
 ]:
     """Dispatcher for module wrapping.
 
@@ -320,9 +320,9 @@ def _wrap_module(
     mixed_precision: bool,
     ds_config: dict,
 ) -> Union[
-    Type["MaggyDDPModuleWrapper"],
-    Type["MaggyFairScaleModuleWrapper"],
-    Type["MaggyDeepSpeedModuleWrapper"],
+    Type["MaggyDDPModuleWrapper"],  # noqa: F821
+    Type["MaggyFairScaleModuleWrapper"],  # noqa: F821
+    Type["MaggyDeepSpeedModuleWrapper"],  # noqa: F821
 ]:
     """Wraps the module according to `backend`.
 

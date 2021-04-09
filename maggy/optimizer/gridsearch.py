@@ -53,7 +53,9 @@ class GridSearch(AbstractOptimizer):
             run_budget = 0
             next_trial_params = self.config_buffer.pop()
             next_trial = self.create_trial(
-                hparams=next_trial_params, sample_type="grid", run_budget=run_budget,
+                hparams=next_trial_params,
+                sample_type="grid",
+                run_budget=run_budget,
             )
 
             self._log(
