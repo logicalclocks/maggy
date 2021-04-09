@@ -5,7 +5,7 @@ on:
     branches: [ master ]
 
 jobs:
-  publish:
+  publish-master:
     runs-on: ubuntu-latest
 
     steps:
