@@ -32,4 +32,4 @@ jobs:
           git config --global user.email mike@maggy.ai
 
       - name: mike deploy master
-        run: mike deploy --update-aliases master dev
+        run: mike deploy --push --update-aliases master dev
