@@ -36,6 +36,14 @@ In this post, we introduce a new unified framework for writing core ML training 
 Maggy enables you to reuse the same training code whether training small models on your laptop or reusing the same code to scale out hyperparameter tuning or distributed deep learning on a cluster.
 Maggy enables the replacement of the current waterfall development process for distributed ML applications, where code is rewritten at every stage to account for the different distribution context.
 
+<p align="center">
+  <figure>
+    <a href="https://github.com/logicalclocks/maggy">
+      <img src="https://raw.githubusercontent.com/moritzmeister/maggy/mkdocs/docs/assets/images/firstgraph.png" alt="Maggy">
+    </a>
+    <figcaption>Maggy uses the same distribution transparent training function in all steps of the machine learning development process.</figcaption>
+  </figure>
+</p>
 
 ## Quick Start
 
