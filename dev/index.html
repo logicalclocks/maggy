@@ -49,7 +49,7 @@
     
       
         
-<script>window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)},ga.l=+new Date,ga("create","G-3VNC1GQCRZ","auto"),ga("set","anonymizeIp",!0),ga("send","pageview"),document.addEventListener("DOMContentLoaded",function(){document.forms.search&&document.forms.search.query.addEventListener("blur",function(){var e;this.value&&(e=document.location.pathname,ga("send","pageview",e+"?q="+this.value))}),"undefined"!=typeof location$&&location$.subscribe(function(e){ga("send","pageview",e.pathname)})})</script>
+<script>window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)},ga.l=+new Date,ga("create","G-J3F4GSLKE8","auto"),ga("set","anonymizeIp",!0),ga("send","pageview"),document.addEventListener("DOMContentLoaded",function(){document.forms.search&&document.forms.search.query.addEventListener("blur",function(){var e;this.value&&(e=document.location.pathname,ga("send","pageview",e+"?q="+this.value))}),"undefined"!=typeof location$&&location$.subscribe(function(e){ga("send","pageview",e.pathname)})})</script>
 <script async src="https://www.google-analytics.com/analytics.js"></script>
       
     
@@ -433,7 +433,7 @@
   
   
     <li class="md-nav__item">
-      <a href="CONTRIBUTING.md" class="md-nav__link">
+      <a href="CONTRIBUTING/" class="md-nav__link">
         Contributing
       </a>
     </li>
@@ -759,6 +759,15 @@
 In this post, we introduce a new unified framework for writing core ML training logic as <strong>oblivious training functions</strong>.
 Maggy enables you to reuse the same training code whether training small models on your laptop or reusing the same code to scale out hyperparameter tuning or distributed deep learning on a cluster.
 Maggy enables the replacement of the current waterfall development process for distributed ML applications, where code is rewritten at every stage to account for the different distribution context.</p>
+<p align="center">
+  <figure>
+    <a href="https://github.com/logicalclocks/maggy">
+      <img src="https://raw.githubusercontent.com/moritzmeister/maggy/mkdocs/docs/assets/images/firstgraph.png" alt="Maggy">
+    </a>
+    <figcaption>Maggy uses the same distribution transparent training function in all steps of the machine learning development process.</figcaption>
+  </figure>
+</p>
+
 <h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">#</a></h2>
 <p>Maggy uses PySpark as an engine to distribute the training processes. To get started, install Maggy in the Python environment used by your Spark Cluster, or install Maggy in your local Python environment with the <code>'spark'</code> extra, to run on Spark in local mode:</p>
 <div class="highlight"><pre><span></span><code><span class="n">pip</span> <span class="n">install</span> <span class="n">maggy</span>
@@ -786,7 +795,7 @@ uses your resources.</p>
 <p>Full documentation is available at <a href="https://maggy.ai/">maggy.ai</a></p>
 <h2 id="contributing">Contributing<a class="headerlink" href="#contributing" title="Permanent link">#</a></h2>
 <p>There are various ways to contribute, and any contribution is welcome, please follow the
-<a href="https://maggy.ai/CONTRIBUTING">CONTRIBUTING guide</a> to get started.</p>
+CONTRIBUTING guide to get started.</p>
 <h2 id="issues">Issues<a class="headerlink" href="#issues" title="Permanent link">#</a></h2>
 <p>Issues can be reported on the official <a href="https://github.com/logicalclocks/maggy/issues">GitHub repo</a> of Maggy.</p>
 <h2 id="citation">Citation<a class="headerlink" href="#citation" title="Permanent link">#</a></h2>
