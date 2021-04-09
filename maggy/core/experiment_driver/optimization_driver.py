@@ -111,8 +111,7 @@ class OptimizationDriver(Driver):
         self.controller._initialize(exp_dir=self.log_dir)
 
     def _exp_startup_callback(self) -> None:
-        """Registers the hp config to tensorboard upon experiment startup.
-        """
+        """Registers the hp config to tensorboard upon experiment startup."""
         tensorboard._register(
             EnvSing.get_instance().get_logdir(self.app_id, self.run_id)
         )
@@ -393,8 +392,7 @@ class OptimizationDriver(Driver):
             self.result["early_stopped"] += 1
 
     def _update_maggy_log(self) -> None:
-        """Creates the status of a maggy experiment with a progress bar.
-        """
+        """Creates the status of a maggy experiment with a progress bar."""
         return self.log_string()
 
     def log_string(self) -> str:
@@ -500,7 +498,8 @@ class OptimizationDriver(Driver):
         self.log(self.maggy_log)
 
         EnvSing.get_instance().dump(
-            trial.to_json(), self.log_dir + "/" + trial.trial_id + "/trial.json",
+            trial.to_json(),
+            self.log_dir + "/" + trial.trial_id + "/trial.json",
         )
 
         # assign new trial

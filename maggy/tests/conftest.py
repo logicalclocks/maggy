@@ -48,7 +48,7 @@ def pytest_addoption(parser):
 
 @pytest.fixture(scope="session")
 def sc(request):
-    """ fixture for creating a spark context
+    """fixture for creating a spark context
     Args:
         request: pytest.FixtureRequest object
     """
@@ -73,7 +73,7 @@ def sc(request):
 
 @pytest.fixture(scope="session")
 def hive_context(sc):
-    """  fixture for creating a Hive Context. Creating a fixture enables it to be reused across all
+    """fixture for creating a Hive Context. Creating a fixture enables it to be reused across all
         tests in a session
     Args:
         spark_context: spark_context fixture

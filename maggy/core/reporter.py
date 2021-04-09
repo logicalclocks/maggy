@@ -54,8 +54,7 @@ class Reporter(object):
         self.trial_fd = None
 
     def init_logger(self, trial_log_file):
-        """Initializes the trial log file
-        """
+        """Initializes the trial log file"""
         self.trial_log_file = trial_log_file
         env = EnvSing.get_instance()
         # Open trial log file descriptor
@@ -135,8 +134,7 @@ class Reporter(object):
                 )
 
     def get_data(self):
-        """Returns the metric and logs to be sent to the experiment driver.
-        """
+        """Returns the metric and logs to be sent to the experiment driver."""
         with self.lock:
             log_to_send = self.logs
             self.logs = ""

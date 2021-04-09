@@ -234,7 +234,11 @@ class GP(BaseAsyncBO):
                 result = fmin_l_bfgs_b(
                     func=self.acq_fun.evaluate_1_d,
                     x0=x,
-                    args=(self.models[budget], y_opt, self.acq_func_kwargs,),
+                    args=(
+                        self.models[budget],
+                        y_opt,
+                        self.acq_func_kwargs,
+                    ),
                     bounds=bounds,
                     approx_grad=approx_grad,
                     maxiter=20,

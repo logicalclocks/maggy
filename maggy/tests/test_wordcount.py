@@ -34,7 +34,7 @@ def do_word_counts(lines):
 
 # start function with test_ so pytest can discover them
 def test_do_word_counts(sc):
-    """ test that a single event is parsed correctly
+    """test that a single event is parsed correctly
     Args:
         spark_context: test fixture SparkContext
         hive_context: test fixture HiveContext

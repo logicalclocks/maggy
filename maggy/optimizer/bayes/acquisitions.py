@@ -158,7 +158,9 @@ class TPE_EI(AbstractAcquisitionFunction):
 class AsyTS(AbstractAcquisitionFunction):
     @staticmethod
     def evaluate(X, surrogate_model, y_opt, acq_func_kwargs=None):
-        return surrogate_model.sample_y(X).reshape(X.shape[0],)
+        return surrogate_model.sample_y(X).reshape(
+            X.shape[0],
+        )
 
     @staticmethod
     def evaluate_1_d(x, surrogate_model, y_opt, acq_func_kwargs=None):
@@ -176,7 +178,9 @@ class AsyTS(AbstractAcquisitionFunction):
         :return: values of the acquisition function at value x. shape = (1,)
         :rtype: np.ndarray
         """
-        return surrogate_model.sample_y(np.expand_dims(x, axis=0)).reshape(1,)
+        return surrogate_model.sample_y(np.expand_dims(x, axis=0)).reshape(
+            1,
+        )
 
 
 class HLP(AbstractAcquisitionFunction):

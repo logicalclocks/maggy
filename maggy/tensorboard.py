@@ -76,11 +76,25 @@ def _write_hparams_config(log_dir, searchspace):
     HPARAMS = _create_hparams_config(searchspace)
     METRICS = [
         hp.Metric(
-            "epoch_accuracy", group="validation", display_name="accuracy (val.)",
+            "epoch_accuracy",
+            group="validation",
+            display_name="accuracy (val.)",
         ),
-        hp.Metric("epoch_loss", group="validation", display_name="loss (val.)",),
-        hp.Metric("epoch_accuracy", group="train", display_name="accuracy (train)",),
-        hp.Metric("epoch_loss", group="train", display_name="loss (train)",),
+        hp.Metric(
+            "epoch_loss",
+            group="validation",
+            display_name="loss (val.)",
+        ),
+        hp.Metric(
+            "epoch_accuracy",
+            group="train",
+            display_name="accuracy (train)",
+        ),
+        hp.Metric(
+            "epoch_loss",
+            group="train",
+            display_name="loss (train)",
+        ),
     ]
 
     with tf.summary.create_file_writer(log_dir).as_default():
