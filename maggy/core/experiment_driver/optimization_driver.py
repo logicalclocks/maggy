@@ -29,7 +29,8 @@ from maggy.core.experiment_driver.driver import Driver
 from maggy.core.rpc import OptimizationServer
 from maggy.core.environment.singleton import EnvSing
 from maggy.core.executors.trial_executor import trial_executor_fn
-from maggy.experiment_config import AblationConfig, OptimizationConfig
+from maggy.experiment_config.ablation import AblationConfig
+from maggy.experiment_config import OptimizationConfig
 
 
 class OptimizationDriver(Driver):
