@@ -25,11 +25,12 @@ from typing import Callable, Tuple
 
 
 from maggy import util
-from maggy.experiment_config import LagomConfig
+from maggy.experiment_config.lagom import LagomConfig
 from maggy.core.rpc import Server
 from maggy.core.environment.singleton import EnvSing
 
-driver_secret = None
+
+DRIVER_SECRET = None
 
 
 class Driver(ABC):

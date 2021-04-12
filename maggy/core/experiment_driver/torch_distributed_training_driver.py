@@ -19,7 +19,7 @@ from typing import Callable, Type, Any
 
 from maggy import util
 from maggy.core.environment.singleton import EnvSing
-from maggy.experiment_config import TorchDistributedConfig
+from maggy.experiment_config.torch_distributed import TorchDistributedConfig
 from maggy.core.rpc import DistributedTrainingServer
 from maggy.core.experiment_driver.driver import Driver
 from maggy.core.executors.torch_dist_executor import torch_dist_executor_fn
