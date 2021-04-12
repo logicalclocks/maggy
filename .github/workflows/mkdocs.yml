@@ -1,0 +1,33 @@
+name: mkdocs
+
+on:
+  push:
+    branches: [ master ]
+
+jobs:
+  publish-master:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'
+      - name: install deps
+        run: pip install .[dev,docs]
+
+      - name: copy files
+        run: |
+          rm docs/CONTRIBUTING.md docs/README.md
+          cp -f CONTRIBUTING.md docs/
+          cp -f README.md docs/
+
+      - name: setup git
+        run: |
+          git config --global user.name Mike
+          git config --global user.email mike@maggy.ai
+
+      - name: mike deploy master
+        run: mike deploy --push --update-aliases master dev
