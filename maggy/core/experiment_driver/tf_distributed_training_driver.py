@@ -18,29 +18,30 @@ from pickle import PicklingError
 from typing import Callable, Type, Any
 
 from maggy import util
-from maggy.core.environment.singleton import EnvSing
-from maggy.experiment_config import TorchDistributedConfig
-from maggy.core.rpc import DistributedTrainingServer
 from maggy.core.experiment_driver.driver import Driver
-from maggy.core.executors.torch_dist_executor import torch_dist_executor_fn
+from maggy.core.executors.tf_dist_executor import dist_executor_fn
+
+from maggy.experiment_config.tf_distributed import TfDistributedConfig
+from maggy.core.rpc import TensorflowServer
 
 
-class DistributedTrainingDriver(Driver):
-    """Driver for distributed learning on a Spark cluster.
+class TensorflowDriver(Driver):
+    """Driver for distributed learning with Tensorflow on a Spark cluster.
 
     Registers the workers on an RPC server, ensures proper configuration and
     logging, and accumulates final results.
     """
 
-    def __init__(self, config: TorchDistributedConfig, app_id: int, run_id: int):
-        """Initializes the server for initial training setup communication and log collection.
+    def __init__(self, config: TfDistributedConfig, app_id: int, run_id: int):
+        """Initializes the server, but does not start it yet.
 
         :param config: Experiment config.
+        :param app_id: Maggy application ID.
         :param app_id: Maggy application ID.
         :param run_id: Maggy run ID.
         """
         super().__init__(config, app_id, run_id)
-        self.server = DistributedTrainingServer(self.num_executors)
+        self.server = TensorflowServer(self.num_executors)
         self.results = []
 
     def _exp_startup_callback(self) -> None:
@@ -55,12 +56,6 @@ class DistributedTrainingDriver(Driver):
         :returns: The result in a dictionary.
         """
         result = {"test result": self.average_metric()}
-        exp_ml_id = str(self.app_id) + "_" + str(self.run_id)
-        EnvSing.get_instance().attach_experiment_xattr(
-            exp_ml_id,
-            {"state": "FINISHED", "duration": int(job_end - self.job_start) * 1000},
-            "FULL_UPDATE",
-        )
         print("Final average test loss: {:.3f}".format(self.average_metric()))
         print(
             "Finished experiment. Total run time: "
@@ -69,8 +64,8 @@ class DistributedTrainingDriver(Driver):
         return result
 
     def _exp_exception_callback(self, exc: Type[Exception]) -> None:
-        """Catches pickling errors in case the input arguments (most likely
-        the dataset) are too large to be pickled, or not compatible.
+        """Catches pickling errors in case either the model or the dataset are
+        too large to be pickled, or not compatible.
 
         :param exc: The exception to handle.
 
@@ -79,13 +74,12 @@ class DistributedTrainingDriver(Driver):
         """
         if isinstance(exc, PicklingError):
             raise RuntimeError(
-                """Pickling has failed. This is most likely caused by one of
-                the following reasons: Your module class can't be pickled, or your
-                dataset is too large.
-                Consider passing a custom dataloader that reads from files in
-                case of large datasets, and verify that your module is
-                pickleable!"""
-            )
+                """Pickling has failed. This is most likely caused by one of the
+                 following reasons: Model too large, model can't be pickled, dataset too large.
+                 Consider passing a custom dataloader that reads from files in case of large
+                 datasets or the model class instead of an instance. It will be initialized
+                 automatically on the workers for you."""
+            ) from exc
         raise exc
 
     def _patching_fn(self, train_fn: Callable) -> Callable:
@@ -94,11 +88,12 @@ class DistributedTrainingDriver(Driver):
 
         :param train_fn: User provided training function.
 
-        :returns: The monkey patched training function.
-        """
-        return torch_dist_executor_fn(
+        :returns: The monkey patched training function."""
+
+        return dist_executor_fn(
             train_fn,
             self.config,
+            self.num_executors,
             self.app_id,
             self.run_id,
             self.server_addr,

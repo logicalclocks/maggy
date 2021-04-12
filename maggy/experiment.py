@@ -30,17 +30,13 @@ from typing import Callable
 
 from maggy import util
 from maggy.core.environment.singleton import EnvSing
-from maggy.experiment_config import (
-    LagomConfig,
-    OptimizationConfig,
-    AblationConfig,
-    TorchDistributedConfig,
-)
-from maggy.core.experiment_driver import (
-    OptimizationDriver,
-    AblationDriver,
-    DistributedTrainingDriver,
-)
+from maggy.experiment_config.lagom import LagomConfig
+from maggy.experiment_config import OptimizationConfig
+from maggy.experiment_config.ablation import AblationConfig
+from maggy.experiment_config.torch_distributed import TorchDistributedConfig
+from maggy.experiment_config.tf_distributed import TfDistributedConfig
+
+from maggy.core.experiment_driver import OptimizationDriver, AblationDriver
 
 
 APP_ID = None
@@ -99,7 +95,11 @@ def lagom_driver(config, app_id: int, run_id: int) -> None:
     raise TypeError(
         "Invalid config type! Config is expected to be of type {}, {} or {}, \
                      but is of type {}".format(
-            OptimizationConfig, AblationConfig, TorchDistributedConfig, type(config)
+            OptimizationConfig,
+            AblationConfig,
+            TorchDistributedConfig,
+            TfDistributedConfig,
+            type(config),
         )
     )
 
@@ -115,10 +115,27 @@ def _(config: AblationConfig, app_id: int, run_id: int) -> AblationDriver:
 
 
 @lagom_driver.register(TorchDistributedConfig)
+# Lazy import of DistributedDriver to avoid Torch import until necessary
 def _(
     config: TorchDistributedConfig, app_id: int, run_id: int
-) -> DistributedTrainingDriver:
+) -> "DistributedTrainingDriver":  # noqa: F821
+    from maggy.core.experiment_driver.torch_distributed_training_driver import (
+        DistributedTrainingDriver,
+    )
+
     return DistributedTrainingDriver(config, app_id, run_id)
+
+
+@lagom_driver.register(TfDistributedConfig)
+# Lazy import of TensorflowDriver to avoid Tensorflow import until necessary
+def _(
+    config: TfDistributedConfig, app_id: int, run_id: int
+) -> "TensorflowDriver":  # noqa: F821
+    from maggy.core.experiment_driver.tf_distributed_training_driver import (
+        TensorflowDriver,
+    )
+
+    return TensorflowDriver(config, app_id, run_id)
 
 
 def _exception_handler(duration: int) -> None:
