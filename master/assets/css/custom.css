@@ -1,0 +1,24 @@
+:root {
+    --md-primary-fg-color: #F15A24;
+    --md-secondary-fg-color: #333333;
+  }
+
+  .md-header__button.md-logo {
+    margin: .1rem;
+    padding: .1rem;
+  }
+
+  .md-header__button.md-logo img, .md-header__button.md-logo svg {
+    display: block;
+    width: 5.2rem;
+    height: 2rem;
+    fill: currentColor;
+  }
+
+  .md-tabs {
+    width: 100%;
+    overflow: auto;
+    color: var(--md-primary-bg-color);
+    background-color: var(--md-secondary-fg-color);
+    transition: background-color 250ms;
+  }
