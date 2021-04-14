@@ -52,10 +52,7 @@ class TfDistributedConfig(LagomConfig):
         :param description: A description of the experiment.
         """
         super().__init__(name, description, hb_interval)
-        if isinstance(module, object):
-            self.module = module.__class__
-        else:
-            self.module = module
+        self.module = module
         self.train_set = train_set
         self.test_set = test_set
         self.mixed_precision = mixed_precision
