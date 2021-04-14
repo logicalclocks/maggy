@@ -20,8 +20,7 @@ from abc import ABC
 
 
 class LagomConfig(ABC):
-    """Base class for lagom configuration classes.
-    """
+    """Base class for lagom configuration classes."""
 
     def __init__(self, name: str, description: str, hb_interval: int):
         """Initializes basic experiment info.
