@@ -118,7 +118,9 @@ def dist_executor_fn(
                 )
             else:
                 retval = train_fn(
-                    model=model, train_set=config.train_set, test_set=config.test_set,
+                    model=model,
+                    train_set=config.train_set,
+                    test_set=config.test_set,
                 )
 
             # Set retval to work with util.handle_return_value,
