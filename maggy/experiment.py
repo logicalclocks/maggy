@@ -93,7 +93,7 @@ def lagom_driver(config, app_id: int, run_id: int) -> None:
         raises an error.
     """
     raise TypeError(
-        "Invalid config type! Config is expected to be of type {}, {} or {}, \
+        "Invalid config type! Config is expected to be of type {}, {}, {} or {}, \
                      but is of type {}".format(
             OptimizationConfig,
             AblationConfig,
