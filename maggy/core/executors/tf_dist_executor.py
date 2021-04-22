@@ -105,22 +105,41 @@ def dist_executor_fn(
 
             strategy = tf.distribute.MultiWorkerMirroredStrategy
             model = _wrap_module(config, strategy)
-            model = model(**config.model_parameters)
 
+            train_set, test_set = _consume_data(config)
+
+            config.train_set = _shard_data(
+                train_set,
+                len(train_set) / num_executors,
+                len(reservations),
+                partition_id,
+            )
+
+            config.test_set = _shard_data(
+                test_set,
+                len(test_set) / num_executors,
+                len(reservations),
+                partition_id,
+            )
+
+            reporter.log(f"index of slice {partition_id}")
             reporter.log("Starting distributed training.")
             sig = inspect.signature(train_fn)
+
             if sig.parameters.get("reporter", None):
                 retval = train_fn(
                     model=model,
                     train_set=config.train_set,
                     test_set=config.test_set,
                     reporter=reporter,
+                    hparams=config.hparams,
                 )
             else:
                 retval = train_fn(
                     model=model,
                     train_set=config.train_set,
                     test_set=config.test_set,
+                    hparams=config.hparams,
                 )
 
             # Set retval to work with util.handle_return_value,
@@ -250,3 +269,102 @@ def _sanitize_init_strategy_params(
         strategy
     ), """Passed strategy should be a
         class, not an instance."""
+
+
+def _shard_data(data, batch_size, num_shards, index):
+    """Returns the index slice of the train_set, given the number of shards.
+    If the data is not a tensor, it will be converted to tensor.
+
+    :param data: Dataset to shard.
+    :param num_shards: Number of slices to shard the data on.
+    :param index:
+
+    :returns: The slice of data at index.
+    """
+
+    # Wrap data in Dataset objects.
+    data = tf.data.Dataset.from_tensor_slices(data)
+
+    # The batch size must now be set on the Dataset objects.
+    data = data.batch(batch_size)
+
+    # Disable AutoShard.
+    options = tf.data.Options()
+    options.experimental_distribute.auto_shard_policy = (
+        tf.data.experimental.AutoShardPolicy.OFF
+    )
+    data.with_options(options)
+
+    if index >= num_shards:
+        raise RuntimeError(
+            f"index ({index}) must be smaller than num_shard ({num_shards})"
+        )
+
+    data = data.shard(num_shards, int(index))
+
+    return data
+
+
+def _consume_data(config):
+    """Load and return the training and test datasets from config file. If the config.train_set and config.test_set are
+    strings they are assumed as path, the functions check if the files or directories exists, if they exists then it
+    will run the function in config.process_data, with paramneters config.train_set and config.test_set and return the
+    result.
+    If the config.train_set and cofig.test_set are not strings but anything else (like a List, nparray, tf.data.Dataset)
+    they will returned as they are.
+    The types of config.train_set and config.test_set have to be the same.
+
+
+    :param config: the experiment configuration dictionary
+
+    :returns: train_set and test_set
+
+    :raises TypeError: if the config.train_set and config.test_set are of different type
+    :raises TypeError: if the process_data function is missing or cannot process the data
+    :raises FileNotFoundError: in case config.train_set or config.test_set are not found
+    """
+
+    train_set = config.train_set
+    test_set = config.test_set
+    process_data = config.process_data
+
+    if type(train_set) != type(test_set):
+        raise TypeError(
+            f"The train_set and test_set types are different but must be the same, "
+            f"provided {type(train_set)} and {type(train_set)}"
+        )
+
+    data_type = type(train_set)
+    if data_type == str:
+        env = EnvSing.get_instance()
+
+        if (env.isdir(train_set) or env.exists(train_set)) and (
+            env.isdir(test_set) or env.exists(test_set)
+        ):
+            try:
+                return process_data(train_set, test_set)
+            except TypeError:
+                raise TypeError(
+                    (
+                        f"process_data function missing in config, "
+                        f"please provide a function that takes 2 arguments, "
+                        f"train_set and test_set, read the datasets and "
+                        f"return 2 tuples (X_train, y_train), (X_test, y_test). "
+                        f"config: {config}"
+                    )
+                )
+        else:
+            if not env.isdir(train_set):
+                assert env.exists(train_set), FileNotFoundError(
+                    f"{train_set} does not exists."
+                )
+            if not env.isdir(test_set):
+                assert env.exists(test_set), FileNotFoundError(
+                    f"{test_set} does not exists."
+                )
+            raise RuntimeError(
+                f"config.train_set: {config.train_set} and/or "
+                f"config.test_set: {config.test_set} do not exists"
+            )
+    else:  # type is tf.data.Dataset
+        return train_set, test_set
