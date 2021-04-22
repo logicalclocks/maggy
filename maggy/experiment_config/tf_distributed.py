@@ -16,7 +16,7 @@
 
 from __future__ import annotations
 
-from typing import Union
+from typing import Union, Callable
 
 from maggy.experiment_config.lagom import LagomConfig
 
@@ -29,12 +29,12 @@ class TfDistributedConfig(LagomConfig):
         module: tf.keras.Model,
         train_set: Union[str, tf.data.Dataset],
         test_set: Union[str, tf.data.Dataset],
+        process_data: Callable = None,
         mixed_precision: bool = False,
         name: str = "tfDist",
         hb_interval: int = 1,
         description: str = "",
         hparams: dict = None,
-        model_parameters: dict = None,
     ):
 
         """Initializes Tensorflow distributed training parameters.
@@ -45,7 +45,8 @@ class TfDistributedConfig(LagomConfig):
             inside the training function, this can be disregarded.
         :param test_set: The test set for the training function. If you want to load the set
             inside the training function, this can be disregarded.
-        :param model_parameters: model parameters that should be used during model initialization. Primarily
+        :param process_data: The function for processing the data
+        :param hparams: model parameters that should be used during model initialization. Primarily
             used to give an interface for hp optimization.
         :param name: Experiment name.
         :param hb_interval: Heartbeat interval with which the server is polling.
@@ -55,6 +56,6 @@ class TfDistributedConfig(LagomConfig):
         self.module = module
         self.train_set = train_set
         self.test_set = test_set
+        self.process_data = process_data
         self.mixed_precision = mixed_precision
         self.hparams = hparams if hparams else {}
-        self.model_parameters = model_parameters if model_parameters else {}
