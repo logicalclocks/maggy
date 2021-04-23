@@ -110,14 +110,14 @@ def dist_executor_fn(
 
             config.train_set = _shard_data(
                 train_set,
-                len(train_set) / num_executors,
+                config.hparams["train_batch_size"],
                 len(reservations),
                 partition_id,
             )
 
             config.test_set = _shard_data(
                 test_set,
-                len(test_set) / num_executors,
+                config.hparams["test_batch_size"],
                 len(reservations),
                 partition_id,
             )
