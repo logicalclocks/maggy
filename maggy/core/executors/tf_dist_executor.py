@@ -87,8 +87,8 @@ def dist_executor_fn(
             reporter.log("Awaiting worker reservations.")
             client.await_reservations()
             reporter.log("Reservations complete, configuring Tensorflow.")
-            master_config = client.get_tf_config()
-            reservations = client.get_reservations()
+            master_config = client.get_message("TF_CONFIG")
+            reservations = client.get_message("RESERVATIONS")
             if not master_config:
                 reporter.log("Tensorflow registration failed, exiting from all tasks.")
                 return
@@ -104,7 +104,7 @@ def dist_executor_fn(
             reporter.log(f"Tensorflow config is {tf_config}")
 
             strategy = tf.distribute.MultiWorkerMirroredStrategy
-            model = _wrap_module(config, strategy)
+            model = _wrap_model(config, strategy)
 
             train_set, test_set = _consume_data(config)
 
@@ -231,34 +231,33 @@ def _init_seed(random_seed: int = 0) -> None:
 
     :raises KeyError: Checks on environment variables failed.
     """
-    for env_variable in ["TF_CONFIG"]:
-        if env_variable not in os.environ:
-            raise KeyError(f"Environment variable {env_variable} not registered!")
+    if "TF_CONFIG" not in os.environ:
+        raise KeyError("Environment variable TF_CONFIG not registered!")
 
     tf.random.set_seed(random_seed)
     np.random.seed(random_seed)
     random.seed(random_seed)
 
 
-def _wrap_module(config, strategy):
-    """Wraps the module according to `backend`.
+def _wrap_model(config, strategy):
+    """Wraps the model according to `backend`.
 
     :param config: Experiment config.
 
-    :returns: Returns a tensorflow model wrapped class of config.module.
+    :returns: Returns a tensorflow model wrapped class of config.model.
     """
     # Instantiate model on executor in case its too large for pickle and sent as a class.
-    _sanitize_init_model_params(config.module)
+    _sanitize_init_model_params(config.model)
     _sanitize_init_strategy_params(strategy)
-    model = get_wrapped_model(config.module, strategy())
+    model = get_wrapped_model(config.model, strategy())
 
     return model
 
 
-def _sanitize_init_model_params(module: tensorflow.keras.Model) -> None:
-    assert isinstance(module, type) or callable(
-        module
-    ), """Passed module should be a
+def _sanitize_init_model_params(model: tensorflow.keras.Model) -> None:
+    assert isinstance(model, type) or callable(
+        model
+    ), """Passed model should be a
         class, not an instance."""
 
 
