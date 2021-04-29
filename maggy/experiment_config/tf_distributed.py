@@ -26,7 +26,7 @@ import tensorflow as tf
 class TfDistributedConfig(LagomConfig):
     def __init__(
         self,
-        module: tf.keras.Model,
+        model: tf.keras.Model,
         train_set: Union[str, tf.data.Dataset],
         test_set: Union[str, tf.data.Dataset],
         process_data: Callable = None,
@@ -39,7 +39,7 @@ class TfDistributedConfig(LagomConfig):
 
         """Initializes Tensorflow distributed training parameters.
 
-        :param module: A tf.keras.Model superclass or list of them.
+        :param model: A tf.keras.Model superclass or list of them.
             Note that this has to be the class itself, not an instance.
         :param train_set: The training set for the training function. If you want to load the set
             inside the training function, this can be disregarded.
@@ -53,7 +53,7 @@ class TfDistributedConfig(LagomConfig):
         :param description: A description of the experiment.
         """
         super().__init__(name, description, hb_interval)
-        self.module = module
+        self.model = model
         self.train_set = train_set
         self.test_set = test_set
         self.process_data = process_data
