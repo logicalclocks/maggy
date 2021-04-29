@@ -21,7 +21,7 @@ from typing import Union
 from maggy import Searchspace
 from maggy.earlystop import AbstractEarlyStop
 from maggy.optimizer import AbstractOptimizer
-from maggy.experiment_config.lagom import LagomConfig
+from maggy.experiment_config import LagomConfig
 
 
 class OptimizationConfig(LagomConfig):

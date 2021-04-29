@@ -21,7 +21,7 @@ from maggy import util
 from maggy.core.experiment_driver.driver import Driver
 from maggy.core.executors.tf_dist_executor import dist_executor_fn
 
-from maggy.experiment_config.tf_distributed import TfDistributedConfig
+from maggy.experiment_config import TfDistributedConfig
 from maggy.core.rpc import TensorflowServer
 
 
