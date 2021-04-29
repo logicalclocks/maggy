@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 from typing import Union
+
 from maggy.ablation.ablationstudy import AblationStudy
 from maggy.ablation.ablator import AbstractAblator
 from maggy.experiment_config.lagom import LagomConfig
