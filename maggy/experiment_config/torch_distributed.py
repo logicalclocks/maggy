@@ -18,7 +18,7 @@ from __future__ import annotations
 
 import typing
 from typing import Union, Type, Optional, List
-from maggy.experiment_config.lagom import LagomConfig
+from maggy.experiment_config import LagomConfig
 
 
 if typing.TYPE_CHECKING:

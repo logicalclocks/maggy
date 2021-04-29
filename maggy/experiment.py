@@ -30,12 +30,13 @@ from typing import Callable
 
 from maggy import util
 from maggy.core.environment.singleton import EnvSing
-from maggy.experiment_config.lagom import LagomConfig
-from maggy.experiment_config import OptimizationConfig
-from maggy.experiment_config.ablation import AblationConfig
-from maggy.experiment_config.torch_distributed import TorchDistributedConfig
-from maggy.experiment_config.tf_distributed import TfDistributedConfig
-
+from maggy.experiment_config import (
+    LagomConfig,
+    OptimizationConfig,
+    AblationConfig,
+    TorchDistributedConfig,
+    TfDistributedConfig,
+)
 from maggy.core.experiment_driver import OptimizationDriver, AblationDriver
 
 
