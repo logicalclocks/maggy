@@ -499,6 +499,49 @@ class DistributedTrainingServer(Server):
         exp_driver.add_message(msg)
 
 
+class TensorflowServer(DistributedTrainingServer):
+    """Implements the server for distributed training using Tensorflow."""
+
+    def __init__(self, num_executors: int):
+        """Registers the callbacks for message handling.
+
+        :param num_executors: Number of Spark executors scheduled for the
+            experiment.
+        """
+        super().__init__(num_executors)
+        self.callback_list = [
+            ("REG", self._register_callback),
+            ("METRIC", self._metric_callback),
+            ("TF_CONFIG", self._tf_callback),
+            ("RESERVATIONS", self._get_reservations),
+            ("LOG", self._log_callback),
+            ("QUERY", self._query_callback),
+            ("FINAL", self._final_callback),
+        ]
+        self.message_callbacks = self._register_callbacks()
+
+    def _get_reservations(self, resp: dict, *_: Any) -> None:
+
+        try:
+            resp["data"] = self.reservations.get()
+        except KeyError:
+            resp["data"] = None
+        resp["type"] = "OK"
+
+    def _tf_callback(self, resp: dict, *_: Any) -> None:
+        """Tensorflow message callback.
+
+        Returns the connection info of the Spark worker with partition ID 1 if
+        available.
+        """
+        try:
+            # Get the config of worker with partition 1.
+            resp["data"] = self.reservations.get()[0]
+        except KeyError:
+            resp["data"] = None
+        resp["type"] = "OK"
+
+
 class Client(MessageSocket):
     """Client to register and await node reservations.
 
@@ -614,11 +657,18 @@ class Client(MessageSocket):
             time.sleep(1)
         return trial_id, parameters
 
-    def get_exec_config(self, timeout=60):
+    def get_message(self, msg_type, timeout=60):
+        """Return the property of msg_type.
+
+        :param msg_type: The property to request.
+        :param timeout: Waiting time for the request (Default: ''60'')
+
+        :return the property requested
+        """
         config = None
         start_time = time.time()
         while not config and time.time() - start_time < timeout:
-            config = self._request(self.sock, "EXEC_CONFIG").get("data", None)
+            config = self._request(self.sock, msg_type).get("data", None)
         return config
 
     def stop(self):

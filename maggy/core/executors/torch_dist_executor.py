@@ -110,7 +110,7 @@ def torch_dist_executor_fn(
             reporter.log("Awaiting worker reservations.", True)
             client.await_reservations()
             reporter.log("Reservations complete, configuring PyTorch.", True)
-            master_config = client.get_exec_config()[0]
+            master_config = client.get_message("EXEC_CONFIG")[0]
             if not master_config:
                 reporter.log("RuntimeError: PyTorch registration failed.", True)
                 raise RuntimeError("PyTorch registration failed.")

@@ -1,5 +1,5 @@
 #
-#   Copyright 2020 Logical Clocks AB
+#   Copyright 2021 Logical Clocks AB
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -14,8 +14,16 @@
 #   limitations under the License.
 #
 
-from .optimization_driver import OptimizationDriver
-from .ablation_driver import AblationDriver
+from maggy.experiment_config.lagom import LagomConfig
+from maggy.experiment_config.ablation import AblationConfig
+from maggy.experiment_config.optimization import OptimizationConfig
+from maggy.experiment_config.torch_distributed import TorchDistributedConfig
+from maggy.experiment_config.tf_distributed import TfDistributedConfig
 
-
-__all__ = ["OptimizationDriver", "AblationDriver"]
+__all__ = [
+    LagomConfig,
+    AblationConfig,
+    OptimizationConfig,
+    TfDistributedConfig,
+    TorchDistributedConfig,
+]
