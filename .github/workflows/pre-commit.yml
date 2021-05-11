@@ -12,7 +12,7 @@ jobs:
         with:
           python-version: '3.8'
       - name: install deps
-        run: pip install flake8 black pre-commit-hooks
+        run: pip install flake8==3.9.0 black==20.8b1 pre-commit-hooks==2.4.0
 
       - name: black
         run: black --check maggy
