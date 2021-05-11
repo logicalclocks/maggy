@@ -80,7 +80,7 @@ uses your resources.
 
 ## Documentation
 
-Full documentation is available at [maggy.ai](https://maggy.ai/)
+Full documentation is available [here](https://maggy.readthedocs.io/en/latest/).
 
 ## Contributing
 
