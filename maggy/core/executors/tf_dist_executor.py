@@ -287,13 +287,6 @@ def _shard_data(data, batch_size, num_shards, index):
     # The batch size must now be set on the Dataset objects.
     data = data.batch(batch_size)
 
-    # Disable AutoShard.
-    options = tf.data.Options()
-    options.experimental_distribute.auto_shard_policy = (
-        tf.data.experimental.AutoShardPolicy.OFF
-    )
-    data.with_options(options)
-
     if index >= num_shards:
         raise RuntimeError(
             f"index ({index}) must be smaller than num_shard ({num_shards})"
