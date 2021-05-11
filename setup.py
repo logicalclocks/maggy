@@ -30,10 +30,8 @@ def read(fname):
 
 setup(
     name='maggy',
-    version=version,
-    install_requires=[
-        'numpy==1.20.1', 'scikit-optimize==0.7.4', 'statsmodels==0.11.0', 'scipy==1.4.1'
-    ],
+    version='0.5.2',
+
     extras_require={
         'pydoop': ['pydoop'],
         'tf': ['tensorflow==2.4.1'],

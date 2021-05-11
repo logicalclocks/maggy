@@ -134,14 +134,10 @@ class BaseEnv:
         pass
 
     def connect_host(self, server_sock, server_host_port, exp_driver):
-        if not server_host_port:
-            server_sock.bind(("", 0))
-            host = self.get_ip_address()
-            port = server_sock.getsockname()[1]
-            server_host_port = (host, port)
-
-        else:
-            server_sock.bind(server_host_port)
+        server_sock.bind(("", 0))
+        host = self.get_ip_address()
+        port = server_sock.getsockname()[1]
+        server_host_port = (host, port)
 
         server_sock.listen(10)
 
