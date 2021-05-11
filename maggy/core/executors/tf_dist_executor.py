@@ -87,9 +87,8 @@ def dist_executor_fn(
             reporter.log("Awaiting worker reservations.")
             client.await_reservations()
             reporter.log("Reservations complete, configuring Tensorflow.")
-            master_config = client.get_message("TF_CONFIG")
             reservations = client.get_message("RESERVATIONS")
-            if not master_config:
+            if not reservations:
                 reporter.log("Tensorflow registration failed, exiting from all tasks.")
                 return
 
