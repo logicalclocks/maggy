@@ -136,6 +136,7 @@ class BaseEnv:
     def connect_host(self, server_sock, server_host_port, exp_driver):
         if not server_host_port:
             server_sock.bind(("", 0))
+            # hostname may not be resolvable but IP address probably will be
             host = self.get_ip_address()
             port = server_sock.getsockname()[1]
             server_host_port = (host, port)
