@@ -19,12 +19,9 @@ import inspect
 import json
 import traceback
 import os
-import random
 import socket
 from typing import Callable, Any, Tuple
 
-import numpy as np
-import tensorflow
 import tensorflow as tf
 
 from maggy import util
@@ -223,21 +220,6 @@ def _setup_tf_config(tf_config: dict) -> None:
     os.environ["TF_CONFIG"] = json.dumps(tf_config)
 
 
-def _init_seed(random_seed: int = 0) -> None:
-    """Checks if config is set and sets random seeds.
-
-    :param random_seed: Random seed for tensorflow, numpy, random (default: ``0``).
-
-    :raises KeyError: Checks on environment variables failed.
-    """
-    if "TF_CONFIG" not in os.environ:
-        raise KeyError("Environment variable TF_CONFIG not registered!")
-
-    tf.random.set_seed(random_seed)
-    np.random.seed(random_seed)
-    random.seed(random_seed)
-
-
 def _wrap_model(config, strategy):
     """Wraps the model according to `backend`.
 
@@ -253,20 +235,18 @@ def _wrap_model(config, strategy):
     return model
 
 
-def _sanitize_init_model_params(model: tensorflow.keras.Model) -> None:
+def _sanitize_init_model_params(model: tf.keras.Model) -> None:
     assert isinstance(model, type) or callable(
         model
-    ), """Passed model should be a
-        class, not an instance."""
+    ), "Passed model should be a class, not an instance."
 
 
 def _sanitize_init_strategy_params(
-    strategy: tensorflow.distribute.MultiWorkerMirroredStrategy,
+    strategy: tf.distribute.MultiWorkerMirroredStrategy,
 ) -> None:
     assert isinstance(strategy, type) or callable(
         strategy
-    ), """Passed strategy should be a
-        class, not an instance."""
+    ), "Passed strategy should be a class, not an instance."
 
 
 def _shard_data(data, batch_size, num_shards, index):
