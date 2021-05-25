@@ -145,6 +145,7 @@ class Driver(ABC):
             # Sparkmagic hb poll intervall is 5 seconds, therefore wait 6 seconds.
             time.sleep(6)
             self.stop()
+            time.sleep(10)
 
     @abstractmethod
     def _exp_startup_callback(self) -> None:
