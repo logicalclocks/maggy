@@ -60,6 +60,7 @@ setup(
     download_url='',
     packages=find_packages(),
     long_description=read('README.md'),
+    long_description_content_type="text/markdown",
     python_requires=">=3.7",
     classifiers=[
         'Development Status :: 5 - Production/Stable',
