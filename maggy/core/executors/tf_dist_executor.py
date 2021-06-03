@@ -24,7 +24,7 @@ from typing import Callable, Any, Tuple
 
 import tensorflow as tf
 
-from maggy import util
+from maggy import util, tensorboard
 from maggy.core.tf_patching.tf_modules import get_wrapped_model
 from maggy.experiment_config import TfDistributedConfig
 from maggy.core.rpc import Client
@@ -81,6 +81,7 @@ def dist_executor_fn(
         try:
             _register_with_servers(client, reporter, partition_id)
             tb_logdir, trial_log_file = _setup_logging(reporter, log_dir)
+            tensorboard._register(tb_logdir)
             reporter.log("Awaiting worker reservations.")
             client.await_reservations()
             reporter.log("Reservations complete, configuring Tensorflow.")
@@ -98,6 +99,7 @@ def dist_executor_fn(
                 "task": {"index": int(partition_id), "type": "worker"},
             }
             reporter.log(f"Tensorflow config is {tf_config}")
+            _setup_tf_config(tf_config)
 
             strategy = tf.distribute.MultiWorkerMirroredStrategy
             model = _wrap_model(config, strategy)
