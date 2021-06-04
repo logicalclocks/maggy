@@ -18,7 +18,7 @@ from __future__ import annotations
 
 from typing import Union, Callable
 
-from maggy.experiment_config import LagomConfig
+from maggy.experiment_config.lagom import LagomConfig
 
 import tensorflow as tf
 
