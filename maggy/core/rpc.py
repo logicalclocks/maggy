@@ -657,18 +657,11 @@ class Client(MessageSocket):
             time.sleep(1)
         return trial_id, parameters
 
-    def get_message(self, msg_type, timeout=60):
-        """Return the property of msg_type.
-
-        :param msg_type: The property to request.
-        :param timeout: Waiting time for the request (Default: ''60'')
-
-        :return the property requested
-        """
+    def get_exec_config(self, timeout=60):
         config = None
         start_time = time.time()
         while not config and time.time() - start_time < timeout:
-            config = self._request(self.sock, msg_type).get("data", None)
+            config = self._request(self.sock, "EXEC_CONFIG").get("data", None)
         return config
 
     def stop(self):
