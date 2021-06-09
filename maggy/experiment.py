@@ -67,6 +67,7 @@ def lagom(train_fn: Callable, config: LagomConfig) -> dict:
     global APP_ID
     global RUNNING
     global RUN_ID
+    global LOCAL
     job_start = time.time()
     try:
         if RUNNING:
@@ -76,6 +77,7 @@ def lagom(train_fn: Callable, config: LagomConfig) -> dict:
         APP_ID = str(spark_context.applicationId)
         APP_ID, RUN_ID = util.register_environment(APP_ID, RUN_ID)
 
+        LOCAL = False
         if type(EnvSing.get_instance()) == BaseEnv:
             LOCAL = True  # avoid the execution in the node partitions
 
