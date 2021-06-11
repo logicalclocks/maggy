@@ -130,7 +130,7 @@ class Driver(ABC):
 
             if self.local:
                 # Trigger execution locally
-                executor_fn(exp_json)
+                node_rdd.foreachPartition(executor_fn)
             else:
                 # Trigger execution on Spark nodes.
                 node_rdd.foreachPartition(executor_fn)

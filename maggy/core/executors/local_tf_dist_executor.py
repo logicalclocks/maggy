@@ -71,15 +71,22 @@ def local_executor_fn(
 
                 model = _wrap_model(config, strategy)
 
-                train_set, test_set = _consume_data(config)
+                if not (config.train_set is None or config.test_set is None):
+                    train_set, test_set = _consume_data(config)
 
-                reporter.write("Starting training. \n")
-                retval = train_fn(
-                    model=model,
-                    train_set=train_set,
-                    test_set=test_set,
-                    hparams=config.hparams,
-                )
+                    reporter.write("Starting training. \n")
+                    retval = train_fn(
+                        model=model,
+                        train_set=train_set,
+                        test_set=test_set,
+                        hparams=config.hparams,
+                    )
+                else:
+                    reporter.write("Starting training. \n")
+                    retval = train_fn(
+                        model=model,
+                        hparams=config.hparams,
+                    )
 
                 print(
                     f"Final loss: {retval[0] if isinstance(retval, list) else retval}"
