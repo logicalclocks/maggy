@@ -20,6 +20,7 @@ from typing import Callable, Type, Any
 from maggy import util
 from maggy.core.experiment_driver.driver import Driver
 from maggy.core.executors.tf_dist_executor import dist_executor_fn
+from maggy.core.executors.local_tf_dist_executor import local_executor_fn
 
 from maggy.experiment_config import TfDistributedConfig
 from maggy.core.rpc import TensorflowServer
@@ -32,7 +33,9 @@ class TensorflowDriver(Driver):
     logging, and accumulates final results.
     """
 
-    def __init__(self, config: TfDistributedConfig, app_id: int, run_id: int):
+    def __init__(
+        self, config: TfDistributedConfig, app_id: int, run_id: int, local: bool
+    ):
         """Initializes the server, but does not start it yet.
 
         :param config: Experiment config.
@@ -40,9 +43,10 @@ class TensorflowDriver(Driver):
         :param app_id: Maggy application ID.
         :param run_id: Maggy run ID.
         """
-        super().__init__(config, app_id, run_id)
+        super().__init__(config, app_id, run_id, local)
         self.server = TensorflowServer(self.num_executors)
         self.results = []
+        self.local = local
 
     def _exp_startup_callback(self) -> None:
         """No special startup actions required."""
@@ -55,12 +59,24 @@ class TensorflowDriver(Driver):
 
         :returns: The result in a dictionary.
         """
-        result = {"test result": self.average_metric()}
-        print("Final average test loss: {:.3f}".format(self.average_metric()))
-        print(
-            "Finished experiment. Total run time: "
-            + util.time_diff(self.job_start, job_end)
-        )
+        average_metric = self.average_metric()
+        if average_metric != -1:
+            result = {"test result": self.average_metric()}
+
+            print("Final average test loss: {:.3f}".format(self.average_metric()))
+            print(
+                "Finished experiment. Total run time: "
+                + util.time_diff(self.job_start, job_end)
+            )
+        else:
+            result = {"test result not available"}
+
+            print("Final average test loss not available")
+            print(
+                "Finished experiment. Total run time: "
+                + util.time_diff(self.job_start, job_end)
+            )
+
         return result
 
     def _exp_exception_callback(self, exc: Type[Exception]) -> None:
@@ -90,17 +106,26 @@ class TensorflowDriver(Driver):
 
         :returns: The monkey patched training function."""
 
-        return dist_executor_fn(
-            train_fn,
-            self.config,
-            self.num_executors,
-            self.app_id,
-            self.run_id,
-            self.server_addr,
-            self.hb_interval,
-            self._secret,
-            self.log_dir,
-        )
+        if self.local:
+            return local_executor_fn(
+                train_fn,
+                self.config,
+                self.app_id,
+                self.run_id,
+                self.log_dir,
+            )
+        else:
+            return dist_executor_fn(
+                train_fn,
+                self.config,
+                self.num_executors,
+                self.app_id,
+                self.run_id,
+                self.server_addr,
+                self.hb_interval,
+                self._secret,
+                self.log_dir,
+            )
 
     def _register_msg_callbacks(self) -> None:
         """Registers a metric message callback for heartbeat responses to spark
@@ -132,5 +157,8 @@ class TensorflowDriver(Driver):
 
         :returns: The average result value.
         """
-        valid_results = [x for x in self.results if x is not None]
-        return sum(valid_results) / len(valid_results)
+        if self.results:
+            valid_results = [x for x in self.results if x is not None]
+            return sum(valid_results) / len(valid_results)
+        else:
+            return -1

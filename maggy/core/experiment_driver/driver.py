@@ -46,7 +46,7 @@ class Driver(ABC):
 
     SECRET_BYTES = 8
 
-    def __init__(self, config: LagomConfig, app_id: int, run_id: int):
+    def __init__(self, config: LagomConfig, app_id: int, run_id: int, local: bool):
         """Sets up the RPC server, message queue and logs.
 
         :param config: Experiment config.
@@ -57,6 +57,7 @@ class Driver(ABC):
         self.config = config
         self.app_id = app_id
         self.run_id = run_id
+        self.local = local
         self.name = config.name
         self.description = config.description
         self.spark_context = util.find_spark().sparkContext
@@ -126,8 +127,13 @@ class Driver(ABC):
                 "{} | {}".format(self.name, str(self.__class__.__name__)),
             )
             executor_fn = self._patching_fn(train_fn)
-            # Trigger execution on Spark nodes.
-            node_rdd.foreachPartition(executor_fn)
+
+            if self.local:
+                # Trigger execution locally
+                node_rdd.foreachPartition(executor_fn)
+            else:
+                # Trigger execution on Spark nodes.
+                node_rdd.foreachPartition(executor_fn)
 
             job_end = time.time()
             result = self._exp_final_callback(job_end, exp_json)
@@ -139,6 +145,7 @@ class Driver(ABC):
             # Sparkmagic hb poll intervall is 5 seconds, therefore wait 6 seconds.
             time.sleep(6)
             self.stop()
+            time.sleep(10)
 
     @abstractmethod
     def _exp_startup_callback(self) -> None:

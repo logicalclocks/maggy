@@ -37,7 +37,7 @@ class AblationDriver(OptimizationDriver):
     callbacks.
     """
 
-    def __init__(self, config: AblationConfig, app_id: int, run_id: int):
+    def __init__(self, config: AblationConfig, app_id: int, run_id: int, local: bool):
         """Performs argument checks and initiallizes the ablation controller.
 
         :param config: Experiment config.
@@ -47,7 +47,7 @@ class AblationDriver(OptimizationDriver):
         :raises TypeError: If the ablation policy or ablation study config is
             wrong.
         """
-        super().__init__(config, app_id, run_id)
+        super().__init__(config, app_id, run_id, local)
         # set up an ablation study experiment
         self.earlystop_check = NoStoppingRule.earlystop_check
 

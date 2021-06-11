@@ -51,7 +51,9 @@ class OptimizationDriver(Driver):
         "gridsearch": GridSearch,
     }
 
-    def __init__(self, config: OptimizationConfig, app_id: int, run_id: int):
+    def __init__(
+        self, config: OptimizationConfig, app_id: int, run_id: int, local: bool
+    ):
         """Performs argument checks and initializes the optimization
         controller.
 
@@ -62,7 +64,7 @@ class OptimizationDriver(Driver):
         :raises ValueError: In case an invalid optimization direction was
             specified.
         """
-        super().__init__(config, app_id, run_id)
+        super().__init__(config, app_id, run_id, local)
         self._final_store = []
         self._trial_store = {}
         self.experiment_done = False

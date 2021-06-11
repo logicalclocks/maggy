@@ -18,7 +18,7 @@ import os
 import shutil
 import warnings
 
-from maggy import util
+import socket
 
 
 class BaseEnv:
@@ -105,8 +105,13 @@ class BaseEnv:
             file.write(data)
 
     def get_ip_address(self):
-        sc = util.find_spark().sparkContext
-        return sc._conf.get("spark.driver.host")
+        try:
+            _, _, _, _, addr = socket.getaddrinfo(
+                socket.gethostname(), None, socket.AF_INET, socket.SOCK_STREAM
+            )[0]
+            return addr[0]
+        except RuntimeError:
+            return socket.gethostbyname(socket.getfqdn())
 
     def get_constants(self):
         pass
