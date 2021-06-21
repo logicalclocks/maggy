@@ -40,10 +40,11 @@ class OptimizationDriver(Driver):
     optimization.
     """
 
+    # When adding a controller_dict entry, make sure the key is in lower case
     controller_dict = {
         "randomsearch": RandomSearch,
         "asha": Asha,
-        "TPE": bayes.TPE,
+        "tpe": bayes.TPE,
         "gp": bayes.GP,
         "none": SingleRun,
         "faulty_none": None,
