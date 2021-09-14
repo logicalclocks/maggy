@@ -21,11 +21,12 @@ Module to produce the wrapper function to be executed by the executors.
 import builtins as __builtin__
 import inspect
 import json
+import socket
 import traceback
 from typing import Callable, Any
 
 from maggy import util, tensorboard
-from maggy.core import rpc, exceptions
+from maggy.core import exceptions
 from maggy.core.reporter import Reporter
 from maggy.core.environment.singleton import EnvSing
 
@@ -70,8 +71,12 @@ def trial_executor_fn(
         # get task context information to determine executor identifier
         partition_id, task_attempt = util.get_partition_attempt_id()
 
-        client = rpc.Client(
-            server_addr, partition_id, task_attempt, hb_interval, secret
+        client = EnvSing.get_instance().get_client(
+            server_addr,
+            partition_id,
+            hb_interval,
+            secret,
+            socket.socket(socket.AF_INET, socket.SOCK_STREAM),
         )
         log_file = (
             log_dir

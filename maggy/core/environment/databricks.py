@@ -17,6 +17,7 @@
 import os
 
 from maggy.core.environment.base import BaseEnv
+from maggy.core.environment.client import Client
 
 
 class DatabricksEnv(BaseEnv):
@@ -64,3 +65,11 @@ class DatabricksEnv(BaseEnv):
                     'Failed to find "spark.databricks.clusterUsageTags.clusterWorkers" property.'
                 )
         return maxExecutors
+
+    def get_client(self, server_addr, partition_id, hb_interval, secret, sock):
+        server_addr = (server_addr[0], server_addr[1])
+        client_addr = (
+            server_addr[0],
+            sock.getsockname()[1],
+        )
+        return Client(server_addr, client_addr, partition_id, 0, hb_interval, secret)
