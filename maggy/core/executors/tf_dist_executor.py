@@ -27,7 +27,7 @@ import tensorflow as tf
 from maggy import util, tensorboard
 from maggy.core.tf_patching.tf_modules import get_wrapped_model
 from maggy.experiment_config import TfDistributedConfig
-from maggy.core.environment.client import Client
+from maggy.core.rpc import Client
 from maggy.core.reporter import Reporter
 from maggy.core.environment.singleton import EnvSing
 

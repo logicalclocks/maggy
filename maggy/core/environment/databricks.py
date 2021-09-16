@@ -17,7 +17,7 @@
 import os
 
 from maggy.core.environment.base import BaseEnv
-from maggy.core.environment.client import Client
+from maggy.core.rpc import Client
 
 
 class DatabricksEnv(BaseEnv):

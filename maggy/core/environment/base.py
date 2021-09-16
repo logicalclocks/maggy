@@ -19,7 +19,7 @@ import shutil
 import warnings
 
 from maggy import util
-from maggy.core.environment.client import Client
+from maggy.core.rpc import Client
 
 
 class BaseEnv:
