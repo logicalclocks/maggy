@@ -28,7 +28,6 @@ import time
 from functools import singledispatch
 from typing import Callable
 
-from maggy import util
 from maggy.core.environment.singleton import EnvSing
 from maggy.experiment_config import (
     LagomConfig,
@@ -37,8 +36,17 @@ from maggy.experiment_config import (
     TorchDistributedConfig,
     TfDistributedConfig,
 )
-from maggy.core.experiment_driver import OptimizationDriver, AblationDriver
+from maggy.core.experiment_driver import (
+    OptimizationDriver,
+    AblationDriver,
+    NoSparkOptimizationDriver,
+)
+import maggy.core.config as conf
 
+if conf.is_spark_available():
+    from maggy import util
+else:
+    from maggy import util_no_spark as util
 
 APP_ID = None
 RUNNING = False
@@ -65,13 +73,20 @@ def lagom(train_fn: Callable, config: LagomConfig) -> dict:
     global RUNNING
     global RUN_ID
     job_start = time.time()
+
+    conf.initialize()
+
     try:
         if RUNNING:
             raise RuntimeError("An experiment is currently running.")
         RUNNING = True
-        spark_context = util.find_spark().sparkContext
-        APP_ID = str(spark_context.applicationId)
-        APP_ID, RUN_ID = util.register_environment(APP_ID, RUN_ID)
+        if conf.is_spark_available():
+            spark_context = util.find_spark().sparkContext
+            APP_ID = str(spark_context.applicationId)
+            APP_ID, RUN_ID = util.register_environment(APP_ID, RUN_ID)
+        else:
+            APP_ID = 0
+            RUN_ID = 0
         driver = lagom_driver(config, APP_ID, RUN_ID)
         return driver.run_experiment(train_fn)
     except:  # noqa: E722
@@ -81,7 +96,8 @@ def lagom(train_fn: Callable, config: LagomConfig) -> dict:
         # Clean up spark jobs
         RUN_ID += 1
         RUNNING = False
-        util.find_spark().sparkContext.setJobGroup("", "")
+        if conf.is_spark_available():
+            util.find_spark().sparkContext.setJobGroup("", "")
 
 
 @singledispatch
@@ -107,7 +123,11 @@ def lagom_driver(config, app_id: int, run_id: int) -> None:
 
 @lagom_driver.register(OptimizationConfig)
 def _(config: OptimizationConfig, app_id: int, run_id: int) -> OptimizationDriver:
-    return OptimizationDriver(config, app_id, run_id)
+    return (
+        OptimizationDriver(config, app_id, run_id)
+        if conf.is_spark_available()
+        else NoSparkOptimizationDriver(config, app_id, run_id)
+    )
 
 
 @lagom_driver.register(AblationConfig)

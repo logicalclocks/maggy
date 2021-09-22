@@ -25,13 +25,6 @@ import numpy as np
 from maggy import constants, tensorboard
 from maggy.core import exceptions
 from maggy.core.environment.singleton import EnvSing
-import maggy.core.config as conf
-
-conf.initialize()
-
-if conf.is_spark_available():
-    from pyspark import TaskContext
-    from pyspark.sql import SparkSession
 
 DEBUG = True
 
@@ -58,22 +51,6 @@ def num_executors(sc):
     """
 
     return EnvSing.get_instance().get_executors(sc)
-
-
-def get_partition_attempt_id():
-    """Returns partitionId and attemptNumber of the task context, when invoked
-    on a spark executor.
-    PartitionId is ID of the RDD partition that is computed by this task.
-    The first task attempt will be assigned attemptNumber = 0, and subsequent
-    attempts will have increasing attempt numbers.
-    Returns:
-        partitionId, attemptNumber -- [description]
-    """
-    if conf.is_spark_available():
-        task_context = TaskContext.get()
-        return task_context.partitionId(), task_context.attemptNumber()
-    else:
-        return 0, 0
 
 
 def progress_bar(done, total):
@@ -243,16 +220,6 @@ def set_ml_id(app_id, run_id):
     os.environ["ML_ID"] = str(app_id) + "_" + str(run_id)
 
 
-def find_spark():
-    """
-    Returns: SparkSession
-    """
-    if conf.is_spark_available():
-        return SparkSession.builder.getOrCreate()
-    else:
-        return None
-
-
 def seconds_to_milliseconds(time):
     """
     Returns: time converted from seconds to milliseconds
@@ -281,7 +248,7 @@ def register_environment(app_id, run_id):
 
     Returns: (app_id, run_id) with the updated IDs.
     """
-    app_id = str(find_spark().sparkContext.applicationId)
+    app_id = 0
     app_id, run_id = validate_ml_id(app_id, run_id)
     set_ml_id(app_id, run_id)
     # Create experiment directory.
@@ -320,7 +287,7 @@ def populate_experiment(config, app_id, run_id, exp_function):
         direction,
         opt_key,
     )
-    exp_ml_id = str(app_id) + "_" + str(run_id)
+    exp_ml_id = app_id + "_" + str(run_id)
     experiment_json = EnvSing.get_instance().attach_experiment_xattr(
         exp_ml_id, experiment_json, "INIT"
     )

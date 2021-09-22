@@ -16,6 +16,6 @@
 
 from .optimization_driver import OptimizationDriver
 from .ablation_driver import AblationDriver
+from .no_spark_optimization_driver import NoSparkOptimizationDriver
 
-
-__all__ = ["OptimizationDriver", "AblationDriver"]
+__all__ = ["OptimizationDriver", "AblationDriver", "NoSparkOptimizationDriver"]

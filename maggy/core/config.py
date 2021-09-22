@@ -1,5 +1,5 @@
 #
-#   Copyright 2020 Logical Clocks AB
+#   Copyright 2021 Logical Clocks AB
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -20,18 +20,55 @@ import tensorflow as tf
 HOPSWORKS = "HOPSWORKS"
 SPARK_ONLY = "SPARK_ONLY"
 
-mode = None
-tf_full = tf.__version__.split(".")[0]
-# for building the docs since mock object doesn't mock int()
-if not isinstance(tf_full, str):
-    tf_version = 2
-else:
-    tf_version = int(tf_full)
+SPARK_AVAILABLE = None
+MODE = None
+TF_VERSION = None
 
-try:
-    mode = os.environ["HOPSWORKS_VERSION"]
-    mode = HOPSWORKS
-    print("You are running maggy on Hopsworks.")
-except KeyError:
-    mode = SPARK_ONLY
-    print("You are running maggy in pure Spark mode.")
+
+def initialize():
+    tf_full = tf.__version__.split(".")[0]
+    # for building the docs since mock object doesn't mock int()
+    global TF_VERSION
+    global MODE
+    if not isinstance(tf_full, str):
+        TF_VERSION = 2
+    else:
+        TF_VERSION = int(tf_full)
+
+    try:
+        MODE = os.environ["HOPSWORKS_VERSION"]
+        MODE = HOPSWORKS
+        print("You are running maggy on Hopsworks.")
+    except KeyError:
+        MODE = SPARK_ONLY
+        print("You are running maggy in pure Spark mode.")
+
+    try:
+        import pyspark
+
+        # adding cause otherwise flake complains
+        pyspark.TaskContext
+
+        global SPARK_AVAILABLE
+        SPARK_AVAILABLE = True
+    except ModuleNotFoundError:
+        SPARK_AVAILABLE = False
+        print("Pyspark is not available, running maggy without spark.")
+    finally:
+        global SPARK_AVAILABLE
+        SPARK_AVAILABLE = True
+
+
+def is_spark_available():
+    try:
+        import pyspark
+
+        # adding cause otherwise flake complains
+        pyspark.TaskContext
+    except ModuleNotFoundError:
+        SPARK_AVAILABLE = False
+        return False
+    finally:
+        global SPARK_AVAILABLE
+        SPARK_AVAILABLE = True
+    return True

@@ -25,7 +25,10 @@ import time
 import typing
 from typing import Any
 
-from pyspark import cloudpickle
+import maggy.core.config as conf
+
+if conf.is_spark_available():
+    from pyspark import cloudpickle
 
 from maggy.core.environment.singleton import EnvSing
 from maggy.trial import Trial
@@ -149,8 +152,11 @@ class MessageSocket(object):
                 recv_len -= len(buf)
             recv_done = recv_len == 0
 
-        msg = cloudpickle.loads(data)
-        return msg
+        if conf.is_spark_available():
+            msg = cloudpickle.loads(data)
+            return msg
+        else:
+            return data
 
     def send(self, sock, msg):
         """
@@ -163,7 +169,10 @@ class MessageSocket(object):
         Returns:
 
         """
-        data = cloudpickle.dumps(msg)
+        if conf.is_spark_available():
+            data = cloudpickle.dumps(msg)
+        else:
+            data = msg
         buf = struct.pack(">I", len(data)) + data
         sock.sendall(buf)
 
