@@ -78,6 +78,8 @@ def dist_executor_fn(
         reporter = Reporter(log_file, partition_id, 0, __builtin__.print)
         builtin_print = __builtin__.print
 
+        trial_id, parameters = client.get_suggestion(reporter)
+
         def maggy_print(*args, **kwargs):
             builtin_print(*args, **kwargs)
             reporter.log(" ".join(str(x) for x in args), True)
@@ -107,8 +109,7 @@ def dist_executor_fn(
             reporter.log(f"Tensorflow config is {tf_config}")
             _setup_tf_config(tf_config)
 
-            strategy = tf.distribute.MultiWorkerMirroredStrategy
-            model = _wrap_model(config, strategy)
+            # strategy = tf.distribute.MultiWorkerMirroredStrategy
 
             train_set, test_set = _consume_data(config)
 
@@ -132,19 +133,11 @@ def dist_executor_fn(
 
             if sig.parameters.get("reporter", None):
                 retval = train_fn(
-                    model=model,
-                    train_set=config.train_set,
-                    test_set=config.test_set,
+                    **parameters,
                     reporter=reporter,
-                    hparams=config.hparams,
                 )
             else:
-                retval = train_fn(
-                    model=model,
-                    train_set=config.train_set,
-                    test_set=config.test_set,
-                    hparams=config.hparams,
-                )
+                retval = train_fn(**parameters)
 
             # Set retval to work with util.handle_return_value,
             # if there is more than 1 metrics, retval will be a list and
