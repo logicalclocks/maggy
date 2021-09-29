@@ -6,10 +6,14 @@
 
 <h2>
 <p align="center">
-Please, check the notebooks example at the following link:
+In this folder you will find example notebooks for Maggy on Databricks environments.
+</p>
+<p align="center">
+Please, if you are interested in using Maggy on Hopsworks or on Local environemts, check the notebooks example at the following link:
 </p>
 <p align="center">
     <a href="https://github.com/logicalclocks/hops-examples/tree/master/notebooks/ml/Maggy">
     Maggy Examples
     </a>
 </p>
+</h2>
