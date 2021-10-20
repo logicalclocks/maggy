@@ -73,7 +73,7 @@ def lagom(train_fn: Callable, config: LagomConfig) -> dict:
         APP_ID = str(spark_context.applicationId)
         APP_ID, RUN_ID = util.register_environment(APP_ID, RUN_ID)
         driver = lagom_driver(config, APP_ID, RUN_ID)
-        return driver.run_experiment(train_fn)
+        return driver.run_experiment(train_fn, config)
     except:  # noqa: E722
         _exception_handler(util.seconds_to_milliseconds(time.time() - job_start))
         raise

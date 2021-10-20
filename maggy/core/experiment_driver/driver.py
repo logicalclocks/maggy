@@ -96,11 +96,12 @@ class Driver(ABC):
         """
         return secrets.token_hex(nbytes=nbytes)
 
-    def run_experiment(self, train_fn: Callable) -> dict:
+    def run_experiment(self, train_fn: Callable, config) -> dict:
         """Runs the generic experiment setup with callbacks for customization.
 
         :param train_fn: User provided training function that should be
             parallelized.
+        :param config: The configuration of the experiment.
 
         :returns: A dictionary of the experiment's results.
         """
@@ -125,7 +126,7 @@ class Driver(ABC):
                 os.environ["ML_ID"],
                 "{} | {}".format(self.name, str(self.__class__.__name__)),
             )
-            executor_fn = self._patching_fn(train_fn)
+            executor_fn = self._patching_fn(train_fn, config)
             # Trigger execution on Spark nodes.
             node_rdd.foreachPartition(executor_fn)
 

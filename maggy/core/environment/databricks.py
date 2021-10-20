@@ -73,3 +73,6 @@ class DatabricksEnv(BaseEnv):
             sock.getsockname()[1],
         )
         return Client(server_addr, client_addr, partition_id, 0, hb_interval, secret)
+
+    def get_logdir(self, app_id, run_id):
+        return self.log_dir

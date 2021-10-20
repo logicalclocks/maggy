@@ -121,7 +121,7 @@ class AblationDriver(OptimizationDriver):
             raise self.exception  # pylint: disable=raising-bad-type
         raise exc
 
-    def _patching_fn(self, train_fn: Callable) -> Callable:
+    def _patching_fn(self, train_fn: Callable, config) -> Callable:
         """Monkey patches the user training function with the trial executor
         modifications for ablation studies.
 
@@ -130,6 +130,7 @@ class AblationDriver(OptimizationDriver):
         :returns: The monkey patched training function."""
         return trial_executor_fn(
             train_fn,
+            config,
             "ablation",
             self.app_id,
             self.run_id,

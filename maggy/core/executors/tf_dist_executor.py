@@ -109,23 +109,36 @@ def dist_executor_fn(
             reporter.log(f"Tensorflow config is {tf_config}")
             _setup_tf_config(tf_config)
 
-            # strategy = tf.distribute.MultiWorkerMirroredStrategy
+            strategy = tf.distribute.MultiWorkerMirroredStrategy
+            model = _wrap_model(config, strategy)
 
-            train_set, test_set = _consume_data(config)
+            train_set = None
+            test_set = None
+            if (
+                config.train_set is not None
+                and config.test_set is not None
+                and config.process_data is not None
+            ):
+                train_set, test_set = _consume_data(config)
 
-            config.train_set = _shard_data(
-                train_set,
-                config.hparams["train_batch_size"],
-                len(reservations),
-                partition_id,
-            )
+            if train_set is not None and test_set is not None:
+                config.train_set = _shard_data(
+                    train_set,
+                    config.hparams["train_batch_size"],
+                    len(reservations),
+                    partition_id,
+                )
 
-            config.test_set = _shard_data(
-                test_set,
-                config.hparams["test_batch_size"],
-                len(reservations),
-                partition_id,
-            )
+                config.test_set = _shard_data(
+                    test_set,
+                    config.hparams["test_batch_size"],
+                    len(reservations),
+                    partition_id,
+                )
+            else:
+                reporter.log(
+                    "train_set or test_set is null, data has not been sharded."
+                )
 
             reporter.log(f"index of slice {partition_id}")
             reporter.log("Starting distributed training.")
@@ -133,11 +146,19 @@ def dist_executor_fn(
 
             if sig.parameters.get("reporter", None):
                 retval = train_fn(
-                    **parameters,
+                    model=model,
+                    train_set=config.train_set,
+                    test_set=config.test_set,
+                    hparams=config.hparams,
                     reporter=reporter,
                 )
             else:
-                retval = train_fn(**parameters)
+                retval = train_fn(
+                    model=model,
+                    train_set=config.train_set,
+                    test_set=config.test_set,
+                    hparams=config.hparams,
+                )
 
             # Set retval to work with util.handle_return_value,
             # if there is more than 1 metrics, retval will be a list and
@@ -338,5 +359,5 @@ def _consume_data(config):
                 f"config.train_set: {config.train_set} and/or "
                 f"config.test_set: {config.test_set} do not exists"
             )
-    else:  # type is tf.data.Dataset
+    else:  # type is not str (could be anything)
         return train_set, test_set

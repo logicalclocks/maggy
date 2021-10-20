@@ -17,6 +17,7 @@
 from __future__ import annotations
 
 from typing import Union
+import tensorflow as tf
 
 from maggy import Searchspace
 from maggy.earlystop import AbstractEarlyStop
@@ -40,6 +41,9 @@ class OptimizationConfig(LagomConfig):
         name: str = "HPOptimization",
         description: str = "",
         hb_interval: int = 1,
+        model: tf.keras.Model = None,
+        train_set: Union[str, tf.data.Dataset] = None,
+        test_set: Union[str, tf.data.Dataset] = None,
     ):
         """Initializes HP optimization experiment parameters.
 
@@ -55,6 +59,9 @@ class OptimizationConfig(LagomConfig):
         :param name: Experiment name.
         :param description: A description of the experiment.
         :param hb_interval: Heartbeat interval with which the server is polling.
+        :param model: The class of the model to be used in the training function.
+        :param train_set: The train_set to be used in the training function.
+        :param test_set: The test_set to be used in the training function.
         """
         super().__init__(name, description, hb_interval)
         if not num_trials > 0:
@@ -67,3 +74,6 @@ class OptimizationConfig(LagomConfig):
         self.es_policy = es_policy
         self.es_interval = es_interval
         self.es_min = es_min
+        self.model = model
+        self.train_set = train_set
+        self.test_set = test_set

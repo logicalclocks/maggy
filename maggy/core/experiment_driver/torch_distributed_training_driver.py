@@ -88,7 +88,7 @@ class DistributedTrainingDriver(Driver):
             )
         raise exc
 
-    def _patching_fn(self, train_fn: Callable) -> Callable:
+    def _patching_fn(self, train_fn: Callable, config) -> Callable:
         """Monkey patches the user training function with the distributed
         executor modifications for distributed training.
 
@@ -98,7 +98,7 @@ class DistributedTrainingDriver(Driver):
         """
         return torch_dist_executor_fn(
             train_fn,
-            self.config,
+            config,
             self.app_id,
             self.run_id,
             self.server_addr,
