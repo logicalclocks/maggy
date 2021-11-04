@@ -19,6 +19,7 @@ import shutil
 import warnings
 
 from maggy import util
+from maggy.core.rpc import Client
 
 
 class BaseEnv:
@@ -212,3 +213,10 @@ class BaseEnv:
 
     def upload_file_output(self, retval, hdfs_exec_logdir):
         pass
+
+    def get_client(self, server_addr, partition_id, hb_interval, secret, sock):
+        client_addr = (
+            self.get_ip_address(),
+            sock.getsockname()[1],
+        )
+        return Client(server_addr, client_addr, partition_id, 0, hb_interval, secret)

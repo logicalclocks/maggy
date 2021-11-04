@@ -91,8 +91,16 @@ def torch_dist_executor_fn(
         function upon foreach calls. Can safely be disregarded.
         """
         EnvSing.get_instance().set_ml_id(app_id, run_id)
+
         partition_id, _ = util.get_partition_attempt_id()
-        client = Client(server_addr, partition_id, 0, hb_interval, secret)
+
+        client = EnvSing.get_instance().get_client(
+            server_addr,
+            partition_id,
+            hb_interval,
+            secret,
+            socket.socket(socket.AF_INET, socket.SOCK_STREAM),
+        )
         log_file = log_dir + "/executor_" + str(partition_id) + ".log"
 
         builtin_print = __builtin__.print

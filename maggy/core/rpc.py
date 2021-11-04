@@ -33,10 +33,8 @@ from maggy.trial import Trial
 if typing.TYPE_CHECKING:  # Avoid circular import error.
     from maggy.core.experiment_driver.driver import Driver
 
-
-MAX_RETRIES = 3
 BUFSIZE = 1024 * 2
-
+MAX_RETRIES = 3
 SERVER_HOST_PORT = None
 
 
@@ -543,13 +541,15 @@ class TensorflowServer(DistributedTrainingServer):
 
 
 class Client(MessageSocket):
-    """Client to register and await node reservations.
+    """BaseClient to register and await node reservations.
 
     Args:
         :server_addr: a tuple of (host, port) pointing to the Server.
     """
 
-    def __init__(self, server_addr, partition_id, task_attempt, hb_interval, secret):
+    def __init__(
+        self, server_addr, client_addr, partition_id, task_attempt, hb_interval, secret
+    ):
         # socket for main thread
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.connect(server_addr)
@@ -558,10 +558,7 @@ class Client(MessageSocket):
         self.hb_sock.connect(server_addr)
         self.server_addr = server_addr
         self.done = False
-        self.client_addr = (
-            EnvSing.get_instance().get_ip_address(),
-            self.sock.getsockname()[1],
-        )
+        self.client_addr = client_addr
         self.partition_id = partition_id
         self.task_attempt = task_attempt
         self.hb_interval = hb_interval
