@@ -76,4 +76,3 @@ class DatabricksEnv(BaseEnv):
 
     def get_logdir(self, app_id, run_id):
         return self.log_dir
-    
