@@ -25,6 +25,7 @@ from maggy.earlystop import AbstractEarlyStop
 from maggy.optimizer import AbstractOptimizer
 from maggy.experiment_config import LagomConfig
 
+
 class OptimizationConfig(LagomConfig):
     """Config class for hyperparameter optimization experiments."""
 
@@ -41,8 +42,12 @@ class OptimizationConfig(LagomConfig):
         name: str = "HPOptimization",
         description: str = "",
         hb_interval: int = 1,
-        model: Union[tf.keras.Model, Type[torch.nn.Module], List[Type[torch.nn.Module]]] = None,
-        train_set: Optional[Union[str, tf.data.Dataset, torch.util.data.Dataset]] = None,
+        model: Union[
+            tf.keras.Model, Type[torch.nn.Module], List[Type[torch.nn.Module]]
+        ] = None,
+        train_set: Optional[
+            Union[str, tf.data.Dataset, torch.util.data.Dataset]
+        ] = None,
         test_set: Optional[Union[str, tf.data.Dataset, torch.util.data.Dataset]] = None,
     ):
         """Initializes HP optimization experiment parameters.
