@@ -23,10 +23,10 @@ import inspect
 import json
 import socket
 import traceback
-from typing import Callable, Any
+from typing import Callable, Any, Union
 
 from maggy import util, tensorboard
-from maggy.experiment_config import OptimizationConfig
+from maggy.experiment_config import OptimizationConfig, AblationConfig
 from maggy.core import exceptions
 from maggy.core.reporter import Reporter
 from maggy.core.environment.singleton import EnvSing
@@ -34,7 +34,7 @@ from maggy.core.environment.singleton import EnvSing
 
 def trial_executor_fn(
     train_fn: Callable,
-    config: OptimizationConfig,
+    config: Union[OptimizationConfig, AblationConfig],
     experiment_type: str,
     app_id: int,
     run_id: int,
