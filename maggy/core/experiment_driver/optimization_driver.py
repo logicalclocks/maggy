@@ -76,7 +76,7 @@ class OptimizationDriver(Driver):
         self.num_executors = min(
             util.num_executors(self.spark_context), self.num_trials
         )
-        self.server = OptimizationServer(self.num_executors)
+        self.server = OptimizationServer(self.num_executors, config.__class__)
         self.searchspace = self._init_searchspace(config.searchspace)
         self.controller = self._init_controller(config.optimizer, self.searchspace)
         # if optimizer has pruner, num trials is determined by pruner

@@ -117,7 +117,8 @@ class Reporter(object):
                 )
                 if jupyter:
                     jupyter_log = str(self.partition_id) + ": " + log_msg
-                    self.trial_fd.write(env.str_or_byte(msg))
+                    if self.trial_fd:
+                        self.trial_fd.write(env.str_or_byte(msg))
                     self.logs = self.logs + jupyter_log + "\n"
                 else:
                     self.fd.write(env.str_or_byte(msg))

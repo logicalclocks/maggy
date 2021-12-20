@@ -30,6 +30,7 @@ from maggy.experiment_config import OptimizationConfig, TfDistributedConfig
 # this allows using the fixture in all tests in this module
 pytestmark = pytest.mark.usefixtures("sc")
 
+
 def test_randomsearch_init():
 
     sp = Searchspace(argument_param=("DOUBLE", [1, 5]), param2=("integer", [3, 4]))
@@ -64,18 +65,19 @@ def test_rs_initialize2():
 
 
 def test_randomsearch(sc):
-
     def train(model, train_set, test_set, hparams, reporter):
 
         if "argument_param" in hparams.keys():
-            print("Entered train function with param {}".format(hparams["argument_param"]))
+            print(
+                "Entered train function with param {}".format(hparams["argument_param"])
+            )
 
         for i in range(5):
             acc = i + random.random()
             reporter.broadcast(metric=acc)
             reporter.log("Metric: {}".format(acc))
 
-            #do something with HP.
+            # do something with HP.
             if "argument_param" in hparams.keys():
                 time.sleep(hparams["argument_param"])
 
@@ -83,25 +85,25 @@ def test_randomsearch(sc):
 
     sp = Searchspace(argument_param=("DOUBLE", [1, 5]))
 
-    config = OptimizationConfig(searchspace=sp,
+    config = OptimizationConfig(
+        searchspace=sp,
         optimizer="randomsearch",
         direction="max",
         num_trials=5,
         name="test",
         hb_interval=1,
-        es_interval=10,)
-
-    result = experiment.lagom(
-        train_fn=train,
-        config=config
+        es_interval=10,
     )
+
+    result = experiment.lagom(train_fn=train, config=config)
     assert type(result) == type({})
 
     test_dt_tensorflow(sc)
 
+
 def test_dt_tensorflow(sc):
 
-    mnist = tf.keras.datasets.mnistp
+    mnist = tf.keras.datasets.mnist
 
     (x_train, y_train), (x_test, y_test) = mnist.load_data()
 
@@ -118,34 +120,34 @@ def test_dt_tensorflow(sc):
         learning_rate = 0.1
 
         criterion = keras.losses.SparseCategoricalCrossentropy()
-        optimizer = keras.optimizers.SGD(learning_rate=learning_rate, momentum=0.9, decay=1e-5)
+        optimizer = keras.optimizers.SGD(
+            learning_rate=learning_rate, momentum=0.9, decay=1e-5
+        )
 
         model = model(nlayers=2)
 
         model.compile(optimizer=optimizer, loss=criterion, metrics=["accuracy"])
 
-        model.fit(x_train,
-                  y_train,
-                  #batch_size=batch_size,
-                  #epochs=num_epochs,
-                  )
+        model.fit(
+            x_train,
+            y_train,
+            # batch_size=batch_size,
+            # epochs=num_epochs,
+        )
 
         print("Testing")
 
-        loss = model.evaluate(
-            x_test,
-            y_test)
+        loss = model.evaluate(x_test, y_test)
 
         return loss
 
     class NeuralNetwork(tf.keras.Model):
-
         def __init__(self, nlayers):
             super().__init__()
-            self.conv1 = keras.layers.Conv2D(28, 2, activation='relu')
+            self.conv1 = keras.layers.Conv2D(28, 2, activation="relu")
             self.flatten = keras.layers.Flatten()
-            self.d1 = keras.layers.Dense(32, activation='relu')
-            self.d2 = keras.layers.Dense(10, activation='softmax')
+            self.d1 = keras.layers.Dense(32, activation="relu")
+            self.d2 = keras.layers.Dense(10, activation="softmax")
 
         def call(self, x):
             x = self.conv1(x)
@@ -157,23 +159,20 @@ def test_dt_tensorflow(sc):
 
     # define the constructor parameters of your model
     model_parameters = {
-        'train_batch_size': 30000,
-        'test_batch_size': 5000,
-        'nlayers': 2
+        "train_batch_size": 30000,
+        "test_batch_size": 5000,
+        "nlayers": 2,
     }
 
     # pass the model parameters in the last
-    config = TfDistributedConfig(name="tf_test",
-                                 model=model,
-                                 train_set=None,
-                                 test_set=None,
-                                 hparams=model_parameters
-                                 )
-
-    result = experiment.lagom(
-        train_fn=training_function,
-        config=config
+    config = TfDistributedConfig(
+        name="tf_test",
+        model=model,
+        train_set=None,
+        test_set=None,
+        hparams=model_parameters,
     )
 
-    assert type(result) == list
+    result = experiment.lagom(train_fn=training_function, config=config)
 
+    assert type(result) == list

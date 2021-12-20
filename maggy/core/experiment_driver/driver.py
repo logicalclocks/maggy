@@ -25,7 +25,6 @@ from typing import Callable, Tuple, Union
 
 from maggy import util
 from maggy.experiment_config import LagomConfig
-from maggy.core.rpc import Server
 from maggy.core.environment.singleton import EnvSing
 from maggy.experiment_config import (
     AblationConfig,
@@ -66,7 +65,6 @@ class Driver(ABC):
         self.spark_context = util.find_spark().sparkContext
         self.num_executors = util.num_executors(self.spark_context)
         self.hb_interval = config.hb_interval
-        self.server = Server(self.num_executors)
         self.server_addr = None
         self.job_start = None
         DRIVER_SECRET = (

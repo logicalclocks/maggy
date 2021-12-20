@@ -15,7 +15,7 @@
 #
 
 
-def get_wrapped_model(model, strategy):
+def get_wrapped_model(model, strategy, is_chief):
     """Build a wrap class for the user defined tensorflow model.
 
     :param model: The class of the user defined tensorflow model.
@@ -31,6 +31,7 @@ def get_wrapped_model(model, strategy):
 
         def __init__(self, *args, **kwargs):
             self.__strategy = strategy
+            self.is_chief = is_chief
             with self.__strategy.scope():
                 try:
                     super().__init__(*args, **kwargs)
@@ -40,31 +41,5 @@ def get_wrapped_model(model, strategy):
                         "do not corresponds to the parameters defined in your model "
                         "constructor."
                     ) from e
-
-        def compile(
-            self,
-            optimizer="rmsprop",
-            loss=None,
-            metrics=None,
-            loss_weights=None,
-            weighted_metrics=None,
-            run_eagerly=None,
-            steps_per_execution=None,
-            **kwargs
-        ):
-            """This method wraps the compile function from tensorflow,
-            adding the distributed strategy scope before the compile() call of tensorflow.
-            """
-            with self.__strategy.scope():
-                super().compile(
-                    optimizer=optimizer,
-                    loss=loss,
-                    metrics=metrics,
-                    loss_weights=loss_weights,
-                    weighted_metrics=weighted_metrics,
-                    run_eagerly=run_eagerly,
-                    steps_per_execution=steps_per_execution,
-                    **kwargs
-                )
 
     return TensorflowModelWrapper

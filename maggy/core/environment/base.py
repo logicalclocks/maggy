@@ -202,13 +202,13 @@ class BaseEnv:
                 )
         return maxExecutors
 
-    def build_summary_json(self):
+    def build_summary_json(self, logdir):
         pass
 
     def connect_hsfs(self):
         pass
 
-    def convert_return_file_to_arr(self):
+    def convert_return_file_to_arr(self, return_file):
         pass
 
     def upload_file_output(self, retval, hdfs_exec_logdir):
