@@ -158,7 +158,7 @@ class OptimizationDriver(Driver):
             raise self.exception  # pylint: disable=raising-bad-type
         raise exc
 
-    def _patching_fn(self, train_fn: Callable, config) -> Callable:
+    def _patching_fn(self, train_fn: Callable, config: OptimizationConfig) -> Callable:
         """Monkey patches the user training function with the trial executor
         modifications for hyperparameter search.
 

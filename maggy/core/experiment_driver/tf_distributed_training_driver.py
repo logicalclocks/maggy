@@ -82,7 +82,7 @@ class TensorflowDriver(Driver):
             ) from exc
         raise exc
 
-    def _patching_fn(self, train_fn: Callable, config) -> Callable:
+    def _patching_fn(self, train_fn: Callable, config: TfDistributedConfig) -> Callable:
         """Monkey patches the user training function with the distributed
         executor modifications for distributed training.
 

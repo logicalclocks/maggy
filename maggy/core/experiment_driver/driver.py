@@ -21,14 +21,18 @@ import threading
 import secrets
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Callable, Tuple
-
+from typing import Callable, Tuple, Union
 
 from maggy import util
 from maggy.experiment_config import LagomConfig
 from maggy.core.rpc import Server
 from maggy.core.environment.singleton import EnvSing
-
+from maggy.experiment_config import (
+    AblationConfig,
+    OptimizationConfig,
+    TfDistributedConfig,
+    TorchDistributedConfig,
+)
 
 DRIVER_SECRET = None
 
@@ -96,7 +100,16 @@ class Driver(ABC):
         """
         return secrets.token_hex(nbytes=nbytes)
 
-    def run_experiment(self, train_fn: Callable, config) -> dict:
+    def run_experiment(
+        self,
+        train_fn: Callable,
+        config: Union[
+            AblationConfig,
+            OptimizationConfig,
+            TfDistributedConfig,
+            TorchDistributedConfig,
+        ],
+    ) -> dict:
         """Runs the generic experiment setup with callbacks for customization.
 
         :param train_fn: User provided training function that should be
@@ -165,7 +178,16 @@ class Driver(ABC):
         """
 
     @abstractmethod
-    def _patching_fn(self, train_fn: Callable) -> Callable:
+    def _patching_fn(
+        self,
+        train_fn: Callable,
+        config: Union[
+            AblationConfig,
+            OptimizationConfig,
+            TfDistributedConfig,
+            TorchDistributedConfig,
+        ],
+    ) -> Callable:
         """Patching function for the user provided training function.
 
         :param train_fn: User provided training function.

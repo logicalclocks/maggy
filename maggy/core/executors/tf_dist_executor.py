@@ -78,8 +78,6 @@ def dist_executor_fn(
         reporter = Reporter(log_file, partition_id, 0, __builtin__.print)
         builtin_print = __builtin__.print
 
-        trial_id, parameters = client.get_suggestion(reporter)
-
         def maggy_print(*args, **kwargs):
             builtin_print(*args, **kwargs)
             reporter.log(" ".join(str(x) for x in args), True)
