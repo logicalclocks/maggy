@@ -280,10 +280,12 @@ def _wrap_model(config, strategy, is_chief):
     _sanitize_init_strategy_params(strategy)
     try:
         model = get_wrapped_model(config.model, strategy(), is_chief)
-    except RuntimeError:
+    except RuntimeError as error:
         # Distributed model initialization did not work, make it non distributed and try to train
         print(
-            "Distributed training is not available, trying to run the experiment in a non distributed way."
+            "Distributed training is not available, trying to run the experiment in a non distributed way. \n "
+            + "Traceback Error: "
+            + str(error)
         )
         model = config.model
     return model
