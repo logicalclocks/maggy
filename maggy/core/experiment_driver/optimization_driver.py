@@ -29,10 +29,10 @@ from maggy.core.experiment_driver.driver import Driver
 from maggy.core.rpc import OptimizationServer
 from maggy.core.environment.singleton import EnvSing
 from maggy.core.executors.trial_executor import trial_executor_fn
-from maggy.experiment_config import AblationConfig, OptimizationConfig
+from maggy.experiment_config import AblationConfig, HyperparameterOptConfig
 
 
-class OptimizationDriver(Driver):
+class HyperparameterOptDriver(Driver):
     """Driver class for hyperparameter optimization experiments.
 
     Initializes a controller that returns a new hyperparameter configuration
@@ -51,7 +51,7 @@ class OptimizationDriver(Driver):
         "gridsearch": GridSearch,
     }
 
-    def __init__(self, config: OptimizationConfig, app_id: int, run_id: int):
+    def __init__(self, config: HyperparameterOptConfig, app_id: int, run_id: int):
         """Performs argument checks and initializes the optimization
         controller.
 
@@ -158,7 +158,9 @@ class OptimizationDriver(Driver):
             raise self.exception  # pylint: disable=raising-bad-type
         raise exc
 
-    def _patching_fn(self, train_fn: Callable, config: OptimizationConfig) -> Callable:
+    def _patching_fn(
+        self, train_fn: Callable, config: HyperparameterOptConfig
+    ) -> Callable:
         """Monkey patches the user training function with the trial executor
         modifications for hyperparameter search.
 
@@ -621,7 +623,7 @@ class OptimizationDriver(Driver):
             optimizer = "faulty_none"
         if isinstance(optimizer, str):
             try:
-                return OptimizationDriver.controller_dict[optimizer.lower()]()
+                return HyperparameterOptDriver.controller_dict[optimizer.lower()]()
             except KeyError as exc:
                 raise KeyError(
                     "Unknown Optimizer. Can't initialize experiment driver."

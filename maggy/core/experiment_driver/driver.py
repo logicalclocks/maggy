@@ -28,7 +28,7 @@ from maggy.experiment_config import LagomConfig
 from maggy.core.environment.singleton import EnvSing
 from maggy.experiment_config import (
     AblationConfig,
-    OptimizationConfig,
+    HyperparameterOptConfig,
     TfDistributedConfig,
     TorchDistributedConfig,
 )
@@ -103,7 +103,7 @@ class Driver(ABC):
         train_fn: Callable,
         config: Union[
             AblationConfig,
-            OptimizationConfig,
+            HyperparameterOptConfig,
             TfDistributedConfig,
             TorchDistributedConfig,
         ],
@@ -181,7 +181,7 @@ class Driver(ABC):
         train_fn: Callable,
         config: Union[
             AblationConfig,
-            OptimizationConfig,
+            HyperparameterOptConfig,
             TfDistributedConfig,
             TorchDistributedConfig,
         ],

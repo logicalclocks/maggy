@@ -25,11 +25,11 @@ from maggy.ablation.ablator.loco import LOCO
 from maggy.ablation.ablator import AbstractAblator
 from maggy.trial import Trial
 from maggy.core.rpc import OptimizationServer
-from maggy.core.experiment_driver.optimization_driver import OptimizationDriver
+from maggy.core.experiment_driver.optimization_driver import HyperparameterOptDriver
 from maggy.core.executors.trial_executor import trial_executor_fn
 
 
-class AblationDriver(OptimizationDriver):
+class AblationDriver(HyperparameterOptDriver):
     """Driver class for ablation experiments.
 
     Initializes a controller that returns a given network with a new ablated

@@ -26,7 +26,7 @@ from maggy.optimizer import AbstractOptimizer
 from maggy.experiment_config import LagomConfig
 
 
-class OptimizationConfig(LagomConfig):
+class HyperparameterOptConfig(LagomConfig):
     """Config class for hyperparameter optimization experiments."""
 
     def __init__(

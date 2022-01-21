@@ -26,7 +26,7 @@ import traceback
 from typing import Callable, Any, Union
 
 from maggy import util, tensorboard
-from maggy.experiment_config import OptimizationConfig, AblationConfig
+from maggy.experiment_config import HyperparameterOptConfig, AblationConfig
 from maggy.core import exceptions
 from maggy.core.reporter import Reporter
 from maggy.core.environment.singleton import EnvSing
@@ -34,7 +34,7 @@ from maggy.core.environment.singleton import EnvSing
 
 def trial_executor_fn(
     train_fn: Callable,
-    config: Union[OptimizationConfig, AblationConfig],
+    config: Union[HyperparameterOptConfig, AblationConfig],
     experiment_type: str,
     app_id: int,
     run_id: int,
