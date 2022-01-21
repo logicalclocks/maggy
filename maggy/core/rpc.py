@@ -28,6 +28,7 @@ from typing import Any
 from pyspark import cloudpickle
 
 from maggy.core.environment.singleton import EnvSing
+from maggy.experiment_config import TfDistributedConfig
 from maggy.trial import Trial
 
 if typing.TYPE_CHECKING:  # Avoid circular import error.
@@ -119,6 +120,85 @@ class Reservations(object):
             self.reservations.get(partition_id, None)["trial_id"] = trial_id
 
 
+class MirroredReservations:
+    """
+    Thread-safe store for node reservations.
+    """
+
+    def __init__(self, required):
+        self.required = required
+        self.lock = threading.RLock()
+        self.reservations = {"cluster": {"worker": [None] * required}}
+        self.check_done = False
+
+    def add(self, meta):
+        """
+        Add a reservation.
+
+        Args:
+            :meta: a dictonary of metadata about a node
+        """
+        with self.lock:
+            self.reservations["cluster"]["worker"][meta["partition_id"]] = meta[
+                "host_port"
+            ]
+            if self.remaining() == 0:
+                # Sort the cluster_spec based on ip so adjacent workers end up on same machine
+                self.reservations["cluster"]["worker"].sort(
+                    key=lambda x: str(x.split(":")[0])
+                )
+                chief = self.reservations["cluster"]["worker"][0]
+                self.reservations["cluster"]["chief"] = [chief]
+                del self.reservations["cluster"]["worker"][0]
+                self.check_done = True
+
+    def done(self):
+        """Returns True if the ``required`` number of reservations have been fulfilled."""
+        with self.lock:
+            return self.check_done
+
+    def get(self):
+        """Get the list of current reservations."""
+        with self.lock:
+            return self.reservations
+
+    def remaining(self):
+        """Get a count of remaining/unfulfilled reservations."""
+        with self.lock:
+            num_registered = 0
+            for entry in self.reservations["cluster"]["worker"]:
+                if entry is not None:
+                    num_registered = num_registered + 1
+            return self.required - num_registered
+
+    def get_assigned_trial(self, partition_id):
+        """Get the ``trial_id`` of the trial assigned to ``partition_id``.
+
+        Returns None if executor with ``partition_id`` is not registered or if
+        ``partition_id`` is not assigned a trial yet.
+
+        Args:
+            :partition_id: An id to identify the spark executor.
+
+        Returns:
+            trial_id
+        """
+        with self.lock:
+            reservation = self.reservations.get(partition_id, None)
+            if reservation is not None:
+                return reservation.get("trial_id", None)
+
+    def assign_trial(self, partition_id, trial_id):
+        """Assigns trial with ``trial_id`` to the reservation with ``partition_id``.
+
+        Args:
+            partition_id --
+            trial {[type]} -- [description]
+        """
+        with self.lock:
+            self.reservations.get(partition_id, None)["trial_id"] = trial_id
+
+
 class MessageSocket(object):
     """Abstract class w/ length-prefixed socket send/receive functions."""
 
@@ -174,7 +254,7 @@ class Server(MessageSocket):
     reservations = None
     done = False
 
-    def __init__(self, num_executors):
+    def __init__(self, num_executors, config_class):
         """
 
         Args:
@@ -182,7 +262,11 @@ class Server(MessageSocket):
         """
         if not num_executors > 0:
             raise ValueError("Number of executors has to be greater than zero!")
-        self.reservations = Reservations(num_executors)
+        if config_class == TfDistributedConfig:
+            self.reservations = MirroredReservations(num_executors)
+        else:
+            self.reservations = Reservations(num_executors)
+
         self.callback_list = []
         self.message_callbacks = self._register_callbacks()
 
@@ -302,13 +386,13 @@ class Server(MessageSocket):
 class OptimizationServer(Server):
     """Implements the server for hyperparameter optimization and ablation."""
 
-    def __init__(self, num_executors: int):
+    def __init__(self, num_executors: int, config_class):
         """Registers the callbacks for message handling.
 
         :param num_executors: Number of Spark executors scheduled for the
             experiment.
         """
-        super().__init__(num_executors)
+        super().__init__(num_executors, config_class)
         self.callback_list = [
             ("REG", self._register_callback),
             ("QUERY", self._query_callback),
@@ -421,13 +505,13 @@ class OptimizationServer(Server):
 class DistributedTrainingServer(Server):
     """Implements the server for distributed training."""
 
-    def __init__(self, num_executors: int):
+    def __init__(self, num_executors: int, config_class):
         """Registers the callbacks for message handling.
 
         :param num_executors: Number of Spark executors scheduled for the
             experiment.
         """
-        super().__init__(num_executors)
+        super().__init__(num_executors, config_class)
         self.callback_list = [
             ("REG", self._register_callback),
             ("METRIC", self._metric_callback),
@@ -500,13 +584,13 @@ class DistributedTrainingServer(Server):
 class TensorflowServer(DistributedTrainingServer):
     """Implements the server for distributed training using Tensorflow."""
 
-    def __init__(self, num_executors: int):
+    def __init__(self, num_executors: int, config_class):
         """Registers the callbacks for message handling.
 
         :param num_executors: Number of Spark executors scheduled for the
             experiment.
         """
-        super().__init__(num_executors)
+        super().__init__(num_executors, config_class)
         self.callback_list = [
             ("REG", self._register_callback),
             ("METRIC", self._metric_callback),

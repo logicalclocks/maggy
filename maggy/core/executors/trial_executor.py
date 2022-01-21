@@ -23,9 +23,10 @@ import inspect
 import json
 import socket
 import traceback
-from typing import Callable, Any
+from typing import Callable, Any, Union
 
 from maggy import util, tensorboard
+from maggy.experiment_config import HyperparameterOptConfig, AblationConfig
 from maggy.core import exceptions
 from maggy.core.reporter import Reporter
 from maggy.core.environment.singleton import EnvSing
@@ -33,6 +34,7 @@ from maggy.core.environment.singleton import EnvSing
 
 def trial_executor_fn(
     train_fn: Callable,
+    config: Union[HyperparameterOptConfig, AblationConfig],
     experiment_type: str,
     app_id: int,
     run_id: int,
@@ -118,7 +120,6 @@ def trial_executor_fn(
 
             # blocking
             trial_id, parameters = client.get_suggestion(reporter)
-
             while not client.done:
                 if experiment_type == "ablation":
                     ablation_params = {
@@ -152,6 +153,10 @@ def trial_executor_fn(
                         tb_logdir + "/.hparams.json",
                     )
 
+                model = config.model
+                train_set = config.train_set
+                test_set = config.test_set
+
                 try:
                     reporter.log("Starting Trial: {}".format(trial_id), False)
                     reporter.log("Trial Configuration: {}".format(parameters), False)
@@ -161,9 +166,20 @@ def trial_executor_fn(
 
                     sig = inspect.signature(train_fn)
                     if sig.parameters.get("reporter", None):
-                        retval = train_fn(**parameters, reporter=reporter)
+                        retval = train_fn(
+                            model=model,
+                            train_set=train_set,
+                            test_set=test_set,
+                            hparams=parameters,
+                            reporter=reporter,
+                        )
                     else:
-                        retval = train_fn(**parameters)
+                        retval = train_fn(
+                            model=model,
+                            train_set=train_set,
+                            test_set=test_set,
+                            hparams=parameters,
+                        )
 
                     retval = util.handle_return_val(
                         retval, tb_logdir, optimization_key, trial_log_file

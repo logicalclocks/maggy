@@ -35,7 +35,6 @@ from maggy.core.environment.singleton import EnvSing
 def dist_executor_fn(
     train_fn: Callable,
     config: TfDistributedConfig,
-    num_executors: int,
     app_id: int,
     run_id: int,
     server_addr: str,
@@ -85,46 +84,87 @@ def dist_executor_fn(
         __builtin__.print = maggy_print
 
         try:
+            host = EnvSing.get_instance().get_ip_address()
+
+            tmp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            tmp_socket.bind(("", 0))
+            port = tmp_socket.getsockname()[1] + 1
+
+            host_port = host + ":" + str(port)
+
             _register_with_servers(client, reporter, partition_id)
             tb_logdir, trial_log_file = _setup_logging(reporter, log_dir)
             tensorboard._register(tb_logdir)
+
             reporter.log("Awaiting worker reservations.")
             client.await_reservations()
-            reporter.log("Reservations complete, configuring Tensorflow.")
+
             reservations = client.get_message("RESERVATIONS")
+            reporter.log(reservations)
+            reporter.log(host_port)
+            reporter.log("Reservations complete, configuring Tensorflow.")
+
             if not reservations:
                 reporter.log("Tensorflow registration failed, exiting from all tasks.")
                 return
 
             workers_host_port = []
-            for i in list(reservations):
-                workers_host_port.append(reservations[i]["host_port"])
 
-            tf_config = {
-                "cluster": {"worker": workers_host_port},
-                "task": {"index": int(partition_id), "type": "worker"},
-            }
+            for i in list(reservations["cluster"]):
+                if len(reservations["cluster"][i]) > 0:
+                    workers_host_port.append(reservations["cluster"][i][0])
+
+            is_chief = False
+            task_index = find_index(host_port, reservations)
+            tf_config = reservations
+            if task_index == -1:
+                tf_config["task"] = {"type": "chief", "index": 0}
+                is_chief = True
+            else:
+                tf_config["task"] = {"type": "worker", "index": task_index}
+
+            last_worker_index = len(reservations["cluster"]["worker"]) - 1
+            if not last_worker_index < 0:
+                evaluator_node = reservations["cluster"]["worker"][last_worker_index]
+                reservations["cluster"]["evaluator"] = [evaluator_node]
+                del reservations["cluster"]["worker"][last_worker_index]
+                if evaluator_node == host_port:
+                    tf_config["task"] = {"type": "evaluator", "index": 0}
+
             reporter.log(f"Tensorflow config is {tf_config}")
+
             _setup_tf_config(tf_config)
 
             strategy = tf.distribute.MultiWorkerMirroredStrategy
-            model = _wrap_model(config, strategy)
+            model = _wrap_model(config, strategy, is_chief)
 
-            train_set, test_set = _consume_data(config)
+            train_set = None
+            test_set = None
+            if (
+                config.train_set is not None
+                and config.test_set is not None
+                and config.process_data is not None
+            ):
+                train_set, test_set = _consume_data(config)
 
-            config.train_set = _shard_data(
-                train_set,
-                config.hparams["train_batch_size"],
-                len(reservations),
-                partition_id,
-            )
+            if train_set is not None and test_set is not None:
+                config.train_set = _shard_data(
+                    train_set,
+                    config.hparams["train_batch_size"],
+                    len(reservations),
+                    partition_id,
+                )
 
-            config.test_set = _shard_data(
-                test_set,
-                config.hparams["test_batch_size"],
-                len(reservations),
-                partition_id,
-            )
+                config.test_set = _shard_data(
+                    test_set,
+                    config.hparams["test_batch_size"],
+                    len(reservations),
+                    partition_id,
+                )
+            else:
+                reporter.log(
+                    "train_set or test_set is null, data has not been sharded."
+                )
 
             reporter.log(f"index of slice {partition_id}")
             reporter.log("Starting distributed training.")
@@ -135,8 +175,8 @@ def dist_executor_fn(
                     model=model,
                     train_set=config.train_set,
                     test_set=config.test_set,
-                    reporter=reporter,
                     hparams=config.hparams,
+                    reporter=reporter,
                 )
             else:
                 retval = train_fn(
@@ -228,7 +268,7 @@ def _setup_tf_config(tf_config: dict) -> None:
     os.environ["TF_CONFIG"] = json.dumps(tf_config)
 
 
-def _wrap_model(config, strategy):
+def _wrap_model(config, strategy, is_chief):
     """Wraps the model according to `backend`.
 
     :param config: Experiment config.
@@ -238,15 +278,23 @@ def _wrap_model(config, strategy):
     # Instantiate model on executor in case its too large for pickle and sent as a class.
     _sanitize_init_model_params(config.model)
     _sanitize_init_strategy_params(strategy)
-    model = get_wrapped_model(config.model, strategy())
-
+    try:
+        model = get_wrapped_model(config.model, strategy(), is_chief)
+    except RuntimeError as error:
+        # Distributed model initialization did not work, make it non distributed and try to train
+        print(
+            "Distributed training is not available, trying to run the experiment in a non distributed way. \n "
+            + "Traceback Error: "
+            + str(error)
+        )
+        model = config.model
     return model
 
 
 def _sanitize_init_model_params(model: tf.keras.Model) -> None:
     assert isinstance(model, type) or callable(
         model
-    ), "Passed model should be a class, not an instance."
+    ), "Passed model should be a class or function, not an instance."
 
 
 def _sanitize_init_strategy_params(
@@ -254,7 +302,7 @@ def _sanitize_init_strategy_params(
 ) -> None:
     assert isinstance(strategy, type) or callable(
         strategy
-    ), "Passed strategy should be a class, not an instance."
+    ), "Passed strategy should be a class or function, not an instance."
 
 
 def _shard_data(data, batch_size, num_shards, index):
@@ -345,5 +393,21 @@ def _consume_data(config):
                 f"config.train_set: {config.train_set} and/or "
                 f"config.test_set: {config.test_set} do not exists"
             )
-    else:  # type is tf.data.Dataset
+    else:  # type is not str (could be anything)
         return train_set, test_set
+
+
+def find_index(host_port, reservations):
+    """
+
+    :param host_port:
+    :param reservations:
+    :return:
+    """
+    index = 0
+    for entry in reservations["cluster"]["worker"]:
+        if entry == host_port:
+            return index
+        else:
+            index = index + 1
+    return -1

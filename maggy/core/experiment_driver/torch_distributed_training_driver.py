@@ -40,7 +40,7 @@ class DistributedTrainingDriver(Driver):
         :param run_id: Maggy run ID.
         """
         super().__init__(config, app_id, run_id)
-        self.server = DistributedTrainingServer(self.num_executors)
+        self.server = DistributedTrainingServer(self.num_executors, config.__class__)
         self.results = []
 
     def _exp_startup_callback(self) -> None:
@@ -88,7 +88,9 @@ class DistributedTrainingDriver(Driver):
             )
         raise exc
 
-    def _patching_fn(self, train_fn: Callable) -> Callable:
+    def _patching_fn(
+        self, train_fn: Callable, config: TorchDistributedConfig
+    ) -> Callable:
         """Monkey patches the user training function with the distributed
         executor modifications for distributed training.
 
@@ -98,7 +100,7 @@ class DistributedTrainingDriver(Driver):
         """
         return torch_dist_executor_fn(
             train_fn,
-            self.config,
+            config,
             self.app_id,
             self.run_id,
             self.server_addr,
@@ -138,4 +140,7 @@ class DistributedTrainingDriver(Driver):
         :returns: The average result value.
         """
         valid_results = [x for x in self.results if x is not None]
-        return sum(valid_results) / len(valid_results)
+        if len(valid_results) > 0:
+            return sum(valid_results) / len(valid_results)
+        else:
+            return 0

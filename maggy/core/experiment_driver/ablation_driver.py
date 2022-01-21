@@ -25,11 +25,11 @@ from maggy.ablation.ablator.loco import LOCO
 from maggy.ablation.ablator import AbstractAblator
 from maggy.trial import Trial
 from maggy.core.rpc import OptimizationServer
-from maggy.core.experiment_driver.optimization_driver import OptimizationDriver
+from maggy.core.experiment_driver.optimization_driver import HyperparameterOptDriver
 from maggy.core.executors.trial_executor import trial_executor_fn
 
 
-class AblationDriver(OptimizationDriver):
+class AblationDriver(HyperparameterOptDriver):
     """Driver class for ablation experiments.
 
     Initializes a controller that returns a given network with a new ablated
@@ -121,7 +121,7 @@ class AblationDriver(OptimizationDriver):
             raise self.exception  # pylint: disable=raising-bad-type
         raise exc
 
-    def _patching_fn(self, train_fn: Callable) -> Callable:
+    def _patching_fn(self, train_fn: Callable, config: AblationConfig) -> Callable:
         """Monkey patches the user training function with the trial executor
         modifications for ablation studies.
 
@@ -130,6 +130,7 @@ class AblationDriver(OptimizationDriver):
         :returns: The monkey patched training function."""
         return trial_executor_fn(
             train_fn,
+            config,
             "ablation",
             self.app_id,
             self.run_id,

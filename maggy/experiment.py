@@ -32,12 +32,12 @@ from maggy import util
 from maggy.core.environment.singleton import EnvSing
 from maggy.experiment_config import (
     LagomConfig,
-    OptimizationConfig,
+    HyperparameterOptConfig,
     AblationConfig,
     TorchDistributedConfig,
     TfDistributedConfig,
 )
-from maggy.core.experiment_driver import OptimizationDriver, AblationDriver
+from maggy.core.experiment_driver import HyperparameterOptDriver, AblationDriver
 
 
 APP_ID = None
@@ -73,7 +73,7 @@ def lagom(train_fn: Callable, config: LagomConfig) -> dict:
         APP_ID = str(spark_context.applicationId)
         APP_ID, RUN_ID = util.register_environment(APP_ID, RUN_ID)
         driver = lagom_driver(config, APP_ID, RUN_ID)
-        return driver.run_experiment(train_fn)
+        return driver.run_experiment(train_fn, config)
     except:  # noqa: E722
         _exception_handler(util.seconds_to_milliseconds(time.time() - job_start))
         raise
@@ -96,7 +96,7 @@ def lagom_driver(config, app_id: int, run_id: int) -> None:
     raise TypeError(
         "Invalid config type! Config is expected to be of type {}, {}, {} or {}, \
                      but is of type {}".format(
-            OptimizationConfig,
+            HyperparameterOptConfig,
             AblationConfig,
             TorchDistributedConfig,
             TfDistributedConfig,
@@ -105,9 +105,11 @@ def lagom_driver(config, app_id: int, run_id: int) -> None:
     )
 
 
-@lagom_driver.register(OptimizationConfig)
-def _(config: OptimizationConfig, app_id: int, run_id: int) -> OptimizationDriver:
-    return OptimizationDriver(config, app_id, run_id)
+@lagom_driver.register(HyperparameterOptConfig)
+def _(
+    config: HyperparameterOptConfig, app_id: int, run_id: int
+) -> HyperparameterOptDriver:
+    return HyperparameterOptDriver(config, app_id, run_id)
 
 
 @lagom_driver.register(AblationConfig)
