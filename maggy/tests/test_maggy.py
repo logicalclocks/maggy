@@ -33,8 +33,10 @@ def test_random_search(sc):
 
     sp = Searchspace(argument_param=("DOUBLE", [1, 5]))
 
-    rs = RandomSearch(5, sp, [])
+    rs = RandomSearch()
+    rs.searchspace = sp
 
+    rs.num_trials = 5
     exp_result = {"argument_param": "DOUBLE"}
 
     assert sp.names() == exp_result

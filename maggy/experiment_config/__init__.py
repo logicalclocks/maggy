@@ -16,14 +16,14 @@
 
 from maggy.experiment_config.lagom import LagomConfig
 from maggy.experiment_config.ablation import AblationConfig
-from maggy.experiment_config.optimization import OptimizationConfig
+from maggy.experiment_config.optimization import HyperparameterOptConfig
 from maggy.experiment_config.torch_distributed import TorchDistributedConfig
 from maggy.experiment_config.tf_distributed import TfDistributedConfig
 
 __all__ = [
     LagomConfig,
     AblationConfig,
-    OptimizationConfig,
+    HyperparameterOptConfig,
     TfDistributedConfig,
     TorchDistributedConfig,
 ]

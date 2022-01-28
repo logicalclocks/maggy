@@ -34,7 +34,7 @@ class HopsworksEnv(BaseEnv):
     The methods implemented mainly recall the libraries developed on maggy.
     """
 
-    def set_ml_id(self, app_id, run_id):
+    def set_ml_id(self, app_id=0, run_id=0):
         return experiment_utils._set_ml_id(app_id, run_id)
 
     def create_experiment_dir(self, app_id, run_id):
@@ -234,14 +234,21 @@ class HopsworksEnv(BaseEnv):
         return str.encode()
 
     def get_executors(self, sc):
+        executors = 0
         try:
-            return int(sc._conf.get("spark.dynamicAllocation.maxExecutors"))
-        except:  # noqa: E722
+            executors = int(sc._conf.get("spark.dynamicAllocation.maxExecutors"))
+        except TypeError as exc:  # noqa: E722, F841
+            pass
+        try:
+            executors = int(sc._conf.get("spark.executor.instances"))
+        except TypeError as exc:  # noqa: E722, F841
+            pass
+        if executors == 0:
             raise RuntimeError(
-                "Failed to find spark.dynamicAllocation.maxExecutors property, \
-                please select your mode as either Experiment, Parallel \
-                Experiments or Distributed Training."
+                "Failed to find spark.dynamicAllocation.maxExecutors or spark.executor.instances properties, \
+                please select jupyter on Spark mode."
             )
+        return executors
 
     def build_summary_json(self, logdir):
         return util.build_summary_json(logdir)

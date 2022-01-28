@@ -26,9 +26,9 @@ import tensorflow as tf
 class TfDistributedConfig(LagomConfig):
     def __init__(
         self,
-        model: tf.keras.Model,
-        train_set: Union[str, tf.data.Dataset],
-        test_set: Union[str, tf.data.Dataset],
+        model: tf.keras.Model = None,
+        train_set: Union[str, tf.data.Dataset] = None,
+        test_set: Union[str, tf.data.Dataset] = None,
         process_data: Callable = None,
         mixed_precision: bool = False,
         name: str = "tfDist",

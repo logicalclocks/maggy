@@ -15,14 +15,18 @@
 #
 
 from pickle import PicklingError
-from typing import Callable, Type, Any
+from typing import Callable, Type
+import json
+import os
+import time
+from tensorflow.keras import Model
 
 from maggy import util
 from maggy.core.experiment_driver.driver import Driver
 from maggy.core.executors.tf_dist_executor import dist_executor_fn
-
 from maggy.experiment_config import TfDistributedConfig
 from maggy.core.rpc import TensorflowServer
+from maggy.core.environment.singleton import EnvSing
 
 
 class TensorflowDriver(Driver):
@@ -41,13 +45,108 @@ class TensorflowDriver(Driver):
         :param run_id: Maggy run ID.
         """
         super().__init__(config, app_id, run_id)
-        self.server = TensorflowServer(self.num_executors)
-        self.results = []
+        self.data = []
+        self.duration = None
+        self.server = TensorflowServer(self.num_executors, config.__class__)
+        self.final_model = None
+        self.experiment_done = False
+        self.result = []
+
+    def set_result(self, result: float):
+        self.result.append(result)
+
+    def set_final_model(self, final_model: Model):
+        self.final_model = final_model
+
+    def finalize(self, job_end: float) -> dict:
+        """Saves a summary of the experiment to a dict and logs it in the DFS.
+
+        :param job_end: Time of the job end.
+
+        :returns: The experiment summary dict.
+        """
+        self.job_end = job_end
+        self.duration = util.seconds_to_milliseconds(self.job_end - self.job_start)
+        duration_str = util.time_diff(self.job_start, self.job_end)
+        results = self.prep_results(duration_str)
+        print(results)
+        self.log(results)
+        EnvSing.get_instance().dump(
+            json.dumps(self.result, default=util.json_default_numpy),
+            self.log_dir + "/result.json",
+        )
+        EnvSing.get_instance().dump(self.json(), self.log_dir + "/maggy.json")
+        return self.result
+
+    def prep_results(self, duration_str: str) -> str:
+        """Writes and returns the results of the experiment into one string and
+        returns it.
+
+        :param duration_str: Experiment duration as a formatted string.
+
+        :returns: The formatted experiment results summary string.
+        """
+        results = (
+            "Results ------\n"
+            + "Metrics value "
+            + str(self.result)
+            + "\n"
+            + "Total job time "
+            + duration_str
+            + "\n"
+        )
+        return results
+
+    def json(self) -> str:
+        """Exports the experiment's metadata in JSON format.
+
+        :returns: The metadata string.
+        """
+        user = None
+        constants = EnvSing.get_instance().get_constants()
+        try:
+            if constants.ENV_VARIABLES.HOPSWORKS_USER_ENV_VAR in os.environ:
+                user = os.environ[constants.ENV_VARIABLES.HOPSWORKS_USER_ENV_VAR]
+        except AttributeError:
+            pass
+
+        experiment_json = {
+            "project": EnvSing.get_instance().project_name(),
+            "user": user,
+            "name": self.name,
+            "module": "maggy",
+            "app_id": str(self.app_id),
+            "start": time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(self.job_start)),
+            "memory_per_executor": str(
+                self.spark_context._conf.get("spark.executor.memory")
+            ),
+            "gpus_per_executor": str(
+                self.spark_context._conf.get("spark.executor.gpus")
+            ),
+            "executors": self.num_executors,
+            "logdir": self.log_dir,
+            # 'versioned_resources': versioned_resources,
+            "description": self.description,
+        }
+
+        if self.experiment_done:
+            experiment_json["status"] = "FINISHED"
+            experiment_json["finished"] = time.strftime(
+                "%Y-%m-%dT%H:%M:%S", time.localtime(self.job_end)
+            )
+            experiment_json["duration"] = self.duration
+            experiment_json["config"] = json.dumps(self.final_model)
+            experiment_json["metric"] = self.result
+
+        else:
+            experiment_json["status"] = "RUNNING"
+
+        return json.dumps(experiment_json, default=util.json_default_numpy)
 
     def _exp_startup_callback(self) -> None:
         """No special startup actions required."""
 
-    def _exp_final_callback(self, job_end: float, _: Any) -> dict:
+    def _exp_final_callback(self, job_end: float, exp_json: dict) -> dict:
         """Calculates the average test error from all partitions.
 
         :param job_end: Time of the job end.
@@ -55,13 +154,31 @@ class TensorflowDriver(Driver):
 
         :returns: The result in a dictionary.
         """
-        result = {"test result": self.average_metric()}
-        print("Final average test loss: {:.3f}".format(self.average_metric()))
+
+        experiment_json = {"state": "FINISHED"}
+        final_result = self.average_metrics()
+
+        util.finalize_experiment(
+            exp_json,
+            final_result,
+            self.app_id,
+            self.run_id,
+            experiment_json,
+            self.duration,
+            self.log_dir,
+            None,
+            None,
+        )
+        self.experiment_done = True
+        self.prep_results(str(job_end))
+
+        print("Final average test loss: {:.3f}".format(final_result))
         print(
             "Finished experiment. Total run time: "
             + util.time_diff(self.job_start, job_end)
         )
-        return result
+
+        return self.result
 
     def _exp_exception_callback(self, exc: Type[Exception]) -> None:
         """Catches pickling errors in case either the model or the dataset are
@@ -72,6 +189,7 @@ class TensorflowDriver(Driver):
         :raises RuntimeError: Provides the user with additional information
             about avoiding pickle problems and includes the pickle error.
         """
+        self.experiment_done = True
         if isinstance(exc, PicklingError):
             raise RuntimeError(
                 """Pickling has failed. This is most likely caused by one of the
@@ -82,18 +200,18 @@ class TensorflowDriver(Driver):
             ) from exc
         raise exc
 
-    def _patching_fn(self, train_fn: Callable) -> Callable:
+    def _patching_fn(self, train_fn: Callable, config: TfDistributedConfig) -> Callable:
         """Monkey patches the user training function with the distributed
         executor modifications for distributed training.
 
         :param train_fn: User provided training function.
+        :param config: The configuration object for the experiment.
 
         :returns: The monkey patched training function."""
 
         return dist_executor_fn(
             train_fn,
-            self.config,
-            self.num_executors,
+            config,
             self.app_id,
             self.run_id,
             self.server_addr,
@@ -125,12 +243,21 @@ class TensorflowDriver(Driver):
 
         :param msg: Final message from the executors.
         """
-        self.results.append(msg.get("data", None))
 
-    def average_metric(self) -> float:
+        final_metric = msg.get("data", None)
+        self.data.append(final_metric)
+        self._update_result(final_metric)
+
+    def _update_result(self, final_metric) -> None:
+        self.result.append(final_metric)
+
+    def average_metrics(self) -> float:
         """Calculates the current average over the valid results.
 
         :returns: The average result value.
         """
-        valid_results = [x for x in self.results if x is not None]
-        return sum(valid_results) / len(valid_results)
+        valid_results = [x for x in self.result if x is not None]
+        if len(valid_results) > 0:
+            return sum(valid_results) / len(valid_results)
+        else:
+            return 0

@@ -14,8 +14,8 @@
 #   limitations under the License.
 #
 
-from .optimization_driver import OptimizationDriver
+from .optimization_driver import HyperparameterOptDriver
 from .ablation_driver import AblationDriver
-from .no_spark_optimization_driver import NoSparkOptimizationDriver
 
-__all__ = ["OptimizationDriver", "AblationDriver", "NoSparkOptimizationDriver"]
+
+__all__ = ["HyperparameterOptDriver", "AblationDriver"]

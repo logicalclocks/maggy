@@ -21,14 +21,17 @@ import threading
 import secrets
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Callable, Tuple
-
+from typing import Callable, Tuple, Union
 
 from maggy import util
 from maggy.experiment_config import LagomConfig
-from maggy.core.rpc import Server
 from maggy.core.environment.singleton import EnvSing
-
+from maggy.experiment_config import (
+    AblationConfig,
+    HyperparameterOptConfig,
+    TfDistributedConfig,
+    TorchDistributedConfig,
+)
 
 DRIVER_SECRET = None
 
@@ -62,7 +65,6 @@ class Driver(ABC):
         self.spark_context = util.find_spark().sparkContext
         self.num_executors = util.num_executors(self.spark_context)
         self.hb_interval = config.hb_interval
-        self.server = Server(self.num_executors)
         self.server_addr = None
         self.job_start = None
         DRIVER_SECRET = (
@@ -96,11 +98,21 @@ class Driver(ABC):
         """
         return secrets.token_hex(nbytes=nbytes)
 
-    def run_experiment(self, train_fn: Callable) -> dict:
+    def run_experiment(
+        self,
+        train_fn: Callable,
+        config: Union[
+            AblationConfig,
+            HyperparameterOptConfig,
+            TfDistributedConfig,
+            TorchDistributedConfig,
+        ],
+    ) -> dict:
         """Runs the generic experiment setup with callbacks for customization.
 
         :param train_fn: User provided training function that should be
             parallelized.
+        :param config: The configuration of the experiment.
 
         :returns: A dictionary of the experiment's results.
         """
@@ -125,7 +137,7 @@ class Driver(ABC):
                 os.environ["ML_ID"],
                 "{} | {}".format(self.name, str(self.__class__.__name__)),
             )
-            executor_fn = self._patching_fn(train_fn)
+            executor_fn = self._patching_fn(train_fn, config)
             # Trigger execution on Spark nodes.
             node_rdd.foreachPartition(executor_fn)
 
@@ -164,7 +176,16 @@ class Driver(ABC):
         """
 
     @abstractmethod
-    def _patching_fn(self, train_fn: Callable) -> Callable:
+    def _patching_fn(
+        self,
+        train_fn: Callable,
+        config: Union[
+            AblationConfig,
+            HyperparameterOptConfig,
+            TfDistributedConfig,
+            TorchDistributedConfig,
+        ],
+    ) -> Callable:
         """Patching function for the user provided training function.
 
         :param train_fn: User provided training function.
