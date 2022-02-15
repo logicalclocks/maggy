@@ -14,13 +14,17 @@
 #   limitations under the License.
 #
 
-import os
 import tensorflow as tf
 
-HOPSWORKS = "HOPSWORKS"
-SPARK_ONLY = "SPARK_ONLY"
-
 SPARK_AVAILABLE = None
+try:
+    from pyspark.sql import SparkSession
+
+    SparkSession.builder.getOrCreate()
+    SPARK_AVAILABLE = True
+except ModuleNotFoundError:
+    SPARK_AVAILABLE = False
+
 MODE = None
 TF_VERSION = None
 
@@ -35,40 +39,10 @@ def initialize():
     else:
         TF_VERSION = int(tf_full)
 
-    try:
-        MODE = os.environ["HOPSWORKS_VERSION"]
-        MODE = HOPSWORKS
-        print("You are running maggy on Hopsworks.")
-    except KeyError:
-        MODE = SPARK_ONLY
-        print("You are running maggy in pure Spark mode.")
-
-    try:
-        import pyspark
-
-        # adding cause otherwise flake complains
-        pyspark.TaskContext
-
-        global SPARK_AVAILABLE
-        SPARK_AVAILABLE = True
-    except ModuleNotFoundError:
-        SPARK_AVAILABLE = False
-        print("Pyspark is not available, running maggy without spark.")
-    finally:
-        global SPARK_AVAILABLE
-        SPARK_AVAILABLE = True
+    print(
+        "Spark is not available, running maggy without Spark."
+    ) if not SPARK_AVAILABLE else print("Spark is available")
 
 
 def is_spark_available():
-    try:
-        import pyspark
-
-        # adding cause otherwise flake complains
-        pyspark.TaskContext
-    except ModuleNotFoundError:
-        SPARK_AVAILABLE = False
-        return False
-    finally:
-        global SPARK_AVAILABLE
-        SPARK_AVAILABLE = True
-    return True
+    return SPARK_AVAILABLE

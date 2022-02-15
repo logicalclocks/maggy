@@ -71,7 +71,7 @@ def lagom(train_fn: Callable, config: LagomConfig) -> dict:
         RUNNING = True
         spark_context = util.find_spark().sparkContext
         APP_ID = str(spark_context.applicationId)
-        APP_ID, RUN_ID = util.register_environment(APP_ID, RUN_ID)
+        APP_ID, RUN_ID = util.register_environment(RUN_ID)
         driver = lagom_driver(config, APP_ID, RUN_ID)
         return driver.run_experiment(train_fn, config)
     except:  # noqa: E722
@@ -118,27 +118,27 @@ def _(config: AblationConfig, app_id: int, run_id: int) -> AblationDriver:
 
 
 @lagom_driver.register(TorchDistributedConfig)
-# Lazy import of DistributedDriver to avoid Torch import until necessary
+# Lazy import of TorchDistributedTrainingDriver to avoid Torch import until necessary
 def _(
     config: TorchDistributedConfig, app_id: int, run_id: int
-) -> "DistributedTrainingDriver":  # noqa: F821
+) -> "TorchDistributedTrainingDriver":  # noqa: F821
     from maggy.core.experiment_driver.torch_distributed_training_driver import (
-        DistributedTrainingDriver,
+        TorchDistributedTrainingDriver,
     )
 
-    return DistributedTrainingDriver(config, app_id, run_id)
+    return TorchDistributedTrainingDriver(config, app_id, run_id)
 
 
 @lagom_driver.register(TfDistributedConfig)
-# Lazy import of TensorflowDriver to avoid Tensorflow import until necessary
+# Lazy import of TfDistributedTrainingDriver to avoid Tensorflow import until necessary
 def _(
     config: TfDistributedConfig, app_id: int, run_id: int
-) -> "TensorflowDriver":  # noqa: F821
+) -> "TfDistributedTrainingDriver":  # noqa: F821
     from maggy.core.experiment_driver.tf_distributed_training_driver import (
-        TensorflowDriver,
+        TfDistributedTrainingDriver,
     )
 
-    return TensorflowDriver(config, app_id, run_id)
+    return TfDistributedTrainingDriver(config, app_id, run_id)
 
 
 def _exception_handler(duration: int) -> None:

@@ -35,7 +35,7 @@ from maggy.experiment_config import TfDistributedConfig
 from maggy.trial import Trial
 
 if typing.TYPE_CHECKING:  # Avoid circular import error.
-    from maggy.core.experiment_driver.driver import Driver
+    from maggy.core.experiment_driver import Driver
 
 BUFSIZE = 1024 * 2
 MAX_RETRIES = 3

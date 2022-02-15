@@ -25,7 +25,12 @@ from maggy.optimizer import AbstractOptimizer, RandomSearch, Asha, SingleRun, Gr
 from maggy.earlystop import AbstractEarlyStop, MedianStoppingRule, NoStoppingRule
 from maggy.optimizer import bayes
 from maggy.trial import Trial
-from maggy.core.experiment_driver.driver import Driver
+from maggy.core import config as mc
+
+if mc.is_spark_available():
+    from maggy.core.experiment_driver.spark_driver import Driver
+else:
+    from maggy.core.experiment_driver.python_driver import Driver
 from maggy.core.rpc import OptimizationServer
 from maggy.core.environment.singleton import EnvSing
 from maggy.core.executors.trial_executor import trial_executor_fn

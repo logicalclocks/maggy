@@ -24,6 +24,7 @@ from maggy import Searchspace
 from maggy.earlystop import AbstractEarlyStop
 from maggy.optimizer import AbstractOptimizer
 from maggy.experiment_config import LagomConfig
+from maggy.core import config as mc
 
 
 class HyperparameterOptConfig(LagomConfig):
@@ -69,6 +70,10 @@ class HyperparameterOptConfig(LagomConfig):
         :param test_set: The test_set to be used in the training function.
         """
         super().__init__(name, description, hb_interval)
+        if not mc.is_spark_available():
+            raise NotImplementedError(
+                "Hyperparameter Optimization can run only on a Spark kernel."
+            )
         if not num_trials > 0:
             raise ValueError("Number of trials should be greater than zero!")
         self.num_trials = num_trials

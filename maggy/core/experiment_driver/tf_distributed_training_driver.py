@@ -22,14 +22,19 @@ import time
 from tensorflow.keras import Model
 
 from maggy import util
-from maggy.core.experiment_driver.driver import Driver
+from maggy.core import config as mc
+
+if mc.is_spark_available():
+    from maggy.core.experiment_driver.spark_driver import Driver
+else:
+    from maggy.core.experiment_driver.python_driver import Driver
 from maggy.core.executors.tf_dist_executor import dist_executor_fn
 from maggy.experiment_config import TfDistributedConfig
 from maggy.core.rpc import TensorflowServer
 from maggy.core.environment.singleton import EnvSing
 
 
-class TensorflowDriver(Driver):
+class TfDistributedTrainingDriver(Driver):
     """Driver for distributed learning with Tensorflow on a Spark cluster.
 
     Registers the workers on an RPC server, ensures proper configuration and

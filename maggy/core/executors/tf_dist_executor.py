@@ -62,7 +62,18 @@ def dist_executor_fn(
         :param _: Necessary catch for the iterator given by Spark to the
         function upon foreach calls. Can safely be disregarded.
         """
+        sp = util.find_spark()
+        if sp is not None:
+            return spark_wrapper_function(_)
+        else:
+            return python_wrapper_function(_)
 
+    def spark_wrapper_function(_: Any) -> None:
+        """Patched function from tf_dist_executor_fn factory.
+
+        :param _: Necessary catch for the iterator given by Spark to the
+        function upon foreach calls. Can safely be disregarded.
+        """
         EnvSing.get_instance().set_ml_id(app_id, run_id)
         partition_id, _ = util.get_partition_attempt_id()
         client = EnvSing.get_instance().get_client(
@@ -76,6 +87,7 @@ def dist_executor_fn(
 
         reporter = Reporter(log_file, partition_id, 0, __builtin__.print)
         builtin_print = __builtin__.print
+        _setup_logging(reporter, log_dir)
 
         def maggy_print(*args, **kwargs):
             builtin_print(*args, **kwargs)
@@ -200,6 +212,109 @@ def dist_executor_fn(
             reporter.close_logger()
             client.stop()
             client.close()
+
+    def python_wrapper_function(_: Any) -> None:
+        """Patched function from tf_dist_executor_fn factory.
+
+        :param _: Necessary catch for the iterator given by Spark to the
+        function upon foreach calls. Can safely be disregarded.
+        """
+        EnvSing.get_instance().set_ml_id(app_id, run_id)
+        partition_id, _ = util.get_partition_attempt_id()
+
+        log_file = log_dir + "/executor_" + str(partition_id) + ".log"
+
+        reporter = Reporter(log_file, partition_id, 0, __builtin__.print)
+        builtin_print = __builtin__.print
+
+        def maggy_print(*args, **kwargs):
+            builtin_print(*args, **kwargs)
+            reporter.log(" ".join(str(x) for x in args), True)
+
+        __builtin__.print = maggy_print
+
+        try:
+            tmp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            tmp_socket.bind(("", 0))
+
+            tb_logdir, trial_log_file = _setup_logging(reporter, log_dir)
+            tensorboard._register(tb_logdir)
+            tf_config = None
+
+            physical_devices = tf.config.list_physical_devices("GPU")
+            if physical_devices is not None:
+                strategy = tf.distribute.MultiWorkerMirroredStrategy
+                for count, pd in enumerate(physical_devices):
+                    if pd == "/gpu:0":
+                        tf_config["task"] = {"type": "chief", "index": 0}
+                    else:
+                        tf_config["task"] = {"type": "worker", "index": count}
+            else:  # Use the Default Strategy
+                strategy = tf.distribute.get_strategy
+
+            model = _wrap_model(config, strategy, False)
+
+            train_set = None
+            test_set = None
+            if (
+                config.train_set is not None
+                and config.test_set is not None
+                and config.process_data is not None
+            ):
+                train_set, test_set = _consume_data(config)
+
+            if train_set is not None and test_set is not None:
+                config.train_set = _shard_data(
+                    train_set,
+                    config.hparams["train_batch_size"],
+                    physical_devices,
+                    partition_id,
+                )
+
+                config.test_set = _shard_data(
+                    test_set,
+                    config.hparams["test_batch_size"],
+                    physical_devices,
+                    partition_id,
+                )
+            else:
+                reporter.log(
+                    "train_set or test_set is null, data has not been sharded."
+                )
+
+            reporter.log(f"index of slice {partition_id}")
+            reporter.log("Starting distributed training.")
+            sig = inspect.signature(train_fn)
+
+            if sig.parameters.get("reporter", None):
+                retval = train_fn(
+                    model=model,
+                    train_set=config.train_set,
+                    test_set=config.test_set,
+                    hparams=config.hparams,
+                    reporter=reporter,
+                )
+            else:
+                retval = train_fn(
+                    model=model,
+                    train_set=config.train_set,
+                    test_set=config.test_set,
+                    hparams=config.hparams,
+                )
+
+            # Set retval to work with util.handle_return_value,
+            # if there is more than 1 metrics, retval will be a list and
+            # retval[0] will contain the final loss
+            retval = {"Metric": retval[0] if isinstance(retval, list) else retval}
+            retval = util.handle_return_val(retval, tb_logdir, "Metric", trial_log_file)
+            reporter.log("Finished distributed training.")
+        except:  # noqa: E722
+            reporter.log(traceback.format_exc())
+            raise
+        finally:
+            reporter.close_logger()
+            __builtin__.print = builtin_print
+        return retval
 
     return wrapper_function
 

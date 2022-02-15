@@ -19,7 +19,7 @@ from __future__ import annotations
 import typing
 from typing import Union, Type, Optional, List
 from maggy.experiment_config import LagomConfig
-
+from maggy.core import config as mc
 
 if typing.TYPE_CHECKING:
     import torch
@@ -67,6 +67,11 @@ class TorchDistributedConfig(LagomConfig):
         :param description: A description of the experiment.
         """
         super().__init__(name, description, hb_interval)
+        mc.initialize()
+        if not mc.is_spark_available():
+            raise NotImplementedError(
+                "Torch Distributed Training can run only on a Spark kernel."
+            )
         self.module = module
         self.train_set = train_set
         self.test_set = test_set

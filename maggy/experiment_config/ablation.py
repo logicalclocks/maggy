@@ -22,6 +22,7 @@ from maggy.ablation.ablationstudy import AblationStudy
 from maggy.ablation.ablator import AbstractAblator
 from maggy.experiment_config import LagomConfig
 import tensorflow as tf
+from maggy.core import config as mc
 
 
 class AblationConfig(LagomConfig):
@@ -54,6 +55,9 @@ class AblationConfig(LagomConfig):
         :param test_set: The test_set to be used in the training function.
         """
         super().__init__(name, description, hb_interval)
+        mc.initialize()
+        if not mc.is_spark_available():
+            raise NotImplementedError("Ablation Study can run only on a Spark kernel.")
         self.ablator = ablator
         self.ablation_study = ablation_study
         self.direction = direction

@@ -21,11 +21,11 @@ from maggy import util
 from maggy.core.environment.singleton import EnvSing
 from maggy.experiment_config import TorchDistributedConfig
 from maggy.core.rpc import DistributedTrainingServer
-from maggy.core.experiment_driver.driver import Driver
+from maggy.core.experiment_driver.spark_driver import Driver
 from maggy.core.executors.torch_dist_executor import torch_dist_executor_fn
 
 
-class DistributedTrainingDriver(Driver):
+class TorchDistributedTrainingDriver(Driver):
     """Driver for distributed learning on a Spark cluster.
 
     Registers the workers on an RPC server, ensures proper configuration and

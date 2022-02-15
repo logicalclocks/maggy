@@ -13,7 +13,7 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 #
-
+import datetime
 import json
 import os
 
@@ -134,8 +134,12 @@ class HopsworksEnv(BaseEnv):
             port = server_sock.getsockname()[1]
             server_host_port = (host, port)
             # register this driver with Hopsworks
-            sc = util.find_spark().sparkContext
-            app_id = str(sc.applicationId)
+            sp = util.find_spark()
+            if sp is not None:
+                sc = sp.sparkContext
+                app_id = str(sc.applicationId)
+            else:
+                app_id = datetime.datetime.now()
 
             hopscons = self.get_constants()
             method = hopscons.HTTP_CONFIG.HTTP_POST
