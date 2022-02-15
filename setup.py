@@ -31,9 +31,9 @@ def read(fname):
 setup(
     name='maggy',
     version=version,
-    install_requires=[
-        'numpy==1.19.2', 'scikit-optimize==0.7.4', 'statsmodels==0.12.2', 'scipy==1.6.3'
-    ],
+    #install_requires=[
+    #    'numpy==1.21.1', 'scikit-optimize==0.7.4', 'statsmodels==0.12.2', 'scipy==1.6.3'
+    #],
     extras_require={
         'pydoop': ['pydoop'],
         'tf': ['tensorflow==2.4.1'],

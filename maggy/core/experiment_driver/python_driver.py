@@ -14,23 +14,27 @@
 #   limitations under the License.
 #
 
-import time
 import queue
 import threading
 import secrets
 from abc import ABC, abstractmethod
 from datetime import datetime
-from typing import Callable, Tuple
+from typing import Callable, Tuple, Union
 
-from maggy.core.rpc import Server
 from maggy import util
 from maggy.experiment_config import LagomConfig
 from maggy.core.environment.singleton import EnvSing
+from maggy.experiment_config import (
+    AblationConfig,
+    HyperparameterOptConfig,
+    TfDistributedConfig,
+    TorchDistributedConfig,
+)
 
 DRIVER_SECRET = None
 
 
-class NoSparkDriver(ABC):
+class Driver(ABC):
     """Abstract base driver class for the experiment drivers.
 
     The driver sets up a digestion thread for messages queued by the server and
@@ -43,9 +47,7 @@ class NoSparkDriver(ABC):
 
     SECRET_BYTES = 8
 
-    def __init__(
-        self, config: LagomConfig, app_id: int, run_id: int, num_executors: int
-    ):
+    def __init__(self, config: LagomConfig, app_id: int, run_id: int):
         """Sets up the RPC server, message queue and logs.
 
         :param config: Experiment config.
@@ -58,6 +60,9 @@ class NoSparkDriver(ABC):
         self.run_id = run_id
         self.name = config.name
         self.description = config.description
+        self.spark_context = None
+        self.num_executors = util.num_physical_devices()
+        self.server_addr = None
         self.hb_interval = config.hb_interval
         self.job_start = None
         DRIVER_SECRET = (
@@ -68,9 +73,7 @@ class NoSparkDriver(ABC):
         self._message_q = queue.Queue()
         self.message_callbacks = {}
         self._register_msg_callbacks()
-        self.num_executors = num_executors
-        self.server = Server(self.num_executors)
-        self.server_addr = None
+        self.worker_done = False
         self.executor_logs = ""
         self.log_lock = threading.RLock()
         self.log_dir = EnvSing.get_instance().get_logdir(app_id, run_id)
@@ -81,8 +84,6 @@ class NoSparkDriver(ABC):
         self.log_file_handle = EnvSing.get_instance().open_file(log_file, flags="w")
         self.exception = None
         self.result = None
-
-        self.experiment_done = False
 
     @staticmethod
     def _generate_secret(nbytes: int) -> str:
@@ -95,41 +96,37 @@ class NoSparkDriver(ABC):
         """
         return secrets.token_hex(nbytes=nbytes)
 
-    def run_experiment(self, train_fn: Callable) -> dict:
+    def run_experiment(
+        self,
+        train_fn: Callable,
+        config: Union[
+            AblationConfig,
+            HyperparameterOptConfig,
+            TfDistributedConfig,
+            TorchDistributedConfig,
+        ],
+    ) -> dict:
         """Runs the generic experiment setup with callbacks for customization.
 
         :param train_fn: User provided training function that should be
             parallelized.
+        :param config: The configuration of the experiment.
 
         :returns: A dictionary of the experiment's results.
         """
-        job_start = time.time()
         try:
             self._exp_startup_callback()
-            exp_json = util.populate_experiment(
-                self.config, self.app_id, self.run_id, str(self.__class__.__name__)
-            )
             self.log(
                 "Started Maggy Experiment: {}, {}, run {}".format(
                     self.name, self.app_id, self.run_id
                 )
             )
-            self.init(job_start)
-
-            executor_fn = self._patching_fn(train_fn)
-
-            # Trigger execution
-            executor_fn()
-
-            job_end = time.time()
-            result = self._exp_final_callback(job_end, exp_json)
+            executor_fn = self._patching_fn(train_fn, config)
+            result = executor_fn(0)
             return result
         except Exception as exc:  # pylint: disable=broad-except
             self._exp_exception_callback(exc)
         finally:
-            # Grace period to send last logs to sparkmagic.
-            # Sparkmagic hb poll intervall is 5 seconds, therefore wait 6 seconds.
-            time.sleep(6)
             self.stop()
 
     @abstractmethod
@@ -156,22 +153,22 @@ class NoSparkDriver(ABC):
         """
 
     @abstractmethod
-    def _patching_fn(self, train_fn: Callable) -> Callable:
+    def _patching_fn(
+        self,
+        train_fn: Callable,
+        config: Union[
+            AblationConfig,
+            HyperparameterOptConfig,
+            TfDistributedConfig,
+            TorchDistributedConfig,
+        ],
+    ) -> Callable:
         """Patching function for the user provided training function.
 
         :param train_fn: User provided training function.
 
         :returns: The patched training function.
         """
-
-    def init(self, job_start: float) -> None:
-        """Starts the RPC server and message digestion worker.
-
-        :param job_start: Time of the job start.
-        """
-        self.server_addr = self.server.start(self)
-        self.job_start = job_start
-        self._start_worker()
 
     def _start_worker(self) -> None:
         """Starts the message digestion worker thread.
@@ -183,7 +180,7 @@ class NoSparkDriver(ABC):
 
         def _digest_queue(self):
             try:
-                while not self.experiment_done:
+                while not self.worker_done:
                     try:
                         msg = self._message_q.get_nowait()
                     except queue.Empty:
@@ -230,7 +227,8 @@ class NoSparkDriver(ABC):
 
     def stop(self) -> None:
         """Stop the Driver's worker thread and server."""
-        self.experiment_done = True
+        self.worker_done = True
+        self.server.stop()
         self.log_file_handle.flush()
         self.log_file_handle.close()
 
