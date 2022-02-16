@@ -16,10 +16,11 @@
 
 """Utility helper module for maggy experiments.
 """
-import datetime
+import calendar
 import math
 import os
 import json
+import time
 
 import tensorflow as tf
 import numpy as np
@@ -285,7 +286,7 @@ def register_environment(run_id):
     app_id = (
         str(find_spark().sparkContext.applicationId)
         if mc.is_spark_available()
-        else str(datetime.datetime.now())
+        else str(calendar.timegm(time.gmtime()))
     )
     app_id, run_id = validate_ml_id(app_id, run_id)
     set_ml_id(app_id, run_id)
@@ -293,25 +294,6 @@ def register_environment(run_id):
     EnvSing.get_instance().create_experiment_dir(app_id, run_id)
     tensorboard._register(EnvSing.get_instance().get_logdir(app_id, run_id))
     return app_id, run_id
-
-
-'''
-def register_environment( run_id):
-    """Validates IDs and creates an experiment folder in the fs.
-
-    Args:
-        :run_id: Current experiment run ID
-
-    Returns: (app_id, run_id) with the updated IDs.
-    """
-    app_id = datetime.datetime.now()
-    app_id, run_id = validate_ml_id(app_id, run_id)
-    set_ml_id(app_id, run_id)
-    # Create experiment directory.
-    EnvSing.get_instance().create_experiment_dir(app_id, run_id)
-    tensorboard._register(EnvSing.get_instance().get_logdir(app_id, run_id))
-    return app_id, run_id
-'''
 
 
 def populate_experiment(config, app_id, run_id, exp_function):
