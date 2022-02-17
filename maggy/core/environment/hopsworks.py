@@ -13,9 +13,10 @@
 #   See the License for the specific language governing permissions and
 #   limitations under the License.
 #
-import datetime
+import calendar
 import json
 import os
+import time
 
 import hsfs
 from hops import constants as hopsconstants
@@ -139,7 +140,8 @@ class HopsworksEnv(BaseEnv):
                 sc = sp.sparkContext
                 app_id = str(sc.applicationId)
             else:
-                app_id = datetime.datetime.now()
+                app_id = str(calendar.timegm(time.gmtime()))
+                util.set_app_id(app_id)
 
             hopscons = self.get_constants()
             method = hopscons.HTTP_CONFIG.HTTP_POST

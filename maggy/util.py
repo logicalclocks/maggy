@@ -35,6 +35,7 @@ if mc.is_spark_available():
     from pyspark.sql import SparkSession
 
 DEBUG = True
+APP_ID = None
 
 
 def log(msg):
@@ -283,11 +284,14 @@ def register_environment(run_id):
     Returns: (app_id, run_id) with the updated IDs.
     """
 
-    app_id = (
-        str(find_spark().sparkContext.applicationId)
-        if mc.is_spark_available()
-        else str(calendar.timegm(time.gmtime()))
-    )
+    if mc.is_spark_available():
+        app_id = str(find_spark().sparkContext.applicationId)
+    else:
+        global APP_ID
+        if APP_ID is None:
+            APP_ID = str(calendar.timegm(time.gmtime()))
+        app_id = APP_ID
+
     app_id, run_id = validate_ml_id(app_id, run_id)
     set_ml_id(app_id, run_id)
     # Create experiment directory.
@@ -340,3 +344,14 @@ def num_physical_devices():
         :int: number of physical devices.
     """
     return len(tf.config.list_physical_devices())
+
+
+def set_app_id(app_id):
+    """Sets the app_id if it's non None, this function is used when the kernel is python.
+
+    Args:
+        :app_id: the app id for the experiment
+    """
+    global APP_ID
+    if APP_ID is None:
+        APP_ID = app_id
