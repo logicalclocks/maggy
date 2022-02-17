@@ -18,9 +18,8 @@ import tensorflow as tf
 
 SPARK_AVAILABLE = None
 try:
-    from pyspark.sql import SparkSession
+    from pyspark.sql import SparkSession  # noqa: F401
 
-    SparkSession.builder.getOrCreate()
     SPARK_AVAILABLE = True
 except ModuleNotFoundError:
     SPARK_AVAILABLE = False
