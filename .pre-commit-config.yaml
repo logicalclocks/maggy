@@ -1,4 +1,4 @@
-exclude: (^setup.py|^maggy/tests/)
+exclude: (^setup.py|^maggy/tests/|^docs/)
 repos:
 -   repo: https://github.com/psf/black
     rev: 20.8b1
