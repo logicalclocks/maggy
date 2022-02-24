@@ -22,6 +22,7 @@ nav:
     - Quickstart: start/quickstart.md
   - Hyperparameter Optimization:
     - Introduction: hpo/intro.md
+    - Strategies: hpo/strategies.md
   - Ablation Studies:
     - Introduction: ablation/intro.md
   - Distributed Training:

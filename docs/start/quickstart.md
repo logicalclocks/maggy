@@ -3,21 +3,6 @@
 The programming model consists of wrapping the code containing the model training logic inside a function. 
 Inside that wrapper function provide all imports and parts that make up your experiment.
 
-There are three requirements for this wrapper function:
-
-1. The function can take _model, train_set, test_set, hparams_ as arguments (they are optionals), 
-plus one optional _parameter_ reporter which is needed for reporting the current metric to the experiment driver.
-2. The function should return the metric that you want to optimize for. 
-This should coincide with the metric being reported in the Keras callback (see next point).
-In order to leverage on the early stopping capabilities of maggy, 
-you need to make use of the maggy reporter API. By including the reporter in your training loop, 
-you are telling maggy which metric to report back to the experiment driver for optimization and to check for global stopping. 
-It is as easy as adding reporter.broadcast(metric=YOUR_METRIC) for example at the end of your epoch or 
-batch training step and adding a reporter argument to your function signature.
-If you are not writing your own training loop you can use the pre-written Keras callbacks in the maggy.callbacks module.
-
-# Getting started
-
 ## What can I do with Maggy?
 
 Maggy can be used for three different ML experiments: Distributed Hyperparameter Optimization (HPO), 
@@ -77,8 +62,19 @@ def training_function(model, train_set, test_set, params):
 ...
 ```
 
-The model, train_set and test_set parameters are optional, so this code flow is not rigid, 
-it is possible to have something like this:
+There are three requirements for the wrapper function:
+
+1. The function can take _model, train_set, test_set, hparams_ as arguments (they are optionals), 
+plus one optional _parameter_ reporter which is needed for reporting the current metric to the experiment driver.
+2. The function should return the metric that you want to optimize for. 
+This should coincide with the metric being reported in the Keras callback (see next point).
+3. In order to leverage on the early stopping capabilities of maggy, 
+you need to make use of the maggy reporter API. By including the reporter in your training loop, 
+you are telling maggy which metric to report back to the experiment driver for optimization and to check for global stopping. 
+It is as easy as adding reporter.broadcast(metric=YOUR_METRIC) for example at the end of your epoch or 
+batch training step and adding a reporter argument to your function signature.
+If you are not writing your own training loop you can use the pre-written Keras callbacks in the maggy.callbacks module.
+
 
 ```py
 def training_function(params):
