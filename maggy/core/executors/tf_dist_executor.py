@@ -182,21 +182,21 @@ def dist_executor_fn(
             reporter.log("Starting distributed training.")
             sig = inspect.signature(train_fn)
 
+            kwargs = {}
+            if sig.parameters.get("model", None):
+                kwargs["model"] = model
+            if sig.parameters.get("train_set", None):
+                kwargs["train_set"] = train_set
+            if sig.parameters.get("test_set", None):
+                kwargs["test_set"] = test_set
+            if sig.parameters.get("hparams", None):
+                kwargs["hparams"] = config.hparams
+
             if sig.parameters.get("reporter", None):
-                retval = train_fn(
-                    model=model,
-                    train_set=config.train_set,
-                    test_set=config.test_set,
-                    hparams=config.hparams,
-                    reporter=reporter,
-                )
+                kwargs["reporter"] = reporter
+                retval = train_fn(**kwargs)
             else:
-                retval = train_fn(
-                    model=model,
-                    train_set=config.train_set,
-                    test_set=config.test_set,
-                    hparams=config.hparams,
-                )
+                retval = train_fn(**kwargs)
 
             # Set retval to work with util.handle_return_value,
             # if there is more than 1 metrics, retval will be a list and
@@ -286,21 +286,21 @@ def dist_executor_fn(
             reporter.log("Starting distributed training.")
             sig = inspect.signature(train_fn)
 
+            kwargs = {}
+            if sig.parameters.get("model", None):
+                kwargs["model"] = model
+            if sig.parameters.get("train_set", None):
+                kwargs["train_set"] = train_set
+            if sig.parameters.get("test_set", None):
+                kwargs["test_set"] = test_set
+            if sig.parameters.get("hparams", None):
+                kwargs["hparams"] = config.hparams
+
             if sig.parameters.get("reporter", None):
-                retval = train_fn(
-                    model=model,
-                    train_set=config.train_set,
-                    test_set=config.test_set,
-                    hparams=config.hparams,
-                    reporter=reporter,
-                )
+                kwargs["reporter"] = reporter
+                retval = train_fn(**kwargs)
             else:
-                retval = train_fn(
-                    model=model,
-                    train_set=config.train_set,
-                    test_set=config.test_set,
-                    hparams=config.hparams,
-                )
+                retval = train_fn(**kwargs)
 
             # Set retval to work with util.handle_return_value,
             # if there is more than 1 metrics, retval will be a list and
@@ -391,7 +391,10 @@ def _wrap_model(config, strategy, is_chief):
     :returns: Returns a tensorflow model wrapped class of config.model.
     """
     # Instantiate model on executor in case its too large for pickle and sent as a class.
-    _sanitize_init_model_params(config.model)
+    if config.model is not None:
+        _sanitize_init_model_params(config.model)
+    else:
+        return None
     _sanitize_init_strategy_params(strategy)
     try:
         model = get_wrapped_model(config.model, strategy(), is_chief)

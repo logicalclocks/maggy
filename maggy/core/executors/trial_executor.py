@@ -165,21 +165,21 @@ def trial_executor_fn(
                         tensorboard._write_hparams(parameters, trial_id)
 
                     sig = inspect.signature(train_fn)
+                    kwargs = {}
+                    if sig.parameters.get("model", None):
+                        kwargs["model"] = model
+                    if sig.parameters.get("train_set", None):
+                        kwargs["train_set"] = train_set
+                    if sig.parameters.get("test_set", None):
+                        kwargs["test_set"] = test_set
+                    if sig.parameters.get("hparams", None):
+                        kwargs["hparams"] = parameters
+
                     if sig.parameters.get("reporter", None):
-                        retval = train_fn(
-                            model=model,
-                            train_set=train_set,
-                            test_set=test_set,
-                            hparams=parameters,
-                            reporter=reporter,
-                        )
+                        kwargs["reporter"] = reporter
+                        retval = train_fn(**kwargs)
                     else:
-                        retval = train_fn(
-                            model=model,
-                            train_set=train_set,
-                            test_set=test_set,
-                            hparams=parameters,
-                        )
+                        retval = train_fn(**kwargs)
 
                     retval = util.handle_return_val(
                         retval, tb_logdir, optimization_key, trial_log_file

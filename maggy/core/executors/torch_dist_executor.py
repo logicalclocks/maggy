@@ -143,21 +143,22 @@ def torch_dist_executor_fn(
 
             reporter.log("Starting distributed training.", True)
             sig = inspect.signature(train_fn)
+
+            kwargs = {}
+            if sig.parameters.get("module", None):
+                kwargs["module"] = module
+            if sig.parameters.get("train_set", None):
+                kwargs["train_set"] = config.train_set
+            if sig.parameters.get("test_set", None):
+                kwargs["test_set"] = config.test_set
+            if sig.parameters.get("hparams", None):
+                kwargs["hparams"] = config.hparams
+
             if sig.parameters.get("reporter", None):
-                retval = train_fn(
-                    module=module,
-                    hparams=config.hparams,
-                    train_set=config.train_set,
-                    test_set=config.test_set,
-                    reporter=reporter,
-                )
+                kwargs["reporter"] = reporter
+                retval = train_fn(**kwargs)
             else:
-                retval = train_fn(
-                    module=module,
-                    hparams=config.hparams,
-                    train_set=config.train_set,
-                    test_set=config.test_set,
-                )
+                retval = train_fn(**kwargs)
 
             retval = util.handle_return_val(retval, tb_logdir, "Metric", trial_log_file)
             dist.barrier()  # Don't exit until all executors are done (else NCCL crashes)
