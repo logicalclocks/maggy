@@ -139,6 +139,16 @@ def _(
     return TfDistributedTrainingDriver(config, app_id, run_id)
 
 
+@lagom_driver.register(LagomConfig)
+# Lazy import of TfDistributedTrainingDriver to avoid Tensorflow import until necessary
+def _(config: LagomConfig, app_id: int, run_id: int) -> "LagomConfig":  # noqa: F821
+    from maggy.core.experiment_driver.base_driver import (
+        BaseDriver,
+    )
+
+    return BaseDriver(config, app_id, run_id)
+
+
 def _exception_handler(duration: int) -> None:
     """Handles exceptions during execution of an experiment.
 
