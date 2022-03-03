@@ -21,9 +21,9 @@ from maggy.experiment_config.torch_distributed import TorchDistributedConfig
 from maggy.experiment_config.tf_distributed import TfDistributedConfig
 
 __all__ = [
-    LagomConfig,
-    AblationConfig,
-    HyperparameterOptConfig,
-    TfDistributedConfig,
-    TorchDistributedConfig,
+    "LagomConfig",
+    "AblationConfig",
+    "HyperparameterOptConfig",
+    "TfDistributedConfig",
+    "TorchDistributedConfig",
 ]

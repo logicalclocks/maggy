@@ -16,9 +16,12 @@
 
 from __future__ import annotations
 
+import typing
 from typing import Union, Type, Optional, List
 import tensorflow as tf
-import torch
+
+if typing.TYPE_CHECKING:
+    import torch
 
 from maggy import Searchspace
 from maggy.earlystop import AbstractEarlyStop
