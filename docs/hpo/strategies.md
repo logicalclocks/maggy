@@ -9,7 +9,7 @@ def training_function(hparams):
     ...
 ```
 
-*Define a search space, containing the HPs we want to optimize, their type and range.
+* Define a search space, containing the HPs we want to optimize, their type and range.
 ```py
 #define the hyperparemeters to optimize, together with their possible values
 sp = Searchspace(kernel=('INTEGER', [2, 8]), pool=('INTEGER', [2, 8]), dropout=('DOUBLE', [0.01, 0.99]))
