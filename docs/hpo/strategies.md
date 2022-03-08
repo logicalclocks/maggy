@@ -28,21 +28,21 @@ config = OptimizationConfig(num_trials=4,
 experiment.lagom(train_fn=training_function, config=config)
 ```
 There are many parameters for the configuration object:
-* num_trials: Controls how many seperate runs are conducted during the hp search.
-* optimizer: Optimizer type for searching the hp searchspace.
-* searchspace: A Searchspace object configuring the names, types and ranges of hps.
-* optimization_key: Name of the metric to use for hp search evaluation.
-* direction: Direction of optimization.
-* es_interval: Early stopping polling frequency during an experiment run.
-* es_min: Minimum number of experiments to conduct before starting the early stopping
+    * num_trials: Controls how many seperate runs are conducted during the hp search.
+    * optimizer: Optimizer type for searching the hp searchspace.
+    * searchspace: A Searchspace object configuring the names, types and ranges of hps.
+    * optimization_key: Name of the metric to use for hp search evaluation.
+    * direction: Direction of optimization.
+    * es_interval: Early stopping polling frequency during an experiment run.
+    * es_min: Minimum number of experiments to conduct before starting the early stopping
     mechanism. Useful to establish a baseline for performance estimates.
-* es_policy: Early stopping policy which formulates a rule for triggering aborts.
-* name: Experiment name.
-* description: A description of the experiment.
-* hb_interval: Heartbeat interval with which the server is polling.
-* model: The class of the model to be used in the training function.
-* train_set: The train_set to be used in the training function.
-* test_set: The test_set to be used in the training function.
+    * es_policy: Early stopping policy which formulates a rule for triggering aborts.
+    * name: Experiment name.
+    * description: A description of the experiment.
+    * hb_interval: Heartbeat interval with which the server is polling.
+    * model: The class of the model to be used in the training function.
+    * train_set: The train_set to be used in the training function.
+    * test_set: The test_set to be used in the training function.
 
 # Strategies
 

@@ -27,6 +27,8 @@ nav:
     - Introduction: ablation/intro.md
   - Distributed Training:
     - Introduction: dist_training/intro.md
+    - TensorFlow: dist_training/tensorflow.md
+    - PyTorch: dist_training/torch.md
 
 theme:
   name: material
