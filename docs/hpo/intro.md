@@ -11,7 +11,7 @@ Because of the impedance mismatch between trials and the stage-/task-based execu
 we are blocking Executors with long-running tasks to run multiple trials per task. 
 In this way, Executors are always kept busy running trials, and global information needed for efficient 
 early-stopping is aggregated in the Optimizer.
-If you want to know more about Maggy for HPO, you can watch the presentation in the video posted below.
+If you want to know more about Maggy for Hyperparameter Optimization (HPO), you can watch the presentation in the video posted below.
 Otherwise, if you feel ready to explore more details, you can jump to the [strategies](strategies.md) section.
 
 

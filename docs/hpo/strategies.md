@@ -4,12 +4,12 @@ Using maggy for Hyperparameter Optimization (HPO) works as follows:
 
 * Define a training function containing the training logic.
 ```py
-def training_function(hparams):
+def training_function(model, train_set, test_set, hparams):
     #training and testing logic
     ...
 ```
 
-* Define a search space, containing the HPs we want to optimize, their type and range.
+* Define a search space, containing the hparams we want to optimize, their type and range.
 ```py
 #define the hyperparemeters to optimize, together with their possible values
 sp = Searchspace(kernel=('INTEGER', [2, 8]), pool=('INTEGER', [2, 8]), dropout=('DOUBLE', [0.01, 0.99]))
@@ -48,7 +48,7 @@ There are many parameters for the configuration object:
 
 ### Random Search
 
-With Random Search, the HPs are selected randomly within the search space defined. The search space is defined 
+With Random Search, the hparams are selected randomly within the search space defined. The search space is defined 
 depending on how many trials (_num_trials_) you choose. 
 
 In the following example, _num_trials_ is set to 4, therefore, Maggy will choose randomly 4 combinations of kernel, 
@@ -96,7 +96,7 @@ result = experiment.lagom(train_fn=training_function, config=config)
 
 This strategy is a combination of random search and early stopping. 
 ASHA tackles large-scale hyperparameter optimization problems, and it is especially useful for challenges that need a
-high number of parallelism (i.e. there are a lot of HPs and a lot of workers are available).
+high number of parallelism (i.e. there are a lot of hparams and a lot of workers are available).
 
 ```py
 def training_function():
@@ -132,8 +132,8 @@ config = OptimizationConfig(...,
 
 ### Bayesian Optimization
 
-WIth Bayesian Optimization (BO), the HPs are chosen based on the space of the HPs. 
-In order to do that, the algorithm infer a function of the HPs in order to optimize the cost function of a given model.
+WIth Bayesian Optimization (BO), the hparams are chosen based on the space of the hparams. 
+In order to do that, the algorithm infer a function of the hparams in order to optimize the cost function of a given model.
 
 There are two different BO methods available in Maggy, namely Gaussian Process (GP) and Tree Parzen Estimators (TPE).
 The GP is a tool used to infer the value of a function in which predictions follow a normal distribution. 

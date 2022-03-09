@@ -25,7 +25,7 @@ class MyModel(tf.keras.Model):
 ```
 * Define a training function containing the training logic.
 ```py
-def training_function(hparams):
+def training_function(model, train_set, test_set, hparams):
     #training and testing logic
     ...
 ```
