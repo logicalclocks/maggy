@@ -34,7 +34,7 @@ else:
 from maggy.core.rpc import OptimizationServer
 from maggy.core.environment.singleton import EnvSing
 from maggy.core.executors.trial_executor import trial_executor_fn
-from maggy.experiment_config import AblationConfig, HyperparameterOptConfig
+from maggy.config import AblationConfig, HyperparameterOptConfig
 
 
 class HyperparameterOptDriver(Driver):

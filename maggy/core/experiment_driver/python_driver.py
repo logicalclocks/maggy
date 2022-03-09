@@ -22,9 +22,9 @@ from datetime import datetime
 from typing import Callable, Tuple, Union
 
 from maggy import util
-from maggy.experiment_config import LagomConfig
+from maggy.config import Config
 from maggy.core.environment.singleton import EnvSing
-from maggy.experiment_config import (
+from maggy.config import (
     AblationConfig,
     HyperparameterOptConfig,
     TfDistributedConfig,
@@ -47,7 +47,7 @@ class Driver(ABC):
 
     SECRET_BYTES = 8
 
-    def __init__(self, config: LagomConfig, app_id: int, run_id: int):
+    def __init__(self, config: Config, app_id: int, run_id: int):
         """Sets up the RPC server, message queue and logs.
 
         :param config: Experiment config.

@@ -26,7 +26,7 @@ import traceback
 from typing import Callable, Any, Union
 
 from maggy import util, tensorboard
-from maggy.experiment_config import HyperparameterOptConfig, AblationConfig
+from maggy.config import HyperparameterOptConfig, AblationConfig
 from maggy.core import exceptions
 from maggy.core.reporter import Reporter
 from maggy.core.environment.singleton import EnvSing

@@ -18,14 +18,14 @@ from __future__ import annotations
 
 import typing
 from typing import Union, Type, Optional, List
-from maggy.experiment_config import LagomConfig
+from maggy.config import Config
 from maggy.core import config as mc
 
 if typing.TYPE_CHECKING:
     import torch
 
 
-class TorchDistributedConfig(LagomConfig):
+class TorchDistributedConfig(Config):
     """Config class for running distributed PyTorch training."""
 
     BACKENDS = ["torch", "deepspeed"]

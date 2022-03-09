@@ -30,7 +30,7 @@ from typing import Callable
 
 from maggy import util
 from maggy.core.environment.singleton import EnvSing
-from maggy.experiment_config import *
+from maggy.config import *
 from maggy.core.experiment_driver import HyperparameterOptDriver, AblationDriver
 
 
@@ -40,7 +40,7 @@ RUN_ID = 1
 EXPERIMENT_JSON = {}
 
 
-def lagom(train_fn: Callable, config: LagomConfig) -> dict:
+def lagom(train_fn: Callable, config: Config) -> dict:
     """Launches a maggy experiment, which depending on 'config' can either
     be a hyperparameter optimization, an ablation study experiment or distributed
     training. Given a search space, objective and a model training procedure `train_fn`
@@ -51,7 +51,7 @@ def lagom(train_fn: Callable, config: LagomConfig) -> dict:
     **lagom** is a Swedish word meaning "just the right amount".
 
     :param train_fn: User defined experiment containing the model training.
-    :param config: An experiment configuration. For more information, see experiment_config.
+    :param config: An experiment configuration. For more information, see config.
 
     :returns: The experiment results as a dict.
     """
@@ -133,9 +133,9 @@ def _(
     return TfDistributedTrainingDriver(config, app_id, run_id)
 
 
-@lagom_driver.register(LagomConfig)
+@lagom_driver.register(Config)
 # Lazy import of TfDistributedTrainingDriver to avoid Tensorflow import until necessary
-def _(config: LagomConfig, app_id: int, run_id: int) -> "LagomConfig":  # noqa: F821
+def _(config: Config, app_id: int, run_id: int) -> "Config":  # noqa: F821
     from maggy.core.experiment_driver.base_driver import (
         BaseDriver,
     )

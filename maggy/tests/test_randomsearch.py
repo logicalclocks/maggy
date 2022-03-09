@@ -25,7 +25,7 @@ import numpy as np
 from maggy.searchspace import Searchspace
 from maggy.optimizer import RandomSearch
 from maggy import experiment
-from maggy.experiment_config import HyperparameterOptConfig, TfDistributedConfig
+from maggy.config import HyperparameterOptConfig, TfDistributedConfig
 
 # this allows using the fixture in all tests in this module
 pytestmark = pytest.mark.usefixtures("sc")

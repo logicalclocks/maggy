@@ -31,7 +31,7 @@ if conf.is_spark_available():
     from pyspark import cloudpickle
 
 from maggy.core.environment.singleton import EnvSing
-from maggy.experiment_config import TfDistributedConfig
+from maggy.config import TfDistributedConfig
 from maggy.trial import Trial
 
 if typing.TYPE_CHECKING:  # Avoid circular import error.

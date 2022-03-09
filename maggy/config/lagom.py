@@ -19,7 +19,7 @@ from __future__ import annotations
 from abc import ABC
 
 
-class LagomConfig(ABC):
+class Config(ABC):
     """Base class for lagom configuration classes."""
 
     def __init__(self, name: str, description: str, hb_interval: int):

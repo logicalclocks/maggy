@@ -31,7 +31,7 @@ import deepspeed
 
 from maggy import util
 from maggy import tensorboard
-from maggy.experiment_config import TorchDistributedConfig
+from maggy.config import TorchDistributedConfig
 from maggy.core.rpc import Client
 from maggy.core.reporter import Reporter
 from maggy.core.patching import MaggyDataLoader

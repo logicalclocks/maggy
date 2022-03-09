@@ -20,12 +20,12 @@ from typing import Union
 
 from maggy.ablation.ablationstudy import AblationStudy
 from maggy.ablation.ablator import AbstractAblator
-from maggy.experiment_config import LagomConfig
+from maggy.config import Config
 import tensorflow as tf
 from maggy.core import config as mc
 
 
-class AblationConfig(LagomConfig):
+class AblationConfig(Config):
     """Config class for ablation study experiments."""
 
     def __init__(

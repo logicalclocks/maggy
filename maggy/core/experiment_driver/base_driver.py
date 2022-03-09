@@ -23,7 +23,7 @@ if mc.is_spark_available():
 else:
     from maggy.core.experiment_driver.python_driver import Driver
 from maggy.core.executors.base_executor import base_executor_fn
-from maggy.experiment_config import LagomConfig
+from maggy.config import Config
 
 
 class BaseDriver(Driver):
@@ -33,7 +33,7 @@ class BaseDriver(Driver):
     logging, and accumulates final results.
     """
 
-    def __init__(self, config: LagomConfig, app_id: int, run_id: int):
+    def __init__(self, config: Config, app_id: int, run_id: int):
         """Initializes the server, but does not start it yet.
 
         :param config: Experiment config.
@@ -62,7 +62,7 @@ class BaseDriver(Driver):
         too large to be pickled, or not compatible."""
         pass
 
-    def _patching_fn(self, train_fn: Callable, config: LagomConfig) -> Callable:
+    def _patching_fn(self, train_fn: Callable, config: Config) -> Callable:
         """Monkey patches the user training function with the distributed
         executor modifications for distributed training.
 
@@ -85,7 +85,7 @@ class BaseDriver(Driver):
     def run_experiment(
         self,
         train_fn: Callable,
-        config: LagomConfig,
+        config: Config,
     ) -> dict:
 
         return train_fn()

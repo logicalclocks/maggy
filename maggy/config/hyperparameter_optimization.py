@@ -26,11 +26,11 @@ if typing.TYPE_CHECKING:
 from maggy import Searchspace
 from maggy.earlystop import AbstractEarlyStop
 from maggy.optimizer import AbstractOptimizer
-from maggy.experiment_config import LagomConfig
+from maggy.config import Config
 from maggy.core import config as mc
 
 
-class HyperparameterOptConfig(LagomConfig):
+class HyperparameterOptConfig(Config):
     """Config class for hyperparameter optimization experiments."""
 
     def __init__(

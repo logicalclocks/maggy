@@ -29,7 +29,7 @@ if mc.is_spark_available():
 else:
     from maggy.core.experiment_driver.python_driver import Driver
 from maggy.core.executors.tf_dist_executor import dist_executor_fn
-from maggy.experiment_config import TfDistributedConfig
+from maggy.config import TfDistributedConfig
 from maggy.core.rpc import TensorflowServer
 from maggy.core.environment.singleton import EnvSing
 
