@@ -14,9 +14,6 @@
 #   limitations under the License.
 #
 
-from maggy.experiment import experiment_python
-from maggy.experiment import experiment_pyspark
-from maggy.core import config as maggyconfig
 from typing import Callable
 from maggy.config import Config
 
@@ -32,6 +29,9 @@ def lagom(train_fn: Callable, config: Config = None) -> dict:
 
     :returns: The experiment results as a dict.
     """
+    from maggy.experiment import experiment_python
+    from maggy.experiment import experiment_pyspark
+    from maggy.core import config as maggyconfig
 
     if config is None:
         config = Config(
