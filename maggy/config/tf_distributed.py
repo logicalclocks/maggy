@@ -16,7 +16,7 @@
 
 from __future__ import annotations
 
-from typing import Union, Callable
+from typing import Union, Callable, List, Optional
 
 from maggy.config import Config
 
@@ -27,8 +27,7 @@ class TfDistributedConfig(Config):
     def __init__(
         self,
         model: tf.keras.Model = None,
-        train_set: Union[str, tf.data.Dataset] = None,
-        test_set: Union[str, tf.data.Dataset] = None,
+        dataset: List[Optional[Union[str, tf.data.Dataset]]] = None,
         process_data: Callable = None,
         mixed_precision: bool = False,
         name: str = "tfDist",
@@ -41,11 +40,11 @@ class TfDistributedConfig(Config):
 
         :param model: A tf.keras.Model superclass or list of them.
             Note that this has to be the class itself, not an instance.
-        :param train_set: The training set for the training function. If you want to load the set
-            inside the training function, this can be disregarded.
-        :param test_set: The test set for the training function. If you want to load the set
-            inside the training function, this can be disregarded.
-        :param process_data: The function for processing the data
+        :param dataset: A List of strings containing the dataset path or list of tf.data.Dataset.
+        these datasets represent the ones you are going to use in the training function. For example,
+        if you have 2 datasets for training and testing, pass an array with [train_set, test_set] and extract them in
+        the training function. If you want to load the set inside the training function, this can be disregarded.
+        :param process_data: The function for processing the data.
         :param hparams: model parameters that should be used during model initialization. Primarily
             used to give an interface for hp optimization.
         :param name: Experiment name.
@@ -54,8 +53,7 @@ class TfDistributedConfig(Config):
         """
         super().__init__(name, description, hb_interval)
         self.model = model
-        self.train_set = train_set
-        self.test_set = test_set
+        self.dataset = dataset
         self.process_data = process_data
         self.mixed_precision = mixed_precision
         self.hparams = hparams if hparams else {}
