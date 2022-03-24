@@ -154,8 +154,7 @@ def trial_executor_fn(
                     )
 
                 model = config.model
-                train_set = config.train_set
-                test_set = config.test_set
+                dataset = config.dataset
 
                 try:
                     reporter.log("Starting Trial: {}".format(trial_id), False)
@@ -168,10 +167,8 @@ def trial_executor_fn(
                     kwargs = {}
                     if sig.parameters.get("model", None):
                         kwargs["model"] = model
-                    if sig.parameters.get("train_set", None):
-                        kwargs["train_set"] = train_set
-                    if sig.parameters.get("test_set", None):
-                        kwargs["test_set"] = test_set
+                    if sig.parameters.get("dataset", None):
+                        kwargs["dataset"] = dataset
                     if sig.parameters.get("hparams", None):
                         kwargs["hparams"] = parameters
 

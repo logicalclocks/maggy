@@ -15,12 +15,10 @@
 #
 
 from typing import Callable, Any
-from maggy.config import Config
 
 
 def base_executor_fn(
     train_fn: Callable,
-    config: Config,
 ) -> Callable:
     """Wraps the user supplied training function in order to be passed to the Spark Executors.
 

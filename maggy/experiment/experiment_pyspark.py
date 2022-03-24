@@ -40,7 +40,7 @@ RUN_ID = 1
 EXPERIMENT_JSON = {}
 
 
-def lagom(train_fn: Callable, config: Config) -> dict:
+def lagom(train_fn: Callable, config: LagomConfig) -> dict:
     """Launches a maggy experiment, which depending on 'config' can either
     be a hyperparameter optimization, an ablation study experiment or distributed
     training. Given a search space, objective and a model training procedure `train_fn`
@@ -65,7 +65,8 @@ def lagom(train_fn: Callable, config: Config) -> dict:
         RUNNING = True
         spark_context = util.find_spark().sparkContext
         APP_ID = str(spark_context.applicationId)
-        APP_ID, RUN_ID = util.register_environment(RUN_ID)
+        APP_ID, RUN_ID = util.register_environment(APP_ID, RUN_ID)
+        EnvSing.get_instance().set_app_id(APP_ID)
         driver = lagom_driver(config, APP_ID, RUN_ID)
         return driver.run_experiment(train_fn, config)
     except:  # noqa: E722
@@ -88,7 +89,7 @@ def lagom_driver(config, app_id: int, run_id: int) -> None:
         raises an error.
     """
     raise TypeError(
-        "Invalid config type! Config is expected to be of type {}, {}, {} or {}, \
+        "Invalid config type! LagomConfig is expected to be of type {}, {}, {} or {}, \
                      but is of type {}".format(
             HyperparameterOptConfig,
             AblationConfig,
@@ -135,9 +136,9 @@ def _(
     return TfDistributedTrainingDriver(config, app_id, run_id)
 
 
-@lagom_driver.register(Config)
+@lagom_driver.register(LagomConfig)
 # Lazy import of TfDistributedTrainingDriver to avoid Tensorflow import until necessary
-def _(config: Config, app_id: int, run_id: int) -> "Config":  # noqa: F821
+def _(config: LagomConfig, app_id: int, run_id: int) -> "BaseDriver":  # noqa: F821
     from maggy.core.experiment_driver.base_driver import (
         BaseDriver,
     )

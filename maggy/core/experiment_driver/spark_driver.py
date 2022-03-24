@@ -24,7 +24,7 @@ from datetime import datetime
 from typing import Callable, Tuple, Union
 
 from maggy import util
-from maggy.config import Config
+from maggy.config import LagomConfig, BaseConfig
 from maggy.core.environment.singleton import EnvSing
 from maggy.config import (
     AblationConfig,
@@ -49,7 +49,7 @@ class Driver(ABC):
 
     SECRET_BYTES = 8
 
-    def __init__(self, config: Config, app_id: int, run_id: int):
+    def __init__(self, config: LagomConfig, app_id: int, run_id: int):
         """Sets up the RPC server, message queue and logs.
 
         :param config: Experiment config.
@@ -106,6 +106,7 @@ class Driver(ABC):
             HyperparameterOptConfig,
             TfDistributedConfig,
             TorchDistributedConfig,
+            BaseConfig,
         ],
     ) -> dict:
         """Runs the generic experiment setup with callbacks for customization.
@@ -137,7 +138,7 @@ class Driver(ABC):
                 os.environ["ML_ID"],
                 "{} | {}".format(self.name, str(self.__class__.__name__)),
             )
-            executor_fn = self._patching_fn(train_fn, config)
+            executor_fn = self._patching_fn(train_fn, config, True)
             # Trigger execution on Spark nodes.
             node_rdd.foreachPartition(executor_fn)
 
@@ -184,7 +185,9 @@ class Driver(ABC):
             HyperparameterOptConfig,
             TfDistributedConfig,
             TorchDistributedConfig,
+            BaseConfig,
         ],
+        is_spark_available: bool,
     ) -> Callable:
         """Patching function for the user provided training function.
 

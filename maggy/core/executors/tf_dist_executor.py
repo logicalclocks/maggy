@@ -41,6 +41,7 @@ def dist_executor_fn(
     hb_interval: int,
     secret: str,
     log_dir: str,
+    is_spark_available: bool,
 ) -> Callable:
     """Wraps the user supplied training function in order to be passed to the Spark Executors.
 
@@ -52,7 +53,7 @@ def dist_executor_fn(
     :param hb_interval: Worker heartbeat interval.
     :param secret: Secret string to authenticate messages.
     :param log_dir: Location of the logger file directory on the file system.
-
+    :param is_spark_available: True if running on a Spark kernel or if Spark is available, False otherwise.
     :returns: Patched function to execute on the Spark executors.
     """
 
@@ -62,8 +63,7 @@ def dist_executor_fn(
         :param _: Necessary catch for the iterator given by Spark to the
         function upon foreach calls. Can safely be disregarded.
         """
-        sp = util.find_spark()
-        if sp is not None:
+        if is_spark_available:
             return spark_wrapper_function(_)
         else:
             return python_wrapper_function(_)

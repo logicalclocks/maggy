@@ -16,16 +16,16 @@
 
 from __future__ import annotations
 
-from typing import Union
+from typing import Union, List
 
 from maggy.ablation.ablationstudy import AblationStudy
 from maggy.ablation.ablator import AbstractAblator
-from maggy.config import Config
+from maggy.config import LagomConfig
 import tensorflow as tf
 from maggy.core import config as mc
 
 
-class AblationConfig(Config):
+class AblationConfig(LagomConfig):
     """Config class for ablation study experiments."""
 
     def __init__(
@@ -37,8 +37,7 @@ class AblationConfig(Config):
         description: str = "",
         hb_interval: int = 1,
         model: tf.keras.Model = None,
-        train_set: Union[str, tf.data.Dataset] = None,
-        test_set: Union[str, tf.data.Dataset] = None,
+        dataset: List[Union[str, tf.data.Dataset]] = None,
     ):
         """Initializes ablation study experiment parameters.
 
@@ -51,8 +50,11 @@ class AblationConfig(Config):
         :param description: A description of the experiment.
         :param hb_interval: Heartbeat interval with which the server is polling.
         :param model: The class of the model to be used in the training function.
-        :param train_set: The train_set to be used in the training function.
-        :param test_set: The test_set to be used in the training function.
+        :param dataset: A List of strings containing the dataset path or list of tf.data.Dataset.
+        These datasets represent the ones you are going to use in the training function.
+        For example, if you have 2 datasets for training and testing, pass an array with [train_set, test_set] and
+        extract them in the training function. If you want to load the set inside the training function, this can be
+        disregarded.
         """
         super().__init__(name, description, hb_interval)
         mc.initialize()
@@ -62,5 +64,4 @@ class AblationConfig(Config):
         self.ablation_study = ablation_study
         self.direction = direction
         self.model = model
-        self.train_set = train_set
-        self.test_set = test_set
+        self.dataset = dataset

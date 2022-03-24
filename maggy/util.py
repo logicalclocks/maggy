@@ -16,11 +16,9 @@
 
 """Utility helper module for maggy experiments.
 """
-import calendar
 import math
 import os
 import json
-import time
 
 import tensorflow as tf
 import numpy as np
@@ -274,7 +272,7 @@ def time_diff(t0, t1):
     return "%d hours, %d minutes, %d seconds" % (hours, minutes, seconds)
 
 
-def register_environment(run_id):
+def register_environment(app_id, run_id):
     """Validates IDs and creates an experiment folder in the fs.
 
     Args:
@@ -283,14 +281,6 @@ def register_environment(run_id):
 
     Returns: (app_id, run_id) with the updated IDs.
     """
-
-    if mc.is_spark_available():
-        app_id = str(find_spark().sparkContext.applicationId)
-    else:
-        global APP_ID
-        if APP_ID is None:
-            APP_ID = str(calendar.timegm(time.gmtime()))
-        app_id = APP_ID
 
     app_id, run_id = validate_ml_id(app_id, run_id)
     set_ml_id(app_id, run_id)

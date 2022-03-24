@@ -161,7 +161,7 @@ class TfDistributedTrainingDriver(Driver):
         """
 
         experiment_json = {"state": "FINISHED"}
-        final_result = self.average_metrics()
+        final_result = self.average_metric()
 
         util.finalize_experiment(
             exp_json,
@@ -183,7 +183,7 @@ class TfDistributedTrainingDriver(Driver):
             + util.time_diff(self.job_start, job_end)
         )
 
-        return self.result
+        return {"test result": self.average_metric()}
 
     def _exp_exception_callback(self, exc: Type[Exception]) -> None:
         """Catches pickling errors in case either the model or the dataset are
@@ -205,7 +205,9 @@ class TfDistributedTrainingDriver(Driver):
             ) from exc
         raise exc
 
-    def _patching_fn(self, train_fn: Callable, config: TfDistributedConfig) -> Callable:
+    def _patching_fn(
+        self, train_fn: Callable, config: TfDistributedConfig, is_spark_available
+    ) -> Callable:
         """Monkey patches the user training function with the distributed
         executor modifications for distributed training.
 
@@ -223,6 +225,7 @@ class TfDistributedTrainingDriver(Driver):
             self.hb_interval,
             self._secret,
             self.log_dir,
+            is_spark_available,
         )
 
     def _register_msg_callbacks(self) -> None:
@@ -256,7 +259,7 @@ class TfDistributedTrainingDriver(Driver):
     def _update_result(self, final_metric) -> None:
         self.result.append(final_metric)
 
-    def average_metrics(self) -> float:
+    def average_metric(self) -> float:
         """Calculates the current average over the valid results.
 
         :returns: The average result value.

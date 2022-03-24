@@ -164,7 +164,10 @@ class HyperparameterOptDriver(Driver):
         raise exc
 
     def _patching_fn(
-        self, train_fn: Callable, config: HyperparameterOptConfig
+        self,
+        train_fn: Callable,
+        config: HyperparameterOptConfig,
+        is_spark_available: bool,
     ) -> Callable:
         """Monkey patches the user training function with the trial executor
         modifications for hyperparameter search.

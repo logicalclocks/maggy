@@ -18,23 +18,22 @@ from __future__ import annotations
 
 import typing
 from typing import Union, Type, Optional, List
-from maggy.config import Config
+from maggy.config import LagomConfig
 from maggy.core import config as mc
 
 if typing.TYPE_CHECKING:
     import torch
 
 
-class TorchDistributedConfig(Config):
-    """Config class for running distributed PyTorch training."""
+class TorchDistributedConfig(LagomConfig):
+    """LagomConfig class for running distributed PyTorch training."""
 
     BACKENDS = ["torch", "deepspeed"]
 
     def __init__(
         self,
         module: Union[Type[torch.nn.Module], List[Type[torch.nn.Module]]],
-        train_set: Optional[Union[str, torch.util.data.Dataset]] = None,
-        test_set: Optional[Union[str, torch.util.data.Dataset]] = None,
+        dataset: List[Optional[Union[str, torch.util.data.Dataset]]] = None,
         hparams: dict = None,
         backend: str = "torch",
         mixed_precision: bool = False,
@@ -48,10 +47,10 @@ class TorchDistributedConfig(Config):
 
         :param module: A PyTorch module class or list of PyTorch module classes.
             Note that this has to be the class itself, not an instance.
-        :param train_set: The training set for the training function. If you want to load the set
-            inside the training function, this can be disregarded.
-        :param test_set: The test set for the training function. If you want to load the set
-            inside the training function, this can be disregarded.
+        :param dataset: A List of strings containing the dataset path or list of torch.util.data.Dataset.
+        these datasets represent the ones you are going to use in the training function. For example,
+        if you have 2 datasets for training and testing, pass an array with [train_set, test_set] and extract them in
+        the training function. If you want to load the set inside the training function, this can be disregarded.
         :param hparams: Hyperparameters that should be used during model initialization. Primarily
             used to give an interface for hp optimization.
         :param backend: The backend framework used for training. Note that `deepspeed` needs syntax
@@ -73,8 +72,7 @@ class TorchDistributedConfig(Config):
                 "Torch Distributed Training can run only on a Spark kernel."
             )
         self.module = module
-        self.train_set = train_set
-        self.test_set = test_set
+        self.dataset = dataset
         if backend not in self.BACKENDS:
             raise ValueError(
                 """Backend {} not supported by Maggy.

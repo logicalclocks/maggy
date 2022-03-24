@@ -26,11 +26,11 @@ if typing.TYPE_CHECKING:
 from maggy import Searchspace
 from maggy.earlystop import AbstractEarlyStop
 from maggy.optimizer import AbstractOptimizer
-from maggy.config import Config
+from maggy.config import LagomConfig
 from maggy.core import config as mc
 
 
-class HyperparameterOptConfig(Config):
+class HyperparameterOptConfig(LagomConfig):
     """Config class for hyperparameter optimization experiments."""
 
     def __init__(
@@ -49,10 +49,9 @@ class HyperparameterOptConfig(Config):
         model: Union[
             tf.keras.Model, Type[torch.nn.Module], List[Type[torch.nn.Module]]
         ] = None,
-        train_set: Optional[
-            Union[str, tf.data.Dataset, torch.util.data.Dataset]
+        dataset: List[
+            Optional[Union[str, tf.data.Dataset, torch.util.data.Dataset]]
         ] = None,
-        test_set: Optional[Union[str, tf.data.Dataset, torch.util.data.Dataset]] = None,
     ):
         """Initializes HP optimization experiment parameters.
 
@@ -69,8 +68,11 @@ class HyperparameterOptConfig(Config):
         :param description: A description of the experiment.
         :param hb_interval: Heartbeat interval with which the server is polling.
         :param model: The class of the model to be used in the training function.
-        :param train_set: The train_set to be used in the training function.
-        :param test_set: The test_set to be used in the training function.
+        :param dataset: A List of strings containing the dataset path or list of tf.data.Dataset or
+        torch.util.data.Dataset. These datasets represent the ones you are going to use in the training function.
+        For example, if you have 2 datasets for training and testing, pass an array with [train_set, test_set] and
+        extract them in the training function. If you want to load the set inside the training function, this can be
+        disregarded.
         """
         super().__init__(name, description, hb_interval)
         if not mc.is_spark_available():
@@ -88,5 +90,4 @@ class HyperparameterOptConfig(Config):
         self.es_interval = es_interval
         self.es_min = es_min
         self.model = model
-        self.train_set = train_set
-        self.test_set = test_set
+        self.dataset = dataset

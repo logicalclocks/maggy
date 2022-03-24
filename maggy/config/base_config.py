@@ -16,19 +16,23 @@
 
 from __future__ import annotations
 
-from abc import ABC
+from maggy.config import LagomConfig
+from maggy.core import config as mc
 
 
-class LagomConfig(ABC):
-    """Base class for lagom configuration classes."""
+class BaseConfig(LagomConfig):
+    def __init__(
+        self,
+        name: str = "base",
+        hb_interval: int = 1,
+        description: str = "",
+    ):
 
-    def __init__(self, name: str, description: str, hb_interval: int):
-        """Initializes basic experiment info.
+        """Initializes Base configuration.
 
         :param name: Experiment name.
-        :param description: A description of the experiment.
         :param hb_interval: Heartbeat interval with which the server is polling.
+        :param description: A description of the experiment.
         """
-        self.name = name
-        self.description = description
-        self.hb_interval = hb_interval
+        super().__init__(name, description, hb_interval)
+        mc.initialize()

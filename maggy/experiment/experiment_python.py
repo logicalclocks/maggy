@@ -24,6 +24,7 @@ invoked it is also registered in the Experiments service along with the
 provided information.
 """
 import atexit
+import calendar
 import time
 from functools import singledispatch
 from typing import Callable
@@ -40,7 +41,7 @@ RUN_ID = 1
 EXPERIMENT_JSON = {}
 
 
-def lagom(train_fn: Callable, config: Config) -> dict:
+def lagom(train_fn: Callable, config: LagomConfig) -> dict:
     """Launches a maggy experiment, which depending on 'config' can either
     be a hyperparameter optimization, an ablation study experiment or distributed
     training. Given a search space, objective and a model training procedure `train_fn`
@@ -63,8 +64,9 @@ def lagom(train_fn: Callable, config: Config) -> dict:
         if RUNNING:
             raise RuntimeError("An experiment is currently running.")
         RUNNING = True
-        APP_ID = "0"  # str(spark_context.applicationId)
-        APP_ID, RUN_ID = util.register_environment(RUN_ID)
+        APP_ID = str(calendar.timegm(time.gmtime()))
+        APP_ID = "application_" + APP_ID + "_0001"
+        APP_ID, RUN_ID = util.register_environment(APP_ID, RUN_ID)
         driver = lagom_driver(config, APP_ID, RUN_ID)
         return driver.run_experiment(train_fn, config)
     except:  # noqa: E722
@@ -133,9 +135,9 @@ def _(
     return TfDistributedTrainingDriver(config, app_id, run_id)
 
 
-@lagom_driver.register(Config)
+@lagom_driver.register(BaseConfig)
 # Lazy import of TfDistributedTrainingDriver to avoid Tensorflow import until necessary
-def _(config: Config, app_id: int, run_id: int) -> "Config":  # noqa: F821
+def _(config: LagomConfig, app_id: int, run_id: int) -> "BaseDriver":  # noqa: F821
     from maggy.core.experiment_driver.base_driver import (
         BaseDriver,
     )

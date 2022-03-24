@@ -18,12 +18,12 @@ from __future__ import annotations
 
 from typing import Union, Callable, List, Optional
 
-from maggy.config import Config
+from maggy.config import LagomConfig
 
 import tensorflow as tf
 
 
-class TfDistributedConfig(Config):
+class TfDistributedConfig(LagomConfig):
     def __init__(
         self,
         model: tf.keras.Model = None,

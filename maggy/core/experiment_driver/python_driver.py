@@ -17,14 +17,16 @@
 import queue
 import threading
 import secrets
+import time
 from abc import ABC, abstractmethod
 from datetime import datetime
 from typing import Callable, Tuple, Union
 
 from maggy import util
-from maggy.config import Config
+from maggy.config import LagomConfig
 from maggy.core.environment.singleton import EnvSing
 from maggy.config import (
+    BaseConfig,
     AblationConfig,
     HyperparameterOptConfig,
     TfDistributedConfig,
@@ -47,7 +49,7 @@ class Driver(ABC):
 
     SECRET_BYTES = 8
 
-    def __init__(self, config: Config, app_id: int, run_id: int):
+    def __init__(self, config: LagomConfig, app_id: int, run_id: int):
         """Sets up the RPC server, message queue and logs.
 
         :param config: Experiment config.
@@ -104,6 +106,7 @@ class Driver(ABC):
             HyperparameterOptConfig,
             TfDistributedConfig,
             TorchDistributedConfig,
+            BaseConfig,
         ],
     ) -> dict:
         """Runs the generic experiment setup with callbacks for customization.
@@ -114,15 +117,26 @@ class Driver(ABC):
 
         :returns: A dictionary of the experiment's results.
         """
+        job_start = time.time()
+        self.job_start = job_start
         try:
             self._exp_startup_callback()
+            exp_json = util.populate_experiment(
+                self.config, self.app_id, self.run_id, str(self.__class__.__name__)
+            )
             self.log(
-                "Started Maggy Experiment: {}, {}, run {}".format(
-                    self.name, self.app_id, self.run_id
+                "Started Maggy Experiment at {}: {}, {}, run {}".format(
+                    job_start, self.name, self.app_id, self.run_id
                 )
             )
-            executor_fn = self._patching_fn(train_fn, config)
+            executor_fn = self._patching_fn(train_fn, config, False)
             result = executor_fn(0)
+            self._update_result(result)
+            self.log("result after execution: " + str(result))
+            job_end = time.time()
+            result = self._exp_final_callback(job_end, exp_json)
+            self.log("result after final callback: " + str(result))
+
             return result
         except Exception as exc:  # pylint: disable=broad-except
             self._exp_exception_callback(exc)
@@ -161,7 +175,9 @@ class Driver(ABC):
             HyperparameterOptConfig,
             TfDistributedConfig,
             TorchDistributedConfig,
+            BaseConfig,
         ],
+        is_spark_available: bool,
     ) -> Callable:
         """Patching function for the user provided training function.
 
@@ -239,3 +255,10 @@ class Driver(ABC):
         """
         msg = datetime.now().isoformat() + ": " + str(log_msg)
         self.log_file_handle.write(EnvSing.get_instance().str_or_byte((msg + "\n")))
+
+    @abstractmethod
+    def _update_result(self, result) -> None:
+        """Set the result variable.
+
+        :param result: The value to set a result.
+        """

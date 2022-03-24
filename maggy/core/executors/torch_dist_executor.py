@@ -147,10 +147,8 @@ def torch_dist_executor_fn(
             kwargs = {}
             if sig.parameters.get("module", None):
                 kwargs["module"] = module
-            if sig.parameters.get("train_set", None):
-                kwargs["train_set"] = config.train_set
-            if sig.parameters.get("test_set", None):
-                kwargs["test_set"] = config.test_set
+            if sig.parameters.get("dataset", None):
+                kwargs["dataset"] = config.dataset
             if sig.parameters.get("hparams", None):
                 kwargs["hparams"] = config.hparams
 
@@ -369,7 +367,7 @@ def _sanitize_config(config: TorchDistributedConfig) -> None:
     if config.backend == "torch":
         if config.ds_config:
             print(
-                "Warning: DeepSpeed config passed for torch backend. Config will be discarded."
+                "Warning: DeepSpeed config passed for torch backend. LagomConfig will be discarded."
             )
         if config.zero_lvl not in [0, 1, 2, 3]:
             raise ValueError(

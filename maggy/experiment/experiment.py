@@ -15,10 +15,10 @@
 #
 
 from typing import Callable
-from maggy.config import Config
+from maggy.config import LagomConfig, BaseConfig
 
 
-def lagom(train_fn: Callable, config: Config = None) -> dict:
+def lagom(train_fn: Callable, config: LagomConfig = None) -> dict:
 
     """Entry point for Maggy experiment, this function passes the parameters to the lagom function
     depending whether the kernel is pyspark or python.
@@ -34,10 +34,10 @@ def lagom(train_fn: Callable, config: Config = None) -> dict:
     from maggy.core import config as maggyconfig
 
     if config is None:
-        config = Config(
+        config = BaseConfig(
             name="maggy_experiment",
             description="experiment without config object",
-            hb_interval=None,
+            hb_interval=1,
         )
     if maggyconfig.is_spark_available():
         return experiment_pyspark.lagom(train_fn, config)

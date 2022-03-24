@@ -14,14 +14,16 @@
 #   limitations under the License.
 #
 
-from maggy.config.lagom import Config
+from maggy.config.lagom import LagomConfig
+from maggy.config.base_config import BaseConfig
 from maggy.config.ablation import AblationConfig
 from maggy.config.hyperparameter_optimization import HyperparameterOptConfig
 from maggy.config.torch_distributed import TorchDistributedConfig
 from maggy.config.tf_distributed import TfDistributedConfig
 
 __all__ = [
-    "Config",
+    "LagomConfig",
+    "BaseConfig",
     "AblationConfig",
     "HyperparameterOptConfig",
     "TfDistributedConfig",
