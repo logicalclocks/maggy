@@ -32,7 +32,11 @@ from typing import Callable
 from maggy import util
 from maggy.core.environment.singleton import EnvSing
 from maggy.config import *
-from maggy.core.experiment_driver import HyperparameterOptDriver, AblationDriver
+from maggy.core.experiment_driver import (
+    HyperparameterOptDriver,
+    AblationDriver,
+    BaseDriver,
+)
 
 
 APP_ID = None
@@ -41,7 +45,7 @@ RUN_ID = 1
 EXPERIMENT_JSON = {}
 
 
-def lagom(train_fn: Callable, config: LagomConfig) -> dict:
+def lagom(train_fn: Callable, config) -> dict:
     """Launches a maggy experiment, which depending on 'config' can either
     be a hyperparameter optimization, an ablation study experiment or distributed
     training. Given a search space, objective and a model training procedure `train_fn`
@@ -88,12 +92,13 @@ def lagom_driver(config, app_id: int, run_id: int) -> None:
         raises an error.
     """
     raise TypeError(
-        "Invalid config type! Config is expected to be of type {}, {}, {} or {}, \
+        "Invalid config type! Config is expected to be of type {}, {}, {}, {} or {}, \
                      but is of type {}".format(
             HyperparameterOptConfig,
             AblationConfig,
             TorchDistributedConfig,
             TfDistributedConfig,
+            BaseConfig,
             type(config),
         )
     )
@@ -136,8 +141,18 @@ def _(
 
 
 @lagom_driver.register(BaseConfig)
-# Lazy import of TfDistributedTrainingDriver to avoid Tensorflow import until necessary
-def _(config: LagomConfig, app_id: int, run_id: int) -> "BaseDriver":  # noqa: F821
+# Lazy import of BaseConfig
+def _(config: BaseConfig, app_id: int, run_id: int) -> BaseDriver:
+    from maggy.core.experiment_driver.base_driver import (
+        BaseDriver,
+    )
+
+    return BaseDriver(config, app_id, run_id)
+
+
+@lagom_driver.register(LagomConfig)
+# Lazy import of LagomConfig
+def _(config: LagomConfig, app_id: int, run_id: int) -> BaseDriver:
     from maggy.core.experiment_driver.base_driver import (
         BaseDriver,
     )

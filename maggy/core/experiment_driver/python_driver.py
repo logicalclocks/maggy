@@ -74,6 +74,7 @@ class Driver(ABC):
         # Logging related initialization
         self._message_q = queue.Queue()
         self.message_callbacks = {}
+        self.server = None
         self._register_msg_callbacks()
         self.worker_done = False
         self.executor_logs = ""
@@ -86,6 +87,8 @@ class Driver(ABC):
         self.log_file_handle = EnvSing.get_instance().open_file(log_file, flags="w")
         self.exception = None
         self.result = None
+        self.result_dict = {}
+        self.main_metric_key = None
 
     @staticmethod
     def _generate_secret(nbytes: int) -> str:
@@ -239,7 +242,7 @@ class Driver(ABC):
             temp = self.executor_logs
             # clear the executor logs since they are being sent
             self.executor_logs = ""
-            return self.result, temp
+            return self.result_dict[self.main_metric_key], temp
 
     def stop(self) -> None:
         """Stop the Driver's worker thread and server."""

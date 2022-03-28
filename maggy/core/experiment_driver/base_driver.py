@@ -29,7 +29,7 @@ if mc.is_spark_available():
 else:
     from maggy.core.experiment_driver.python_driver import Driver
 from maggy.core.executors.base_executor import base_executor_fn
-from maggy.config import LagomConfig, BaseConfig
+from maggy.config import BaseConfig
 
 
 class BaseDriver(Driver):
@@ -39,7 +39,7 @@ class BaseDriver(Driver):
     logging, and accumulates final results.
     """
 
-    def __init__(self, config: LagomConfig, app_id: int, run_id: int):
+    def __init__(self, config: BaseConfig, app_id: int, run_id: int):
         """Initializes the server, but does not start it yet.
 
         :param config: Experiment config.
@@ -52,12 +52,9 @@ class BaseDriver(Driver):
         self.duration = None
         self.final_model = None
         self.experiment_done = False
-        self.result = []
+        self.result_dict = {}
         self.num_executors = 1
         self.server = Server(self.num_executors, config.__class__)
-
-    def set_result(self, result: float):
-        self.result.append(result)
 
     def finalize(self, job_end: float) -> dict:
         """Saves a summary of the experiment to a dict and logs it in the DFS.
@@ -77,7 +74,7 @@ class BaseDriver(Driver):
             self.log_dir + "/result.json",
         )
         EnvSing.get_instance().dump(self.json(), self.log_dir + "/maggy.json")
-        return self.result
+        return self.result_dict
 
     def prep_results(self, duration_str: str) -> str:
         """Writes and returns the results of the experiment into one string and
@@ -90,7 +87,7 @@ class BaseDriver(Driver):
         results = (
             "Results ------\n"
             + "Metrics value "
-            + str(self.result)
+            + str(self.result_dict)
             + "\n"
             + "Total job time "
             + duration_str
@@ -137,7 +134,7 @@ class BaseDriver(Driver):
             )
             experiment_json["duration"] = self.duration
             experiment_json["config"] = json.dumps(self.final_model)
-            experiment_json["metric"] = self.result
+            experiment_json["metric"] = self.result_dict[self.main_metric_key]
 
         else:
             experiment_json["status"] = "RUNNING"
@@ -157,11 +154,11 @@ class BaseDriver(Driver):
         """
 
         experiment_json = {"state": "FINISHED"}
-        final_result = self.result
+        final_result = self.result_dict
 
         util.finalize_experiment(
             exp_json,
-            final_result,
+            final_result[self.main_metric_key],
             self.app_id,
             self.run_id,
             experiment_json,
@@ -173,8 +170,9 @@ class BaseDriver(Driver):
         self.experiment_done = True
         self.prep_results(str(job_end))
 
-        print("List of the results: " + "\n".join(map(str, final_result)))
-        print("Final average test loss: {:.3f}".format(self.average_metrics()))
+        print("List of the results:\n")
+        for key, value in final_result.items():
+            print(key, " : ", value)
         print(
             "Finished experiment. Total run time: "
             + util.time_diff(self.job_start, job_end)
@@ -231,7 +229,17 @@ class BaseDriver(Driver):
         self._update_result(final_metric)
 
     def _update_result(self, final_metric) -> None:
-        self.result.append(final_metric)
+
+        if self.main_metric_key is None:
+            self.main_metric_key = list(final_metric.keys())[0]
+        key_result = util.get_metric_value(final_metric, self.main_metric_key)
+        self.result = key_result
+        if isinstance(final_metric, dict):
+            for key in final_metric:
+                try:
+                    self.result_dict[key].append(final_metric[key])
+                except KeyError:
+                    self.result_dict[key] = [final_metric[key]]
 
     def average_metrics(self) -> float:
         """Calculates the current average over the valid results.

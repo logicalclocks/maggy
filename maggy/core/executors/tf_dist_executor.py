@@ -251,6 +251,11 @@ def dist_executor_fn(
             # Set retval to work with util.handle_return_value,
             # if there is more than 1 metrics, retval will be a list and
             # retval[0] will contain the final loss
+            retval_list = []
+            if isinstance(retval, dict):
+                for item in retval.items():
+                    retval_list.append(item[1])
+                retval = retval_list
             retval = {"Metric": retval[0] if isinstance(retval, list) else retval}
             retval = util.handle_return_val(retval, tb_logdir, "Metric", trial_log_file)
             reporter.log("Finished distributed training.")

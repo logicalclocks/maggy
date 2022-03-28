@@ -345,3 +345,21 @@ def set_app_id(app_id):
     global APP_ID
     if APP_ID is None:
         APP_ID = app_id
+
+
+def get_metric_value(return_dict, metric_key):
+    if return_dict and metric_key:
+        assert (
+            metric_key in return_dict.keys()
+        ), "Supplied metric_key {} is not in returned dict {}".format(
+            metric_key, return_dict
+        )
+        return return_dict[metric_key]
+    elif (
+        return_dict is not None
+        and len(return_dict.keys()) == 2
+        and "metric" in return_dict.keys()
+    ):
+        return return_dict["metric"]
+    else:
+        return None

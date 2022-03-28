@@ -38,9 +38,9 @@ def initialize():
     else:
         TF_VERSION = int(tf_full)
 
-    print(
-        "Spark is not available, running maggy without Spark."
-    ) if not SPARK_AVAILABLE else print("Spark is available")
+    print("Detected Kernel: Python.") if not SPARK_AVAILABLE else print(
+        "Detected Kernel: Spark."
+    )
 
 
 def is_spark_available():

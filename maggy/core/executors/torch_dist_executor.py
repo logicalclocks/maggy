@@ -158,6 +158,12 @@ def torch_dist_executor_fn(
             else:
                 retval = train_fn(**kwargs)
 
+            # todo: test this change
+            retval_list = []
+            if isinstance(retval, dict):
+                for item in retval.items():
+                    retval_list.append(item[1])
+                retval = retval_list
             retval = util.handle_return_val(retval, tb_logdir, "Metric", trial_log_file)
             dist.barrier()  # Don't exit until all executors are done (else NCCL crashes)
             reporter.log("Finished distributed training.", True)

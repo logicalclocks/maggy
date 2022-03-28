@@ -27,21 +27,21 @@ class EnvSing(object):
 
         # check hopsworks availability
         if "REST_ENDPOINT" in os.environ:
-            print("You are running Maggy on Hopsworks.")
+            print("Detected Environment: Hopsworks.")
 
             from maggy.core.environment import hopsworks
 
             EnvSing.obj = hopsworks.HopsworksEnv()
 
         elif os.environ.get("DATABRICKS_ROOT_CONDA_ENV") == "databricks-ml":
-            print("You are running Maggy on Databricks.")
+            print("Detected Environment: Databricks.")
 
             from maggy.core.environment import databricks
 
             EnvSing.obj = databricks.DatabricksEnv()
 
         else:
-            print("Your are running Maggy on a base configuration.")
+            print("Detected Environment: base.")
 
             from maggy.core.environment import base
 

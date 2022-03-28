@@ -86,6 +86,8 @@ class Driver(ABC):
         self.log_file_handle = EnvSing.get_instance().open_file(log_file, flags="w")
         self.exception = None
         self.result = None
+        self.result_dict = {}
+        self.main_metric_key = None
 
     @staticmethod
     def _generate_secret(nbytes: int) -> str:
@@ -144,6 +146,7 @@ class Driver(ABC):
 
             job_end = time.time()
             result = self._exp_final_callback(job_end, exp_json)
+            self._update_result(result)
             return result
         except Exception as exc:  # pylint: disable=broad-except
             self._exp_exception_callback(exc)
@@ -258,7 +261,7 @@ class Driver(ABC):
             temp = self.executor_logs
             # clear the executor logs since they are being sent
             self.executor_logs = ""
-            return self.result, temp
+            return self.result_dict[self.metric_key], temp
 
     def stop(self) -> None:
         """Stop the Driver's worker thread and server."""
@@ -274,3 +277,10 @@ class Driver(ABC):
         """
         msg = datetime.now().isoformat() + ": " + str(log_msg)
         self.log_file_handle.write(EnvSing.get_instance().str_or_byte((msg + "\n")))
+
+    @abstractmethod
+    def _update_result(self, result) -> None:
+        """Set the result variable.
+
+        :param result: The value to set a result.
+        """

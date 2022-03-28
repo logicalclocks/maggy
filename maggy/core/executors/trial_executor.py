@@ -178,6 +178,12 @@ def trial_executor_fn(
                     else:
                         retval = train_fn(**kwargs)
 
+                    # todo: test this change
+                    retval_list = []
+                    if isinstance(retval, dict):
+                        for item in retval.items():
+                            retval_list.append(item[1])
+                        retval = retval_list
                     retval = util.handle_return_val(
                         retval, tb_logdir, optimization_key, trial_log_file
                     )
