@@ -128,7 +128,7 @@ class Asha(AbstractOptimizer):
                     # make copy of params to be able to change resource
                     params = old_trial.params.copy()
                     params["budget"] = self.resource_min * (
-                        self.reduction_factor ** new_rung
+                        self.reduction_factor**new_rung
                     )
                     promote_trial = Trial(params)
 
