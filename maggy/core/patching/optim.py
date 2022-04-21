@@ -41,7 +41,7 @@ class MaggyZeroOptimizer(ZeroRedundancyOptimizer, ABC):
             kwargs[arg_spec.args[idx + 1]] = arg  # +1 to skip self in arg_spec
         params = kwargs.pop("params", None)
         super().__init__(
-            params, self.optim_cls, group=None, bucket_cap_kb=2 ** 24, **kwargs
+            params, self.optim_cls, group=None, bucket_cap_kb=2**24, **kwargs
         )
 
     @property
