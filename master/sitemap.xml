@@ -2,67 +2,67 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://maggy.ai/master/</loc>
-         <lastmod>2022-04-21</lastmod>
+         <lastmod>2022-04-22</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://maggy.ai/master/CONTRIBUTING/</loc>
-         <lastmod>2022-04-21</lastmod>
+         <lastmod>2022-04-22</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://maggy.ai/master/blogs/</loc>
-         <lastmod>2022-04-21</lastmod>
+         <lastmod>2022-04-22</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://maggy.ai/master/publications/</loc>
-         <lastmod>2022-04-21</lastmod>
+         <lastmod>2022-04-22</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://maggy.ai/master/releases/</loc>
-         <lastmod>2022-04-21</lastmod>
+         <lastmod>2022-04-22</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://maggy.ai/master/ablation/intro/</loc>
-         <lastmod>2022-04-21</lastmod>
+         <lastmod>2022-04-22</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://maggy.ai/master/dist_training/intro/</loc>
-         <lastmod>2022-04-21</lastmod>
+         <lastmod>2022-04-22</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://maggy.ai/master/dist_training/tensorflow/</loc>
-         <lastmod>2022-04-21</lastmod>
+         <lastmod>2022-04-22</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://maggy.ai/master/dist_training/torch/</loc>
-         <lastmod>2022-04-21</lastmod>
+         <lastmod>2022-04-22</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://maggy.ai/master/hpo/intro/</loc>
-         <lastmod>2022-04-21</lastmod>
+         <lastmod>2022-04-22</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://maggy.ai/master/hpo/strategies/</loc>
-         <lastmod>2022-04-21</lastmod>
+         <lastmod>2022-04-22</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://maggy.ai/master/start/install/</loc>
-         <lastmod>2022-04-21</lastmod>
+         <lastmod>2022-04-22</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://maggy.ai/master/start/quickstart/</loc>
-         <lastmod>2022-04-21</lastmod>
+         <lastmod>2022-04-22</lastmod>
          <changefreq>daily</changefreq>
     </url>
 </urlset>
