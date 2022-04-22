@@ -26,7 +26,7 @@ import tensorflow as tf
 
 from maggy import util, tensorboard
 from maggy.core.tf_patching.tf_modules import get_wrapped_model
-from maggy.experiment_config import TfDistributedConfig
+from maggy.config import TfDistributedConfig
 from maggy.core.rpc import Client
 from maggy.core.reporter import Reporter
 from maggy.core.environment.singleton import EnvSing
@@ -41,6 +41,7 @@ def dist_executor_fn(
     hb_interval: int,
     secret: str,
     log_dir: str,
+    is_spark_available: bool,
 ) -> Callable:
     """Wraps the user supplied training function in order to be passed to the Spark Executors.
 
@@ -52,7 +53,7 @@ def dist_executor_fn(
     :param hb_interval: Worker heartbeat interval.
     :param secret: Secret string to authenticate messages.
     :param log_dir: Location of the logger file directory on the file system.
-
+    :param is_spark_available: True if running on a Spark kernel or if Spark is available, False otherwise.
     :returns: Patched function to execute on the Spark executors.
     """
 
@@ -62,7 +63,17 @@ def dist_executor_fn(
         :param _: Necessary catch for the iterator given by Spark to the
         function upon foreach calls. Can safely be disregarded.
         """
+        if is_spark_available:
+            return spark_wrapper_function(_)
+        else:
+            return python_wrapper_function(_)
 
+    def spark_wrapper_function(_: Any) -> None:
+        """Patched function from tf_dist_executor_fn factory.
+
+        :param _: Necessary catch for the iterator given by Spark to the
+        function upon foreach calls. Can safely be disregarded.
+        """
         EnvSing.get_instance().set_ml_id(app_id, run_id)
         partition_id, _ = util.get_partition_attempt_id()
         client = EnvSing.get_instance().get_client(
@@ -76,6 +87,7 @@ def dist_executor_fn(
 
         reporter = Reporter(log_file, partition_id, 0, __builtin__.print)
         builtin_print = __builtin__.print
+        _setup_logging(reporter, log_dir)
 
         def maggy_print(*args, **kwargs):
             builtin_print(*args, **kwargs)
@@ -138,53 +150,26 @@ def dist_executor_fn(
             strategy = tf.distribute.MultiWorkerMirroredStrategy
             model = _wrap_model(config, strategy, is_chief)
 
-            train_set = None
-            test_set = None
-            if (
-                config.train_set is not None
-                and config.test_set is not None
-                and config.process_data is not None
-            ):
-                train_set, test_set = _consume_data(config)
-
-            if train_set is not None and test_set is not None:
-                config.train_set = _shard_data(
-                    train_set,
-                    config.hparams["train_batch_size"],
-                    len(reservations),
-                    partition_id,
-                )
-
-                config.test_set = _shard_data(
-                    test_set,
-                    config.hparams["test_batch_size"],
-                    len(reservations),
-                    partition_id,
-                )
-            else:
-                reporter.log(
-                    "train_set or test_set is null, data has not been sharded."
-                )
+            if config.dataset is not None and config.process_data is not None:
+                config.dataset = _consume_data(config)
 
             reporter.log(f"index of slice {partition_id}")
             reporter.log("Starting distributed training.")
             sig = inspect.signature(train_fn)
 
+            kwargs = {}
+            if sig.parameters.get("model", None):
+                kwargs["model"] = model
+            if sig.parameters.get("dataset", None):
+                kwargs["dataset"] = config.dataset
+            if sig.parameters.get("hparams", None):
+                kwargs["hparams"] = config.hparams
+
             if sig.parameters.get("reporter", None):
-                retval = train_fn(
-                    model=model,
-                    train_set=config.train_set,
-                    test_set=config.test_set,
-                    hparams=config.hparams,
-                    reporter=reporter,
-                )
+                kwargs["reporter"] = reporter
+                retval = train_fn(**kwargs)
             else:
-                retval = train_fn(
-                    model=model,
-                    train_set=config.train_set,
-                    test_set=config.test_set,
-                    hparams=config.hparams,
-                )
+                retval = train_fn(**kwargs)
 
             # Set retval to work with util.handle_return_value,
             # if there is more than 1 metrics, retval will be a list and
@@ -200,6 +185,87 @@ def dist_executor_fn(
             reporter.close_logger()
             client.stop()
             client.close()
+
+    def python_wrapper_function(_: Any) -> None:
+        """Patched function from tf_dist_executor_fn factory.
+
+        :param _: Necessary catch for the iterator given by Spark to the
+        function upon foreach calls. Can safely be disregarded.
+        """
+        EnvSing.get_instance().set_ml_id(app_id, run_id)
+        partition_id, _ = util.get_partition_attempt_id()
+
+        log_file = log_dir + "/executor_" + str(partition_id) + ".log"
+
+        reporter = Reporter(log_file, partition_id, 0, __builtin__.print)
+        builtin_print = __builtin__.print
+
+        def maggy_print(*args, **kwargs):
+            builtin_print(*args, **kwargs)
+            reporter.log(" ".join(str(x) for x in args), True)
+
+        __builtin__.print = maggy_print
+
+        try:
+            tmp_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            tmp_socket.bind(("", 0))
+
+            tb_logdir, trial_log_file = _setup_logging(reporter, log_dir)
+            tensorboard._register(tb_logdir)
+            tf_config = None
+
+            physical_devices = tf.config.list_physical_devices("GPU")
+            if physical_devices is not None:
+                strategy = tf.distribute.MultiWorkerMirroredStrategy
+                for count, pd in enumerate(physical_devices):
+                    if pd == "/gpu:0":
+                        tf_config["task"] = {"type": "chief", "index": 0}
+                    else:
+                        tf_config["task"] = {"type": "worker", "index": count}
+            else:  # Use the Default Strategy
+                strategy = tf.distribute.get_strategy
+
+            model = _wrap_model(config, strategy, False)
+
+            if config.dataset is not None and config.process_data is not None:
+                config.dataset = _consume_data(config)
+
+            reporter.log(f"index of slice {partition_id}")
+            reporter.log("Starting distributed training.")
+            sig = inspect.signature(train_fn)
+
+            kwargs = {}
+            if sig.parameters.get("model", None):
+                kwargs["model"] = model
+            if sig.parameters.get("dataset", None):
+                kwargs["dataset"] = config.dataset
+            if sig.parameters.get("hparams", None):
+                kwargs["hparams"] = config.hparams
+
+            if sig.parameters.get("reporter", None):
+                kwargs["reporter"] = reporter
+                retval = train_fn(**kwargs)
+            else:
+                retval = train_fn(**kwargs)
+
+            # Set retval to work with util.handle_return_value,
+            # if there is more than 1 metrics, retval will be a list and
+            # retval[0] will contain the final loss
+            retval_list = []
+            if isinstance(retval, dict):
+                for item in retval.items():
+                    retval_list.append(item[1])
+                retval = retval_list
+            retval = {"Metric": retval[0] if isinstance(retval, list) else retval}
+            retval = util.handle_return_val(retval, tb_logdir, "Metric", trial_log_file)
+            reporter.log("Finished distributed training.")
+        except:  # noqa: E722
+            reporter.log(traceback.format_exc())
+            raise
+        finally:
+            reporter.close_logger()
+            __builtin__.print = builtin_print
+        return retval
 
     return wrapper_function
 
@@ -276,7 +342,10 @@ def _wrap_model(config, strategy, is_chief):
     :returns: Returns a tensorflow model wrapped class of config.model.
     """
     # Instantiate model on executor in case its too large for pickle and sent as a class.
-    _sanitize_init_model_params(config.model)
+    if config.model is not None:
+        _sanitize_init_model_params(config.model)
+    else:
+        return None
     _sanitize_init_strategy_params(strategy)
     try:
         model = get_wrapped_model(config.model, strategy(), is_chief)
@@ -306,7 +375,7 @@ def _sanitize_init_strategy_params(
 
 
 def _shard_data(data, batch_size, num_shards, index):
-    """Returns the index slice of the train_set, given the number of shards.
+    """Returns the index slice of the dataset, given the number of shards.
     If the data is not a tensor, it will be converted to tensor.
 
     :param data: Dataset to shard.
@@ -333,68 +402,61 @@ def _shard_data(data, batch_size, num_shards, index):
 
 
 def _consume_data(config):
-    """Load and return the training and test datasets from config file. If the config.train_set and config.test_set are
+    """Load and return the training and test datasets from config file. If the config.dataset and config.test_set are
     strings they are assumed as path, the functions check if the files or directories exists, if they exists then it
-    will run the function in config.process_data, with paramneters config.train_set and config.test_set and return the
+    will run the function in config.process_data, with paramneters config.dataset and config.test_set and return the
     result.
-    If the config.train_set and cofig.test_set are not strings but anything else (like a List, nparray, tf.data.Dataset)
+    If the config.dataset and cofig.test_set are not strings but anything else (like a List, nparray, tf.data.Dataset)
     they will returned as they are.
-    The types of config.train_set and config.test_set have to be the same.
+    The types of config.dataset and config.test_set have to be the same.
 
 
     :param config: the experiment configuration dictionary
 
-    :returns: train_set and test_set
+    :returns: dataset
 
-    :raises TypeError: if the config.train_set and config.test_set are of different type
+    :raises TypeError: if the config.dataset and config.test_set are of different type
     :raises TypeError: if the process_data function is missing or cannot process the data
-    :raises FileNotFoundError: in case config.train_set or config.test_set are not found
+    :raises FileNotFoundError: in case config.dataset or config.test_set are not found
     """
 
-    train_set = config.train_set
-    test_set = config.test_set
-    process_data = config.process_data
-
-    if type(train_set) != type(test_set):
+    dataset_list = config.dataset
+    if not isinstance(dataset_list, list):
         raise TypeError(
-            f"The train_set and test_set types are different but must be the same, "
-            f"provided {type(train_set)} and {type(train_set)}"
+            "Dataset must be a list, got {}. If you have only 1 set, provide it within a list".format(
+                type(dataset_list)
+            )
         )
 
-    data_type = type(train_set)
+    data_type = dataset_list[0]
+
     if data_type == str:
+        for ds in dataset_list:
+            if type(ds) != data_type:
+                raise TypeError(
+                    "Dataset contains string and other types, "
+                    "if a string is included, it must contain all strings."
+                )
+
         env = EnvSing.get_instance()
 
-        if (env.isdir(train_set) or env.exists(train_set)) and (
-            env.isdir(test_set) or env.exists(test_set)
-        ):
-            try:
-                return process_data(train_set, test_set)
-            except TypeError:
-                raise TypeError(
-                    (
-                        f"process_data function missing in config, "
-                        f"please provide a function that takes 2 arguments, "
-                        f"train_set and test_set, read the datasets and "
-                        f"return 2 tuples (X_train, y_train), (X_test, y_test). "
-                        f"config: {config}"
-                    )
+        for ds in dataset_list:
+            if not (env.isdir(ds) or env.exists(ds)):
+                raise FileNotFoundError(f"Path {ds} does not exists.")
+        try:
+            return config.process_data(dataset_list)
+        except TypeError:
+            raise TypeError(
+                (
+                    f"process_data function missing in config, "
+                    f"please provide a function that takes 1 argument dataset, "
+                    f"reads it and "
+                    f"returns the transformed dataset as the list before. "
+                    f"config: {config}"
                 )
-        else:
-            if not env.isdir(train_set):
-                assert env.exists(train_set), FileNotFoundError(
-                    f"{train_set} does not exists."
-                )
-            if not env.isdir(test_set):
-                assert env.exists(test_set), FileNotFoundError(
-                    f"{test_set} does not exists."
-                )
-            raise RuntimeError(
-                f"config.train_set: {config.train_set} and/or "
-                f"config.test_set: {config.test_set} do not exists"
             )
     else:  # type is not str (could be anything)
-        return train_set, test_set
+        return config.process_data(dataset_list)
 
 
 def find_index(host_port, reservations):

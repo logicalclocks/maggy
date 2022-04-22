@@ -31,7 +31,7 @@ import deepspeed
 
 from maggy import util
 from maggy import tensorboard
-from maggy.experiment_config import TorchDistributedConfig
+from maggy.config import TorchDistributedConfig
 from maggy.core.rpc import Client
 from maggy.core.reporter import Reporter
 from maggy.core.patching import MaggyDataLoader
@@ -143,22 +143,27 @@ def torch_dist_executor_fn(
 
             reporter.log("Starting distributed training.", True)
             sig = inspect.signature(train_fn)
-            if sig.parameters.get("reporter", None):
-                retval = train_fn(
-                    module=module,
-                    hparams=config.hparams,
-                    train_set=config.train_set,
-                    test_set=config.test_set,
-                    reporter=reporter,
-                )
-            else:
-                retval = train_fn(
-                    module=module,
-                    hparams=config.hparams,
-                    train_set=config.train_set,
-                    test_set=config.test_set,
-                )
 
+            kwargs = {}
+            if sig.parameters.get("module", None):
+                kwargs["module"] = module
+            if sig.parameters.get("dataset", None):
+                kwargs["dataset"] = config.dataset
+            if sig.parameters.get("hparams", None):
+                kwargs["hparams"] = config.hparams
+
+            if sig.parameters.get("reporter", None):
+                kwargs["reporter"] = reporter
+                retval = train_fn(**kwargs)
+            else:
+                retval = train_fn(**kwargs)
+
+            # todo: test this change
+            retval_list = []
+            if isinstance(retval, dict):
+                for item in retval.items():
+                    retval_list.append(item[1])
+                retval = retval_list
             retval = util.handle_return_val(retval, tb_logdir, "Metric", trial_log_file)
             dist.barrier()  # Don't exit until all executors are done (else NCCL crashes)
             reporter.log("Finished distributed training.", True)
@@ -368,7 +373,7 @@ def _sanitize_config(config: TorchDistributedConfig) -> None:
     if config.backend == "torch":
         if config.ds_config:
             print(
-                "Warning: DeepSpeed config passed for torch backend. Config will be discarded."
+                "Warning: DeepSpeed config passed for torch backend. LagomConfig will be discarded."
             )
         if config.zero_lvl not in [0, 1, 2, 3]:
             raise ValueError(

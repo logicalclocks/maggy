@@ -1,5 +1,5 @@
 #
-#   Copyright 2020 Logical Clocks AB
+#   Copyright 2021 Logical Clocks AB
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -14,4 +14,18 @@
 #   limitations under the License.
 #
 
-__version__ = "1.1.0"
+from maggy.config.lagom import LagomConfig
+from maggy.config.base_config import BaseConfig
+from maggy.config.ablation import AblationConfig
+from maggy.config.hyperparameter_optimization import HyperparameterOptConfig
+from maggy.config.torch_distributed import TorchDistributedConfig
+from maggy.config.tf_distributed import TfDistributedConfig
+
+__all__ = [
+    "LagomConfig",
+    "BaseConfig",
+    "AblationConfig",
+    "HyperparameterOptConfig",
+    "TfDistributedConfig",
+    "TorchDistributedConfig",
+]

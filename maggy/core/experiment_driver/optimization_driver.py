@@ -25,11 +25,16 @@ from maggy.optimizer import AbstractOptimizer, RandomSearch, Asha, SingleRun, Gr
 from maggy.earlystop import AbstractEarlyStop, MedianStoppingRule, NoStoppingRule
 from maggy.optimizer import bayes
 from maggy.trial import Trial
-from maggy.core.experiment_driver.driver import Driver
+from maggy.core import config as mc
+
+if mc.is_spark_available():
+    from maggy.core.experiment_driver.spark_driver import Driver
+else:
+    from maggy.core.experiment_driver.python_driver import Driver
 from maggy.core.rpc import OptimizationServer
 from maggy.core.environment.singleton import EnvSing
 from maggy.core.executors.trial_executor import trial_executor_fn
-from maggy.experiment_config import AblationConfig, HyperparameterOptConfig
+from maggy.config import AblationConfig, HyperparameterOptConfig
 
 
 class HyperparameterOptDriver(Driver):
@@ -159,7 +164,10 @@ class HyperparameterOptDriver(Driver):
         raise exc
 
     def _patching_fn(
-        self, train_fn: Callable, config: HyperparameterOptConfig
+        self,
+        train_fn: Callable,
+        config: HyperparameterOptConfig,
+        is_spark_available: bool,
     ) -> Callable:
         """Monkey patches the user training function with the trial executor
         modifications for hyperparameter search.

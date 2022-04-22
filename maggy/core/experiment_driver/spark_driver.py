@@ -24,9 +24,9 @@ from datetime import datetime
 from typing import Callable, Tuple, Union
 
 from maggy import util
-from maggy.experiment_config import LagomConfig
+from maggy.config import LagomConfig, BaseConfig
 from maggy.core.environment.singleton import EnvSing
-from maggy.experiment_config import (
+from maggy.config import (
     AblationConfig,
     HyperparameterOptConfig,
     TfDistributedConfig,
@@ -86,6 +86,8 @@ class Driver(ABC):
         self.log_file_handle = EnvSing.get_instance().open_file(log_file, flags="w")
         self.exception = None
         self.result = None
+        self.result_dict = {}
+        self.main_metric_key = None
 
     @staticmethod
     def _generate_secret(nbytes: int) -> str:
@@ -106,6 +108,7 @@ class Driver(ABC):
             HyperparameterOptConfig,
             TfDistributedConfig,
             TorchDistributedConfig,
+            BaseConfig,
         ],
     ) -> dict:
         """Runs the generic experiment setup with callbacks for customization.
@@ -137,12 +140,13 @@ class Driver(ABC):
                 os.environ["ML_ID"],
                 "{} | {}".format(self.name, str(self.__class__.__name__)),
             )
-            executor_fn = self._patching_fn(train_fn, config)
+            executor_fn = self._patching_fn(train_fn, config, True)
             # Trigger execution on Spark nodes.
             node_rdd.foreachPartition(executor_fn)
 
             job_end = time.time()
             result = self._exp_final_callback(job_end, exp_json)
+            self._update_result(result)
             return result
         except Exception as exc:  # pylint: disable=broad-except
             self._exp_exception_callback(exc)
@@ -184,7 +188,9 @@ class Driver(ABC):
             HyperparameterOptConfig,
             TfDistributedConfig,
             TorchDistributedConfig,
+            BaseConfig,
         ],
+        is_spark_available: bool,
     ) -> Callable:
         """Patching function for the user provided training function.
 
@@ -255,7 +261,7 @@ class Driver(ABC):
             temp = self.executor_logs
             # clear the executor logs since they are being sent
             self.executor_logs = ""
-            return self.result, temp
+            return self.result_dict[self.metric_key], temp
 
     def stop(self) -> None:
         """Stop the Driver's worker thread and server."""
@@ -271,3 +277,10 @@ class Driver(ABC):
         """
         msg = datetime.now().isoformat() + ": " + str(log_msg)
         self.log_file_handle.write(EnvSing.get_instance().str_or_byte((msg + "\n")))
+
+    @abstractmethod
+    def _update_result(self, result) -> None:
+        """Set the result variable.
+
+        :param result: The value to set a result.
+        """

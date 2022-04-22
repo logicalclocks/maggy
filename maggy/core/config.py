@@ -1,5 +1,5 @@
 #
-#   Copyright 2020 Logical Clocks AB
+#   Copyright 2021 Logical Clocks AB
 #
 #   Licensed under the Apache License, Version 2.0 (the "License");
 #   you may not use this file except in compliance with the License.
@@ -14,24 +14,34 @@
 #   limitations under the License.
 #
 
-import os
 import tensorflow as tf
 
-HOPSWORKS = "HOPSWORKS"
-SPARK_ONLY = "SPARK_ONLY"
-
-mode = None
-tf_full = tf.__version__.split(".")[0]
-# for building the docs since mock object doesn't mock int()
-if not isinstance(tf_full, str):
-    tf_version = 2
-else:
-    tf_version = int(tf_full)
-
+SPARK_AVAILABLE = None
 try:
-    mode = os.environ["HOPSWORKS_VERSION"]
-    mode = HOPSWORKS
-    print("You are running maggy on Hopsworks.")
-except KeyError:
-    mode = SPARK_ONLY
-    print("You are running maggy in pure Spark mode.")
+    from pyspark.sql import SparkSession  # noqa: F401
+
+    SPARK_AVAILABLE = True
+except ModuleNotFoundError:
+    SPARK_AVAILABLE = False
+
+MODE = None
+TF_VERSION = None
+
+
+def initialize():
+    tf_full = tf.__version__.split(".")[0]
+    # for building the docs since mock object doesn't mock int()
+    global TF_VERSION
+    global MODE
+    if not isinstance(tf_full, str):
+        TF_VERSION = 2
+    else:
+        TF_VERSION = int(tf_full)
+
+    print("Detected Kernel: Python.") if not SPARK_AVAILABLE else print(
+        "Detected Kernel: Spark."
+    )
+
+
+def is_spark_available():
+    return SPARK_AVAILABLE

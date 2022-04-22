@@ -14,16 +14,25 @@
 #   limitations under the License.
 #
 
-from maggy.experiment_config.lagom import LagomConfig
-from maggy.experiment_config.ablation import AblationConfig
-from maggy.experiment_config.optimization import HyperparameterOptConfig
-from maggy.experiment_config.torch_distributed import TorchDistributedConfig
-from maggy.experiment_config.tf_distributed import TfDistributedConfig
+from __future__ import annotations
 
-__all__ = [
-    LagomConfig,
-    AblationConfig,
-    HyperparameterOptConfig,
-    TfDistributedConfig,
-    TorchDistributedConfig,
-]
+from maggy.config import LagomConfig
+from maggy.core import config as mc
+
+
+class BaseConfig(LagomConfig):
+    def __init__(
+        self,
+        name: str = "base",
+        hb_interval: int = 1,
+        description: str = "",
+    ):
+
+        """Initializes Base configuration.
+
+        :param name: Experiment name.
+        :param hb_interval: Heartbeat interval with which the server is polling.
+        :param description: A description of the experiment.
+        """
+        super().__init__(name, description, hb_interval)
+        mc.initialize()

@@ -20,15 +20,20 @@ import math
 import os
 import json
 
+import tensorflow as tf
 import numpy as np
-from pyspark import TaskContext
-from pyspark.sql import SparkSession
 
 from maggy import constants, tensorboard
 from maggy.core import exceptions
 from maggy.core.environment.singleton import EnvSing
+import maggy.core.config as mc
+
+if mc.is_spark_available():
+    from pyspark import TaskContext
+    from pyspark.sql import SparkSession
 
 DEBUG = True
+APP_ID = None
 
 
 def log(msg):
@@ -64,8 +69,11 @@ def get_partition_attempt_id():
     Returns:
         partitionId, attemptNumber -- [description]
     """
-    task_context = TaskContext.get()
-    return task_context.partitionId(), task_context.attemptNumber()
+    if mc.is_spark_available():
+        task_context = TaskContext.get()
+        return task_context.partitionId(), task_context.attemptNumber()
+    else:
+        return 0, 0
 
 
 def progress_bar(done, total):
@@ -239,7 +247,10 @@ def find_spark():
     """
     Returns: SparkSession
     """
-    return SparkSession.builder.getOrCreate()
+    if mc.is_spark_available():
+        return SparkSession.builder.getOrCreate()
+    else:
+        return None
 
 
 def seconds_to_milliseconds(time):
@@ -270,7 +281,7 @@ def register_environment(app_id, run_id):
 
     Returns: (app_id, run_id) with the updated IDs.
     """
-    app_id = str(find_spark().sparkContext.applicationId)
+
     app_id, run_id = validate_ml_id(app_id, run_id)
     set_ml_id(app_id, run_id)
     # Create experiment directory.
@@ -309,8 +320,46 @@ def populate_experiment(config, app_id, run_id, exp_function):
         direction,
         opt_key,
     )
-    exp_ml_id = app_id + "_" + str(run_id)
+    exp_ml_id = str(app_id) + "_" + str(run_id)
     experiment_json = EnvSing.get_instance().attach_experiment_xattr(
         exp_ml_id, experiment_json, "INIT"
     )
     return experiment_json
+
+
+def num_physical_devices():
+    """Returns the number of physical devices using Tensorflow.config.list_physical_devices() function.
+
+    Returns:
+        :int: number of physical devices.
+    """
+    return len(tf.config.list_physical_devices())
+
+
+def set_app_id(app_id):
+    """Sets the app_id if it's non None, this function is used when the kernel is python.
+
+    Args:
+        :app_id: the app id for the experiment
+    """
+    global APP_ID
+    if APP_ID is None:
+        APP_ID = app_id
+
+
+def get_metric_value(return_dict, metric_key):
+    if return_dict and metric_key:
+        assert (
+            metric_key in return_dict.keys()
+        ), "Supplied metric_key {} is not in returned dict {}".format(
+            metric_key, return_dict
+        )
+        return return_dict[metric_key]
+    elif (
+        return_dict is not None
+        and len(return_dict.keys()) == 2
+        and "metric" in return_dict.keys()
+    ):
+        return return_dict["metric"]
+    else:
+        return None

@@ -26,7 +26,7 @@ import traceback
 from typing import Callable, Any, Union
 
 from maggy import util, tensorboard
-from maggy.experiment_config import HyperparameterOptConfig, AblationConfig
+from maggy.config import HyperparameterOptConfig, AblationConfig
 from maggy.core import exceptions
 from maggy.core.reporter import Reporter
 from maggy.core.environment.singleton import EnvSing
@@ -154,8 +154,7 @@ def trial_executor_fn(
                     )
 
                 model = config.model
-                train_set = config.train_set
-                test_set = config.test_set
+                dataset = config.dataset
 
                 try:
                     reporter.log("Starting Trial: {}".format(trial_id), False)
@@ -165,22 +164,26 @@ def trial_executor_fn(
                         tensorboard._write_hparams(parameters, trial_id)
 
                     sig = inspect.signature(train_fn)
-                    if sig.parameters.get("reporter", None):
-                        retval = train_fn(
-                            model=model,
-                            train_set=train_set,
-                            test_set=test_set,
-                            hparams=parameters,
-                            reporter=reporter,
-                        )
-                    else:
-                        retval = train_fn(
-                            model=model,
-                            train_set=train_set,
-                            test_set=test_set,
-                            hparams=parameters,
-                        )
+                    kwargs = {}
+                    if sig.parameters.get("model", None):
+                        kwargs["model"] = model
+                    if sig.parameters.get("dataset", None):
+                        kwargs["dataset"] = dataset
+                    if sig.parameters.get("hparams", None):
+                        kwargs["hparams"] = parameters
 
+                    if sig.parameters.get("reporter", None):
+                        kwargs["reporter"] = reporter
+                        retval = train_fn(**kwargs)
+                    else:
+                        retval = train_fn(**kwargs)
+
+                    # todo: test this change
+                    retval_list = []
+                    if isinstance(retval, dict):
+                        for item in retval.items():
+                            retval_list.append(item[1])
+                        retval = retval_list
                     retval = util.handle_return_val(
                         retval, tb_logdir, optimization_key, trial_log_file
                     )

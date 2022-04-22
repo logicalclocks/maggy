@@ -101,7 +101,7 @@ class BaseEnv:
     def dump(self, data, hdfs_path):
         head_tail = os.path.split(hdfs_path)
         if not os.path.exists(head_tail[0]):
-            os.mkdir(head_tail[0])
+            os.makedirs(head_tail[0])
         with self.open_file(hdfs_path, flags="w") as file:
             file.write(data)
 

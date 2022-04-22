@@ -16,6 +16,7 @@
 
 from .optimization_driver import HyperparameterOptDriver
 from .ablation_driver import AblationDriver
+from .base_driver import BaseDriver
 
 
-__all__ = ["HyperparameterOptDriver", "AblationDriver"]
+__all__ = ["HyperparameterOptDriver", "AblationDriver", "BaseDriver"]

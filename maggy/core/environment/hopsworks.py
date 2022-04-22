@@ -27,6 +27,8 @@ from maggy import tensorboard
 from maggy import util
 from maggy.core.environment.base import BaseEnv
 
+global APP_ID
+
 
 class HopsworksEnv(BaseEnv):
     """
@@ -34,8 +36,13 @@ class HopsworksEnv(BaseEnv):
     The methods implemented mainly recall the libraries developed on maggy.
     """
 
+    APP_ID = None
+
     def set_ml_id(self, app_id=0, run_id=0):
         return experiment_utils._set_ml_id(app_id, run_id)
+
+    def set_app_id(self, app_id):
+        self.APP_ID = app_id
 
     def create_experiment_dir(self, app_id, run_id):
         return experiment_utils._create_experiment_dir(app_id, run_id)
@@ -134,8 +141,13 @@ class HopsworksEnv(BaseEnv):
             port = server_sock.getsockname()[1]
             server_host_port = (host, port)
             # register this driver with Hopsworks
-            sc = util.find_spark().sparkContext
-            app_id = str(sc.applicationId)
+            sp = util.find_spark()
+            if sp is not None:
+                sc = sp.sparkContext
+                app_id = str(sc.applicationId)
+            else:
+                app_id = self.APP_ID
+                util.set_app_id(app_id)
 
             hopscons = self.get_constants()
             method = hopscons.HTTP_CONFIG.HTTP_POST

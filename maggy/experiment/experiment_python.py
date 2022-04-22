@@ -24,20 +24,19 @@ invoked it is also registered in the Experiments service along with the
 provided information.
 """
 import atexit
+import calendar
 import time
 from functools import singledispatch
 from typing import Callable
 
 from maggy import util
 from maggy.core.environment.singleton import EnvSing
-from maggy.experiment_config import (
-    LagomConfig,
-    HyperparameterOptConfig,
-    AblationConfig,
-    TorchDistributedConfig,
-    TfDistributedConfig,
+from maggy.config import *
+from maggy.core.experiment_driver import (
+    HyperparameterOptDriver,
+    AblationDriver,
+    BaseDriver,
 )
-from maggy.core.experiment_driver import HyperparameterOptDriver, AblationDriver
 
 
 APP_ID = None
@@ -46,7 +45,7 @@ RUN_ID = 1
 EXPERIMENT_JSON = {}
 
 
-def lagom(train_fn: Callable, config: LagomConfig) -> dict:
+def lagom(train_fn: Callable, config) -> dict:
     """Launches a maggy experiment, which depending on 'config' can either
     be a hyperparameter optimization, an ablation study experiment or distributed
     training. Given a search space, objective and a model training procedure `train_fn`
@@ -57,7 +56,7 @@ def lagom(train_fn: Callable, config: LagomConfig) -> dict:
     **lagom** is a Swedish word meaning "just the right amount".
 
     :param train_fn: User defined experiment containing the model training.
-    :param config: An experiment configuration. For more information, see experiment_config.
+    :param config: An experiment configuration. For more information, see config.
 
     :returns: The experiment results as a dict.
     """
@@ -69,8 +68,8 @@ def lagom(train_fn: Callable, config: LagomConfig) -> dict:
         if RUNNING:
             raise RuntimeError("An experiment is currently running.")
         RUNNING = True
-        spark_context = util.find_spark().sparkContext
-        APP_ID = str(spark_context.applicationId)
+        APP_ID = str(calendar.timegm(time.gmtime()))
+        APP_ID = "application_" + APP_ID + "_0001"
         APP_ID, RUN_ID = util.register_environment(APP_ID, RUN_ID)
         driver = lagom_driver(config, APP_ID, RUN_ID)
         return driver.run_experiment(train_fn, config)
@@ -81,7 +80,6 @@ def lagom(train_fn: Callable, config: LagomConfig) -> dict:
         # Clean up spark jobs
         RUN_ID += 1
         RUNNING = False
-        util.find_spark().sparkContext.setJobGroup("", "")
 
 
 @singledispatch
@@ -94,12 +92,13 @@ def lagom_driver(config, app_id: int, run_id: int) -> None:
         raises an error.
     """
     raise TypeError(
-        "Invalid config type! Config is expected to be of type {}, {}, {} or {}, \
+        "Invalid config type! Config is expected to be of type {}, {}, {}, {} or {}, \
                      but is of type {}".format(
             HyperparameterOptConfig,
             AblationConfig,
             TorchDistributedConfig,
             TfDistributedConfig,
+            BaseConfig,
             type(config),
         )
     )
@@ -121,24 +120,44 @@ def _(config: AblationConfig, app_id: int, run_id: int) -> AblationDriver:
 # Lazy import of DistributedDriver to avoid Torch import until necessary
 def _(
     config: TorchDistributedConfig, app_id: int, run_id: int
-) -> "DistributedTrainingDriver":  # noqa: F821
+) -> "TorchDistributedTrainingDriver":  # noqa: F821
     from maggy.core.experiment_driver.torch_distributed_training_driver import (
-        DistributedTrainingDriver,
+        TorchDistributedTrainingDriver,
     )
 
-    return DistributedTrainingDriver(config, app_id, run_id)
+    return TorchDistributedTrainingDriver(config, app_id, run_id)
 
 
 @lagom_driver.register(TfDistributedConfig)
-# Lazy import of TensorflowDriver to avoid Tensorflow import until necessary
+# Lazy import of TfDistributedTrainingDriver to avoid Tensorflow import until necessary
 def _(
     config: TfDistributedConfig, app_id: int, run_id: int
-) -> "TensorflowDriver":  # noqa: F821
+) -> "TfDistributedTrainingDriver":  # noqa: F821
     from maggy.core.experiment_driver.tf_distributed_training_driver import (
-        TensorflowDriver,
+        TfDistributedTrainingDriver,
     )
 
-    return TensorflowDriver(config, app_id, run_id)
+    return TfDistributedTrainingDriver(config, app_id, run_id)
+
+
+@lagom_driver.register(BaseConfig)
+# Lazy import of BaseConfig
+def _(config: BaseConfig, app_id: int, run_id: int) -> BaseDriver:
+    from maggy.core.experiment_driver.base_driver import (
+        BaseDriver,
+    )
+
+    return BaseDriver(config, app_id, run_id)
+
+
+@lagom_driver.register(LagomConfig)
+# Lazy import of LagomConfig
+def _(config: LagomConfig, app_id: int, run_id: int) -> BaseDriver:
+    from maggy.core.experiment_driver.base_driver import (
+        BaseDriver,
+    )
+
+    return BaseDriver(config, app_id, run_id)
 
 
 def _exception_handler(duration: int) -> None:
