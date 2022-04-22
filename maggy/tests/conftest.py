@@ -32,7 +32,7 @@ from pyspark.streaming import StreamingContext
 
 
 def quiet_py4j():
-    """ turn down spark logging for the test context """
+    """turn down spark logging for the test context"""
     logger = logging.getLogger("py4j")
     logger.setLevel(logging.WARN)
 

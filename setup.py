@@ -41,9 +41,9 @@ setup(
         'zero': ['deepspeed==0.3.13',
                  'fairscale==0.3.0'],
         'docs': [
-            'mkdocs==1.1.2',
-            'mike==0.5.5',
-            'mkdocs-material==7.0.6',
+            'mkdocs==1.3.0',
+            'mike==1.1.2',
+            'mkdocs-material==8.2.8',
             'markdown-include==0.6.0',
         ],
         'dev': [

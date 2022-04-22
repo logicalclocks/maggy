@@ -202,7 +202,7 @@ class Hyperband(AbstractPruner):
             n_rungs = self.max_sh_rungs - 1 - (iteration % self.max_sh_rungs)
             # number of configurations per rung
             n0 = int(
-                np.floor(self.max_sh_rungs / (n_rungs + 1)) * self.eta ** n_rungs
+                np.floor(self.max_sh_rungs / (n_rungs + 1)) * self.eta**n_rungs
             )  # configs in first rung
             ns = [max(int(n0 * (self.eta ** (-i))), 1) for i in range(n_rungs + 1)]
             # budgets per rung

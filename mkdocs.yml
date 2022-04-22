@@ -22,10 +22,13 @@ nav:
     - Quickstart: start/quickstart.md
   - Hyperparameter Optimization:
     - Introduction: hpo/intro.md
+    - Strategies: hpo/strategies.md
   - Ablation Studies:
     - Introduction: ablation/intro.md
   - Distributed Training:
     - Introduction: dist_training/intro.md
+    - TensorFlow: dist_training/tensorflow.md
+    - PyTorch: dist_training/torch.md
 
 theme:
   name: material
@@ -52,6 +55,9 @@ extra:
       link: https://community.hopsworks.ai/
     - icon: fontawesome/brands/linkedin
       link: https://www.linkedin.com/company/logicalclocks/
+  analytics:
+    provider: google
+    property: G-J3F4GSLKE8
 
 extra_css:
   - assets/css/custom.css
@@ -67,7 +73,8 @@ markdown_extensions:
   - admonition
   - codehilite
   - footnotes
-  - pymdownx.tabbed
+  - pymdownx.tabbed:
+        alternate_style: true
   - pymdownx.arithmatex
   - pymdownx.superfences
   - pymdownx.details
@@ -82,7 +89,3 @@ markdown_extensions:
       custom_checkbox: true
   - markdown_include.include:
       base_path: docs
-
-google_analytics:
-  - G-J3F4GSLKE8
-  - auto
