@@ -347,62 +347,63 @@ class HyperparameterOptDriver(Driver):
 
         :param trial: The finalized trial.
         """
-        metric = trial.final_metric
-        param_string = trial.params
-        trial_id = trial.trial_id
-        num_epochs = len(trial.metric_history)
+        if isinstance(trial, Trial):
+            metric = trial.final_metric
+            param_string = trial.params
+            trial_id = trial.trial_id
+            num_epochs = len(trial.metric_history)
 
-        # pop function values and trial_type from parameters, since we don't need them
-        param_string.pop("dataset_function", None)
-        param_string.pop("model_function", None)
-        # First finalized trial
-        if self.result.get("best_id", None) is None:
-            self.result = {
-                "best_id": trial_id,
-                "best_val": metric,
-                "best_config": param_string,
-                "worst_id": trial_id,
-                "worst_val": metric,
-                "worst_config": param_string,
-                "avg": metric,
-                "metric_list": [metric],
-                "num_trials": 1,
-                "early_stopped": 0,
-                "num_epochs": num_epochs,
-                "trial_id": trial_id,
-            }
+            # pop function values and trial_type from parameters, since we don't need them
+            param_string.pop("dataset_function", None)
+            param_string.pop("model_function", None)
+            # First finalized trial
+            if self.result.get("best_id", None) is None:
+                self.result = {
+                    "best_id": trial_id,
+                    "best_val": metric,
+                    "best_config": param_string,
+                    "worst_id": trial_id,
+                    "worst_val": metric,
+                    "worst_config": param_string,
+                    "avg": metric,
+                    "metric_list": [metric],
+                    "num_trials": 1,
+                    "early_stopped": 0,
+                    "num_epochs": num_epochs,
+                    "trial_id": trial_id,
+                }
+                if trial.early_stop:
+                    self.result["early_stopped"] += 1
+                return
+            else:
+                if self.direction == "max":
+                    if metric > self.result["best_val"]:
+                        self.result["best_val"] = metric
+                        self.result["best_id"] = trial_id
+                        self.result["best_config"] = param_string
+                    if metric < self.result["worst_val"]:
+                        self.result["worst_val"] = metric
+                        self.result["worst_id"] = trial_id
+                        self.result["worst_config"] = param_string
+                elif self.direction == "min":
+                    if metric < self.result["best_val"]:
+                        self.result["best_val"] = metric
+                        self.result["best_id"] = trial_id
+                        self.result["best_config"] = param_string
+                    if metric > self.result["worst_val"]:
+                        self.result["worst_val"] = metric
+                        self.result["worst_id"] = trial_id
+                        self.result["worst_config"] = param_string
+
+            # update results and average regardless of experiment type
+            self.result["metric_list"].append(metric)
+            self.result["num_trials"] += 1
+            self.result["avg"] = sum(self.result["metric_list"]) / float(
+                len(self.result["metric_list"])
+            )
+
             if trial.early_stop:
                 self.result["early_stopped"] += 1
-            return
-        else:
-            if self.direction == "max":
-                if metric > self.result["best_val"]:
-                    self.result["best_val"] = metric
-                    self.result["best_id"] = trial_id
-                    self.result["best_config"] = param_string
-                if metric < self.result["worst_val"]:
-                    self.result["worst_val"] = metric
-                    self.result["worst_id"] = trial_id
-                    self.result["worst_config"] = param_string
-            elif self.direction == "min":
-                if metric < self.result["best_val"]:
-                    self.result["best_val"] = metric
-                    self.result["best_id"] = trial_id
-                    self.result["best_config"] = param_string
-                if metric > self.result["worst_val"]:
-                    self.result["worst_val"] = metric
-                    self.result["worst_id"] = trial_id
-                    self.result["worst_config"] = param_string
-
-        # update results and average regardless of experiment type
-        self.result["metric_list"].append(metric)
-        self.result["num_trials"] += 1
-        self.result["avg"] = sum(self.result["metric_list"]) / float(
-            len(self.result["metric_list"])
-        )
-
-        if trial.early_stop:
-            self.result["early_stopped"] += 1
 
     def _update_maggy_log(self) -> None:
         """Creates the status of a maggy experiment with a progress bar."""

@@ -38,7 +38,7 @@ class HyperparameterOptConfig(LagomConfig):
         num_trials: int,
         optimizer: Union[str, AbstractOptimizer],
         searchspace: Searchspace,
-        optimization_key: str = "metric",
+        optimization_key: str = "Metric",
         direction: str = "max",
         es_interval: int = 1,
         es_min: int = 10,

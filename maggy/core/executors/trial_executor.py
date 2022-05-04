@@ -184,6 +184,9 @@ def trial_executor_fn(
                         for item in retval.items():
                             retval_list.append(item[1])
                         retval = retval_list
+                    retval = {
+                        "Metric": retval[0] if isinstance(retval, list) else retval
+                    }
                     retval = util.handle_return_val(
                         retval, tb_logdir, optimization_key, trial_log_file
                     )
