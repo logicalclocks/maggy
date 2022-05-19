@@ -12,7 +12,7 @@ def training_function(model, train_set, test_set, hparams):
 * Define a search space, containing the hparams we want to optimize, their type and range.
 ```py
 #define the hyperparemeters to optimize, together with their possible values
-sp = Searchspace(kernel=('INTEGER', [2, 8]), pool=('INTEGER', [2, 8]), dropout=('DOUBLE', [0.01, 0.99]))
+sp = Searchspace(kernel=('DISCRETE', [2, 8]), pool=('DISCRETE', [2, 8]), dropout=('DISCRETE', [0.01, 0.99]))
 ```
 
 * Create the configuration object and run the optimization.
