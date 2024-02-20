@@ -94,3 +94,7 @@ Issues can be reported on the official [GitHub repo](https://github.com/logicalc
 ## Citation
 
 Please see our publications on [maggy.ai](https://maggy.ai/publications) to find out how to cite our work.
+
+## Acknowledgements
+
+The development of Maggy is supported by the <a href="https://deepcube-h2020.eu/">EU H2020 Deep Cube Project</a> (Grant agreement ID: 101004188).
