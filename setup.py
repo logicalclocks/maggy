@@ -41,10 +41,10 @@ setup(
         'zero': ['deepspeed==0.3.13',
                  'fairscale==0.3.0'],
         'docs': [
-            'mkdocs==1.3.0',
-            'mike==1.1.2',
-            'mkdocs-material==8.2.8',
-            'markdown-include==0.6.0',
+            'mkdocs==1.5.3',
+            'mike==2.0.0',
+            'mkdocs-material==9.5.10',
+            'markdown-include==0.8.1',
         ],
         'dev': [
             'black==20.8b1',
